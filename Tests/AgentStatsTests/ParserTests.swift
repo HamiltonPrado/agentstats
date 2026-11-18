@@ -275,3 +275,68 @@ struct UsageTests {
 @Test func uniquedKeepsFirstOccurrenceOrder() {
     #expect(["zsh", "node", "zsh", "git", "node"].uniqued() == ["zsh", "node", "git"])
 }
+
+// MARK: - Hook de notificações do Claude Code
+
+@Suite("Hook de notificações")
+struct HookTests {
+    private func tempDir() -> URL {
+        FileManager.default.temporaryDirectory.appendingPathComponent("agentstats-hook-\(UUID().uuidString)")
+    }
+    private func process() -> AgentProcess {
+        AgentProcess(pid: 1, kind: "Claude Code", cpu: 0, memKB: 0, elapsed: "00:01", cwd: "/x",
+                     children: [], isSubagent: false, shellChildren: 0)
+    }
+
+    @Test(arguments: [
+        ("permission_prompt", "Claude needs your permission to use Bash", HookEvent.Kind.permission),
+        (nil, "Claude needs your permission to use Edit", .permission),
+        ("idle_prompt", "Claude is waiting for your input", .idle),
+        ("auth_success", "Login concluído", .other),
+    ] as [(String?, String, HookEvent.Kind)])
+    func classifiesNotifications(_ type: String?, _ message: String, _ expected: HookEvent.Kind) {
+        #expect(HookEvents.kind(type: type, message: message) == expected)
+    }
+
+    @Test func recordsAndReadsBackTheLatestEvent() throws {
+        let dir = tempDir()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let json = #"{"session_id":"abc-123","hook_event_name":"Notification","notification_type":"permission_prompt","message":"Claude needs your permission to use Bash"}"#
+        HookEvents.record(stdin: Data(json.utf8), now: Date(timeIntervalSince1970: 1000), in: dir)
+        let e = try #require(HookEvents.latest(session: "abc-123", in: dir))
+        #expect(e.kind == .permission)
+        #expect(e.date == Date(timeIntervalSince1970: 1000))
+    }
+
+    @Test func ignoresInvalidInputAndUnsafeSessionIDs() {
+        let dir = tempDir()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        HookEvents.record(stdin: Data("não é json".utf8), in: dir)
+        HookEvents.record(stdin: Data(#"{"session_id":"../../etc/x","message":"m"}"#.utf8), in: dir)
+        #expect(!FileManager.default.fileExists(atPath: dir.path))
+    }
+
+    @Test func permissionEventAfterTheToolCallMeansApproval() {
+        let since = Date(timeIntervalSince1970: 1000)
+        let hook = HookEvent(kind: .permission, message: "", date: since.addingTimeInterval(1))
+        #expect(AgentReader.approvalState(tool: "Bash", since: since, process: process(), hook: hook, hookActive: true) == .needsApproval("Bash"))
+    }
+
+    @Test func oldPermissionEventIsIgnored() {
+        // aviso de um pedido anterior, já aprovado: o transcript avançou para outro pedido
+        let since = Date(timeIntervalSince1970: 1000)
+        let hook = HookEvent(kind: .permission, message: "", date: since.addingTimeInterval(-30))
+        #expect(AgentReader.approvalState(tool: "Bash", since: since, process: process(), hook: hook, hookActive: true) == nil)
+    }
+
+    @Test func withHookActiveTheHeuristicIsNotUsed() {
+        // sem aviso do hook, um Bash pendente há muito tempo sem shell já não é "aprovação"
+        let since = Date().addingTimeInterval(-60)
+        #expect(AgentReader.approvalState(tool: "Bash", since: since, process: process(), hook: nil, hookActive: true) == nil)
+        #expect(AgentReader.approvalState(tool: "Bash", since: since, process: process(), hook: nil, hookActive: false) == .needsApproval("Bash"))
+    }
+
+    @Test func questionsNeedAnAnswerEvenWithHook() {
+        #expect(AgentReader.approvalState(tool: "AskUserQuestion", since: Date(), process: process(), hook: nil, hookActive: true) == .needsAnswer)
+    }
+}

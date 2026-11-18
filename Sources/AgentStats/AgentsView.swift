@@ -200,7 +200,11 @@ struct SessionCard: View {
             }
         }
         .cardStyle(highlight: session.state.needsAttention ? Palette.attention.opacity(0.5) : nil)
+        .background(RoundedRectangle(cornerRadius: DS.rCard, style: .continuous).fill(hover.value ? DS.surface : .clear))
         .opacity(session.state == .finished ? 0.6 : 1)
+        .contentShape(Rectangle())
+        .onTapGesture { AppState.controller?.open(session) }
+        .help("Clica para ir para o agente")
         .onHover { hover.value = $0 }
         .contextMenu { menu }
     }

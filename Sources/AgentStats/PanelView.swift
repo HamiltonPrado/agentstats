@@ -51,7 +51,10 @@ struct PanelView: View {
                 }
                 .frame(height: min(max(contentHeight.value, 80), Self.maxContentHeight))
                 .onPreferenceChange(ContentHeightKey.self) { h in
-                    if abs(h - contentHeight.value) > 0.5 { contentHeight.value = h }
+                    // Altura em passos de 8 pt: variações pequenas do texto a cada amostra não
+                    // obrigam o popover a redimensionar (e o macOS a refazer o layout da janela).
+                    let snapped = (h / 8).rounded(.up) * 8
+                    if snapped != contentHeight.value { contentHeight.value = snapped }
                 }
             } else {
                 content.padding(DS.md)

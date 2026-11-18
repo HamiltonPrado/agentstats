@@ -148,6 +148,31 @@ final class Monitor {
         onUpdate?()
     }
 
+    // MARK: Abrir o agente
+
+    /// Traz para a frente a app onde o agente corre: sobe pela cadeia de processos até à primeira app
+    /// com janela (Claude, Terminal, iTerm, VS Code…). O Codex corre dentro da app ChatGPT.
+    /// Devolve false se não encontrar nenhuma app.
+    @discardableResult
+    func focus(_ session: AgentSession) -> Bool {
+        if let p = session.process {
+            for pid in [p.pid] + p.ancestors {
+                if let app = NSRunningApplication(processIdentifier: pid_t(pid)), app.activationPolicy == .regular {
+                    return app.activate(options: [.activateAllWindows])
+                }
+            }
+        }
+        if session.kind == "Codex",
+           let app = NSWorkspace.shared.runningApplications.first(where: { ["ChatGPT", "Codex"].contains($0.localizedName ?? "") }) {
+            return app.activate(options: [.activateAllWindows])
+        }
+        return false
+    }
+
+    func focus(sessionID: String) {
+        if let s = sessions.first(where: { $0.id == sessionID }) { focus(s) }
+    }
+
     private func handleTransitions(_ new: [AgentSession]) {
         defer { previousStates = Dictionary(new.map { ($0.id, $0.state) }, uniquingKeysWith: { a, _ in a }) }
         guard notifyOnFinish, !previousStates.isEmpty else { return }
@@ -162,6 +187,7 @@ final class Monitor {
                 content.title = "Agente terminou · \(s.project)"
                 content.body = s.detail ?? s.title
             } else { continue }
+            content.userInfo = ["session": s.id]   // clicar na notificação abre o agente
             content.sound = .default
             UNUserNotificationCenter.current().add(
                 UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: nil))

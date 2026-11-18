@@ -2,6 +2,7 @@ import SwiftUI
 import AppKit
 import ServiceManagement
 import Combine
+import UserNotifications
 
 @main
 enum AgentStatsApp {
@@ -16,6 +17,11 @@ enum AgentStatsApp {
     }
 
     static func handleCommandLine() {
+        if CommandLine.arguments.contains("--hook") {
+            // Chamado pelo hook de Notification do Claude Code: grava o evento e sai, sem escrever nada.
+            HookEvents.record(stdin: FileHandle.standardInput.readDataToEndOfFile())
+            exit(0)
+        }
         if CommandLine.arguments.contains("--dump") { Self.dump(); exit(0) }
         if CommandLine.arguments.contains("--bench") { Self.bench(); exit(0) }
         if CommandLine.arguments.contains("--register-login") {
@@ -123,7 +129,12 @@ enum AgentStatsApp {
         let agents = agentR.agentProcesses(from: procs)
         print("Top CPU (libproc+ps):", procs.sorted { $0.cpu > $1.cpu }.prefix(5).map { "\($0.name) \(String(format: "%.1f", $0.cpu))%" }.joined(separator: ", "))
         print("Processos: \(procs.count) · agentes: \(agents.count)")
-        for a in agents { print("  [\(a.kind)] pid \(a.pid) cpu \(a.cpu) sub=\(a.isSubagent) cwd \(a.cwd ?? "-") filhos \(a.children)") }
+        for a in agents {
+            let host = ([a.pid] + a.ancestors).lazy.compactMap { NSRunningApplication(processIdentifier: pid_t($0)) }
+                .first { $0.activationPolicy == .regular }?.localizedName ?? "—"
+            print("  [\(a.kind)] pid \(a.pid) app \(host) sub=\(a.isSubagent) cwd \(a.cwd ?? "-")")
+        }
+        print("Hook ativo: \(HookEvents.isActive)")
         for s in agentR.sessions(processes: agents) + CodexReader().sessions(recentWindow: 7 * 86400) {
             print("  • [\(s.kind)] \(s.title) | \(s.state.label) | \(s.detail ?? "") | \(s.project) | \(s.model ?? "-") | pid \(s.process?.pid ?? 0)")
         }
@@ -131,20 +142,38 @@ enum AgentStatsApp {
 
 }
 
-final class AppDelegate: NSObject, NSApplicationDelegate {
+/// Referência ao controlador para quem não está no main actor (o delegate das notificações).
+@MainActor enum AppState {
+    static weak var controller: StatusController?
+}
+
+final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelegate {
     private var controller: StatusController?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        UNUserNotificationCenter.current().delegate = self
         MainActor.assumeIsolated {
             controller = StatusController(monitor: Monitor())
+            AppState.controller = controller
+            HookEvents.prune()
             // Diagnóstico: abre o painel ao arrancar (para medir o consumo com o painel aberto)
             if ProcessInfo.processInfo.environment["AGENTSTATS_OPEN_PANEL"] != nil {
                 DispatchQueue.main.asyncAfter(deadline: .now() + 3) { [weak self] in self?.controller?.openPanel() }
             }
         }
     }
-}
 
+    // Clicar numa notificação de um agente traz para a frente a app onde ele corre.
+    nonisolated func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse) async {
+        guard let id = response.notification.request.content.userInfo["session"] as? String else { return }
+        await MainActor.run { AppState.controller?.focusSession(id: id) }
+    }
+
+    // Mostra as notificações mesmo quando a AgentStats está ativa (por exemplo, com o painel aberto).
+    nonisolated func userNotificationCenter(_ center: UNUserNotificationCenter, willPresent notification: UNNotification) async -> UNNotificationPresentationOptions {
+        [.banner, .sound]
+    }
+}
 @MainActor
 final class StatusController: NSObject, NSPopoverDelegate {
     private let monitor: Monitor
@@ -209,6 +238,19 @@ final class StatusController: NSObject, NSPopoverDelegate {
         lastIconSignature = sig
         lastIconUpdate = Date()
         item.button?.image = MenuBarDrawer.image(monitor)
+    }
+
+    func focusSession(id: String) {
+        popover.performClose(nil)
+        monitor.focus(sessionID: id)
+    }
+
+    /// Fecha o painel e traz para a frente a app do agente.
+    func open(_ session: AgentSession) {
+        popover.performClose(nil)
+        if !monitor.focus(session), let cwd = session.cwd {
+            NSWorkspace.shared.open(URL(fileURLWithPath: cwd))   // sem app encontrada: abre a pasta
+        }
     }
 
     func openPanel() {

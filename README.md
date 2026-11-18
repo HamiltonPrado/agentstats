@@ -8,6 +8,11 @@ App de barra de menus para macOS (estilo Stats) que mostra as métricas do siste
 - **Temperaturas:** CPU (média e máx.), chip, SSD e bateria via sensores HID do Apple Silicon — sem precisar do Xcode
 - **Sistema:** CPU (total, por núcleo, carga, estado térmico), memória (apps, wired, comprimida, cache, swap, pressão), GPU, rede, disco e bateria
 - **Precisa de ti:** deteta quando um agente do Claude Code está bloqueado à espera de aprovação (Bash/Edit/Write) ou tem uma pergunta para ti; destaca a vermelho, ✋ na barra de menus e notificação
+- **Hook do Claude Code:** com `AgentStats --hook` no hook `Notification` de `~/.claude/settings.json`, o "precisa de aprovação" passa a vir do próprio Claude Code (sem hook, usa uma heurística). Exemplo:
+  ```json
+  { "hooks": { "Notification": [ { "hooks": [ { "type": "command", "command": "/Applications/AgentStats.app/Contents/MacOS/AgentStats --hook 2>/dev/null || true", "async": true, "timeout": 10 } ] } ] } }
+  ```
+- **Ir para o agente:** clicar num cartão ou numa notificação traz para a frente a app onde o agente corre (Claude, Terminal, VS Code…; Codex → app ChatGPT)
 - **Tokens:** total de hoje (Claude + Codex) e por sessão, lido incrementalmente dos transcripts
 - **Alertas:** notificação quando a CPU ou a temperatura ficam 20 s acima do limite (configurável), com o processo mais pesado; aviso ⚠ na barra de menus
 - **Processos:** top por CPU
@@ -24,7 +29,7 @@ open build/AgentStats.app
 Diagnóstico sem interface: `build/AgentStats.app/Contents/MacOS/AgentStats --dump`
 
 ## Testes
-Swift Testing (30 testes: leitura de transcripts do Claude e do Codex, deteção de "precisa de aprovação", contagem de tokens, formatação):
+Swift Testing (37 testes: leitura de transcripts do Claude e do Codex, deteção de "precisa de aprovação", contagem de tokens, formatação):
 
 ```bash
 ./test.sh

@@ -77,7 +77,7 @@ struct SettingsView: View {
             }
 
             HStack {
-                Text("AgentStats 1.5").font(DS.meta).foregroundStyle(.tertiary)
+                Text("AgentStats 1.6").font(DS.meta).foregroundStyle(.tertiary)
                 Spacer()
                 Link("Código no GitHub", destination: URL(string: "https://github.com/HamiltonPrado/agentstats")!)
                     .font(DS.meta)

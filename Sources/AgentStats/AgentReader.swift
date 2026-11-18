@@ -50,6 +50,7 @@ struct AgentProcess: Identifiable {
     let isSubagent: Bool
     var role: String? = nil   // ex.: "app" / "executor" para os servidores do Codex
     var shellChildren: Int = 0 // shells filhas (o Claude Code corre cada comando Bash numa zsh)
+    var ancestors: [Int] = []  // PIDs dos pais, do mais próximo ao mais distante (para encontrar a app onde corre)
 }
 
 struct AgentSession: Identifiable {
@@ -139,6 +140,16 @@ final class AgentReader {
             return out
         }
 
+        func ancestors(of p: ProcSample) -> [Int] {
+            var out: [Int] = []
+            var cur = byPid[p.ppid]
+            while let c = cur, c.pid > 1, out.count < 32 {
+                out.append(c.pid)
+                cur = byPid[c.ppid]
+            }
+            return out
+        }
+
         func hasAgentAncestor(_ p: ProcSample) -> Bool {
             var cur = byPid[p.ppid]
             var guardCount = 0
@@ -168,7 +179,8 @@ final class AgentReader {
                 children: Array(busy.uniqued().prefix(4)),
                 isSubagent: hasAgentAncestor(p) || role == "executor",
                 role: role,
-                shellChildren: desc.filter { ["zsh", "bash", "sh"].contains($0.name) }.count
+                shellChildren: desc.filter { ["zsh", "bash", "sh"].contains($0.name) }.count,
+                ancestors: ancestors(of: p)
             )
         }
         .sorted { $0.cpu > $1.cpu }
@@ -213,7 +225,9 @@ final class AgentReader {
             if proc == nil && age > 90 { state = .finished }
             if state == .unknown && age < 15 { state = .thinking }
             if let proc, case .runningTool(let tool) = state {
-                state = Self.approvalState(tool: tool, since: info.timestamp ?? c.mtime, process: proc) ?? state
+                let session = c.url.deletingPathExtension().lastPathComponent
+                state = Self.approvalState(tool: tool, since: info.timestamp ?? c.mtime, process: proc,
+                                           hook: HookEvents.latest(session: session), hookActive: HookEvents.isActive) ?? state
             }
 
             result.append(AgentSession(
@@ -232,15 +246,23 @@ final class AgentReader {
         return result
     }
 
-    /// Heurística para "à espera de aprovação": o pedido da ferramenta está pendente mas nada está a correr.
-    /// - Bash: o Claude Code corre cada comando numa zsh filha; pendente sem zsh → à espera de autorização.
-    /// - Edit/Write/…: são instantâneas; pendentes há mais de 5 s → à espera de autorização.
+    /// "À espera de aprovação" para um pedido de ferramenta ainda pendente (`since` = quando foi pedido).
+    /// - Com o hook instalado: só quando o Claude Code avisou que mostrou um pedido de autorização
+    ///   depois deste pedido de ferramenta (fonte fiável; quando é aprovado, o transcript avança e o aviso fica antigo).
+    /// - Sem o hook (plano B, heurística):
+    ///   - Bash: o Claude Code corre cada comando numa zsh filha; pendente sem zsh → à espera de autorização.
+    ///   - Edit/Write/…: são instantâneas; pendentes há mais de 5 s → à espera de autorização.
     /// - AskUserQuestion / ExitPlanMode: esperam sempre por uma resposta tua.
-    static func approvalState(tool: String, since: Date, process: AgentProcess) -> AgentState? {
-        let age = Date().timeIntervalSince(since)
+    static func approvalState(tool: String, since: Date, process: AgentProcess,
+                              hook: HookEvent? = nil, hookActive: Bool = false, now: Date = Date()) -> AgentState? {
+        if tool == "AskUserQuestion" || tool == "ExitPlanMode" { return .needsAnswer }
+        if hookActive {
+            // tolerância de 2 s: o aviso pode ser gravado um instante antes da linha do transcript
+            if let hook, hook.kind == .permission, hook.date >= since.addingTimeInterval(-2) { return .needsApproval(tool) }
+            return nil
+        }
+        let age = now.timeIntervalSince(since)
         switch tool {
-        case "AskUserQuestion", "ExitPlanMode":
-            return .needsAnswer
         case "Bash":
             return age > 3 && process.shellChildren == 0 ? .needsApproval(tool) : nil
         case "Edit", "Write", "MultiEdit", "NotebookEdit":
