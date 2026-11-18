@@ -153,6 +153,7 @@ final class StatusController: NSObject, NSPopoverDelegate {
     /// O painel só existe enquanto está aberto: fechado, o SwiftUI não o recalcula a cada amostra.
     private let host = NSHostingController(rootView: AnyView(EmptyView()))
     private var lastIconSignature = ""
+    private var lastIconUpdate = Date.distantPast
     private var cancellables = Set<AnyCancellable>()
 
     init(monitor: Monitor) {
@@ -205,7 +206,11 @@ final class StatusController: NSObject, NSPopoverDelegate {
         if Monitor.disabled.contains("icon") { return }
         let sig = iconSignature()
         guard sig != lastIconSignature else { return }
+        // Estado dos agentes e alertas mudam o ícone logo; os números (CPU, rede…) no máximo de 4 em 4 s.
+        let urgent = sig.split(separator: "|").prefix(3) != lastIconSignature.split(separator: "|").prefix(3)
+        guard urgent || Date().timeIntervalSince(lastIconUpdate) >= 3.9 else { return }
         lastIconSignature = sig
+        lastIconUpdate = Date()
         item.button?.image = MenuBarDrawer.image(monitor)
     }
 
@@ -219,6 +224,8 @@ final class StatusController: NSObject, NSPopoverDelegate {
             popover.performClose(sender)
         } else {
             host.rootView = AnyView(PanelView().environmentObject(monitor))
+            monitor.panelOpen = true
+            monitor.sample()   // dados frescos ao abrir
             NSApp.activate(ignoringOtherApps: true)
             popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
             popover.contentViewController?.view.window?.makeKey()
@@ -227,6 +234,7 @@ final class StatusController: NSObject, NSPopoverDelegate {
 
     func popoverDidClose(_ notification: Notification) {
         host.rootView = AnyView(EmptyView())
+        monitor.panelOpen = false
     }
 }
 

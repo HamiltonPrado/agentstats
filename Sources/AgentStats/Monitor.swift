@@ -59,6 +59,8 @@ final class Monitor: ObservableObject {
     @AppStorage("alert.temp.threshold") var tempThreshold: Double = 85
     @Published var activeAlerts: [SystemAlert] = []
     @Published var usage = UsageSnapshot()
+    /// Com o painel aberto tudo é atualizado a cada amostra; fechado, as partes caras abrandam.
+    var panelOpen = false
     private var highSince: [SystemAlert.Kind: Date] = [:]
     private var lastNotified: [SystemAlert.Kind: Date] = [:]
     /// Tempo que o valor tem de ficar acima do limite antes de alertar (evita picos curtos).
@@ -111,6 +113,8 @@ final class Monitor: ObservableObject {
         let needTemps = !off.contains("temps") && (tick % 3 == 1 || lastTemps == nil)  // temperaturas: de 6 em 6 s
         let cpuReader = cpuReader, netReader = netReader, diskReader = diskReader, agentReader = agentReader, tempReader = tempReader, codexReader = codexReader, procSampler = procSampler, usageTracker = usageTracker
         let needUsage = !off.contains("usage") && tick % 5 == 1   // tokens: de 10 em 10 s
+        // Processos e agentes: a cada amostra com o painel aberto; com ele fechado, de 2 em 2 (4 s).
+        let needAgents = panelOpen || tick % 2 == 1 || agents.isEmpty
         queue.async {
             let cpu = cpuReader.read()
             let mem = MemoryReader.read()
@@ -119,13 +123,15 @@ final class Monitor: ObservableObject {
             let gpu = off.contains("gpu") ? nil : GPUReader.read()
             let temps = needTemps ? tempReader.read() : nil
             let battery = slow ? BatteryReader.read() : nil
-            let procs = off.contains("procs") ? [] : procSampler.read()
-            let agents = agentReader.agentProcesses(from: procs)
-            let sessions = off.contains("sessions") ? [] : (agentReader.sessions(processes: agents) + codexReader.sessions())
-                .sorted { $0.lastActivity > $1.lastActivity }
+            let procs = !needAgents || off.contains("procs") ? nil : procSampler.read()
+            let agents = procs.map { agentReader.agentProcesses(from: $0) }
+            let sessions = agents.map { ag in
+                off.contains("sessions") ? [] : (agentReader.sessions(processes: ag) + codexReader.sessions())
+                    .sorted { $0.lastActivity > $1.lastActivity }
+            }
             let usage = needUsage ? usageTracker.update() : nil
-            let top = Array(procs.sorted { $0.cpu > $1.cpu }.prefix(12))
-            let topMem = Array(procs.sorted { $0.rssKB > $1.rssKB }.prefix(12))
+            let top = procs.map { Array($0.sorted { $0.cpu > $1.cpu }.prefix(12)) }
+            let topMem = procs.map { Array($0.sorted { $0.rssKB > $1.rssKB }.prefix(12)) }
 
             DispatchQueue.main.async {
                 self.cpu = cpu
@@ -137,11 +143,13 @@ final class Monitor: ObservableObject {
                 if let t = self.temps?.cpuMax { self.tempHistory.push(t) }
                 if slow { self.battery = battery }
                 if let usage { self.usage = usage }
-                self.topProcesses = top
-                self.topMemory = topMem
-                self.agents = agents
-                self.handleTransitions(sessions)
-                self.sessions = sessions
+                if let top, let topMem, let agents, let sessions {
+                    self.topProcesses = top
+                    self.topMemory = topMem
+                    self.agents = agents
+                    self.handleTransitions(sessions)
+                    self.sessions = sessions
+                }
                 self.thermal = ProcessInfo.processInfo.thermalState
                 self.uptime = Sys.uptime
 
