@@ -29,6 +29,8 @@ struct PanelView: View {
     @AppStorage("panel.tab2") private var storedTab: Tab = .agents
     var forcedTab: Tab? = nil
     var scrollable = true
+    @StateObject private var contentHeight = Box<CGFloat>(300)
+    static let maxContentHeight: CGFloat = 600
 
     private var tab: Tab { forcedTab ?? storedTab }
 
@@ -38,7 +40,17 @@ struct PanelView: View {
             if tab != .settings { tabBar.padding(.horizontal, 12).padding(.bottom, 10) }
             Divider().opacity(0.6)
             if scrollable {
-                ScrollView { content.padding(12) }.frame(height: 540)
+                // Altura ajusta-se ao conteúdo; só faz scroll acima do máximo.
+                ScrollView {
+                    content.padding(12)
+                        .background(GeometryReader { g in
+                            Color.clear.preference(key: ContentHeightKey.self, value: g.size.height)
+                        })
+                }
+                .frame(height: min(max(contentHeight.value, 80), Self.maxContentHeight))
+                .onPreferenceChange(ContentHeightKey.self) { h in
+                    if abs(h - contentHeight.value) > 0.5 { contentHeight.value = h }
+                }
             } else {
                 content.padding(12)
             }
@@ -147,4 +159,9 @@ struct PanelView: View {
         }
         .padding(.horizontal, 12).padding(.vertical, 6)
     }
+}
+
+private struct ContentHeightKey: PreferenceKey {
+    static var defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) { value = max(value, nextValue()) }
 }
