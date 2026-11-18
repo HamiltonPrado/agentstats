@@ -63,7 +63,7 @@ struct SystemView: View {
     private func readout(_ metric: Metric) -> some View {
         let d = data(metric)
         let isSel = selected == metric
-        return Button { withAnimation(.easeOut(duration: 0.16)) { selected = metric } } label: {
+        return Button { withAnimation(Motion.ease(0.16)) { selected = metric } } label: {
             VStack(alignment: .leading, spacing: 2) {
                 Text(d.title).font(DS.meta).foregroundStyle(.secondary).lineLimit(1)
                 Text(d.value).font(DS.figure).foregroundStyle(d.valueColor).lineLimit(1).minimumScaleFactor(0.8)
@@ -77,12 +77,15 @@ struct SystemView: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .accessibilityLabel("\(d.title): \(d.value), \(d.sub)")
+        .accessibilityHint("Mostra o detalhe")
+        .accessibilityAddTraits(isSel ? .isSelected : [])
     }
 
     private var networkStrip: some View {
         let isSel = selected == .network
         let mx = max((m.downHistory.values + m.upHistory.values).max() ?? 1, 10_000)
-        return Button { withAnimation(.easeOut(duration: 0.16)) { selected = .network } } label: {
+        return Button { withAnimation(Motion.ease(0.16)) { selected = .network } } label: {
             HStack(spacing: DS.md) {
                 VStack(alignment: .leading, spacing: 2) {
                     Text("↓ " + Fmt.rate(m.network.downPerSec))
@@ -103,6 +106,8 @@ struct SystemView: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .accessibilityLabel("Rede: download \(Fmt.rate(m.network.downPerSec)), upload \(Fmt.rate(m.network.upPerSec))")
+        .accessibilityHint("Mostra o detalhe")
     }
 
     // MARK: Detalhe (o gráfico principal do separador)
@@ -122,6 +127,8 @@ struct SystemView: View {
     private var cpuDetail: some View {
         Card(title: "CPU", icon: "cpu", trailing: Fmt.pct(m.cpu.total)) {
             Sparkline(values: m.cpuHistory.values, maxValue: 1).frame(height: 48)
+                .accessibilityLabel("Gráfico da CPU no último minuto")
+                .accessibilityValue("máximo " + Fmt.pct(m.cpuHistory.values.max() ?? 0))
             HStack(alignment: .bottom, spacing: DS.xs) {
                 ForEach(Array(m.cpu.cores.enumerated()), id: \.offset) { _, v in
                     VStack(spacing: 0) {
@@ -136,12 +143,17 @@ struct SystemView: View {
             }
             .frame(height: 20)
             .help("Utilização de cada núcleo")
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel("Utilização por núcleo")
+            .accessibilityValue(m.cpu.cores.map(Fmt.pct).joined(separator: ", "))
             Divider().opacity(0.5)
             StatRow(label: "Utilizador", value: Fmt.pct(m.cpu.user))
             StatRow(label: "Sistema", value: Fmt.pct(m.cpu.system))
             StatRow(label: "Carga média 1 · 5 · 15 min",
                     value: [m.cpu.load.0, m.cpu.load.1, m.cpu.load.2].map { Fmt.num($0, 2) }.joined(separator: " · "))
             if let p = m.pCores, let e = m.eCores { StatRow(label: "Núcleos", value: "\(p) de desempenho, \(e) de eficiência") }
+            Divider().opacity(0.5)
+            DayChart(samples: m.day, value: { $0.cpu }, maxValue: 1, title: "CPU", format: Fmt.pct)
             StatRow(label: "Chip", value: m.machine.replacingOccurrences(of: "Apple ", with: ""))
         }
     }
@@ -172,6 +184,8 @@ struct SystemView: View {
             StatRow(label: "Swap", value: "\(Fmt.bytes(m.memory.swapUsed)) de \(Fmt.bytes(m.memory.swapTotal))")
             StatRow(label: "Pressão", value: m.memory.pressure >= 4 ? "Crítica" : m.memory.pressure >= 2 ? "Elevada" : "Normal",
                     valueColor: m.memory.pressure >= 4 ? .red : m.memory.pressure >= 2 ? .orange : .primary)
+            Divider().opacity(0.5)
+            DayChart(samples: m.day, value: { $0.mem }, maxValue: 1, title: "Memória", format: Fmt.pct)
         }
     }
 
@@ -180,7 +194,7 @@ struct SystemView: View {
     }
 
     @ViewBuilder private var tempDetail: some View {
-        if let t = m.temps { TemperatureCard(t: t, history: m.tempHistory.values, thermal: thermalLabel) }
+        if let t = m.temps { TemperatureCard(t: t, history: m.tempHistory.values, thermal: thermalLabel, day: m.day) }
         else { unavailable("Temperaturas", "thermometer.medium", "Os sensores de temperatura não estão disponíveis neste Mac") }
     }
 
@@ -266,6 +280,7 @@ struct TemperatureCard: View {
     let t: TemperatureSample
     let history: [Double]
     let thermal: String
+    var day: [MinuteSample] = []
     @StateObject private var expanded = Box(false)
 
     private func color(_ c: Double) -> Color { Palette.temp(c) == .secondary ? .primary : Palette.temp(c) }
@@ -282,8 +297,10 @@ struct TemperatureCard: View {
             if let s = t.ssd { StatRow(label: "SSD", value: Fmt.temp(s), valueColor: color(s)) }
             if let b = t.battery { StatRow(label: "Bateria", value: Fmt.temp(b), valueColor: color(b)) }
             StatRow(label: "Estado térmico", value: thermal.prefix(1).uppercased() + thermal.dropFirst())
+            Divider().opacity(0.5)
+            DayChart(samples: day, value: { $0.temp }, maxValue: 110, title: "Temperatura da CPU", format: { Fmt.temp($0, 0) })
             Button {
-                withAnimation(.easeOut(duration: 0.2)) { expanded.value.toggle() }
+                withAnimation(Motion.ease(0.2)) { expanded.value.toggle() }
             } label: {
                 HStack(spacing: DS.xs) {
                     Text(expanded.value ? "Esconder sensores" : "Ver os \(t.sensors.count) sensores")

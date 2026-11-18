@@ -98,15 +98,15 @@ struct PanelView: View {
         let working = m.workingCount
         let waiting = m.sessions.filter { $0.state == .waitingUser }.count
         let attention = m.needsAttentionCount
-        let (text, color): (String, Color) =
-            attention > 0 ? ("\(attention) precisa\(attention == 1 ? "" : "m") de ti", Palette.attention)
-            : working > 0 ? ("\(working) agente\(working == 1 ? "" : "s") a trabalhar", Palette.working)
-            : waiting > 0 ? ("\(waiting) à tua espera", Palette.waiting)
-            : ("Nenhum agente a trabalhar", Color.secondary.opacity(0.6))
+        let (text, kind): (String, StatusKind) =
+            attention > 0 ? ("\(attention) precisa\(attention == 1 ? "" : "m") de ti", .attention)
+            : working > 0 ? ("\(working) agente\(working == 1 ? "" : "s") a trabalhar", .working)
+            : waiting > 0 ? ("\(waiting) à tua espera", .waiting)
+            : ("Nenhum agente a trabalhar", .idle)
         var line = text + " · CPU " + Fmt.pct(m.cpu.total)
         if let t = m.temps?.cpuMax { line += " · " + Fmt.num(t, 0) + "°" }
         return HStack(spacing: DS.sm) {
-            StatusDot(color: color)
+            StatusDot(kind)
             Text(line).font(DS.meta.monospacedDigit()).foregroundStyle(.secondary).lineLimit(1)
         }
     }
@@ -116,12 +116,12 @@ struct PanelView: View {
     private var tabBar: some View {
         HStack(spacing: 0) {
             ForEach(Tab.main) { t in
-                Button { withAnimation(.easeOut(duration: 0.16)) { storedTab = t } } label: {
+                Button { withAnimation(Motion.ease(0.16)) { storedTab = t } } label: {
                     HStack(spacing: DS.xs + 2) {
                         Image(systemName: t.icon).font(DS.meta)
                         Text(t.title).font(DS.body.weight(.medium))
                         if t == .agents, m.workingCount + m.needsAttentionCount > 0 {
-                            StatusDot(color: m.needsAttentionCount > 0 ? Palette.attention : Palette.working)
+                            StatusDot(m.needsAttentionCount > 0 ? .attention : .working)
                         }
                     }
                     .foregroundStyle(tab == t ? Color.primary : Color.secondary)
@@ -182,6 +182,7 @@ struct AlertBanner: View {
             }
         }
         .padding(.horizontal, DS.md).padding(.vertical, DS.sm)
+        .accessibilityElement(children: .combine)
         .background(RoundedRectangle(cornerRadius: DS.rControl, style: .continuous).fill(Palette.attention.opacity(0.08)))
         .overlay(RoundedRectangle(cornerRadius: DS.rControl, style: .continuous).strokeBorder(Palette.attention.opacity(0.35), lineWidth: 1))
     }

@@ -340,3 +340,54 @@ struct HookTests {
         #expect(AgentReader.approvalState(tool: "AskUserQuestion", since: Date(), process: process(), hook: nil, hookActive: true) == .needsAnswer)
     }
 }
+
+// MARK: - Histórico de 24 h
+
+@Suite("Histórico de 24 h")
+struct HistoryTests {
+    private func at(_ minute: Double, _ second: Double = 0) -> Date { Date(timeIntervalSince1970: 1_800_000_000 + minute * 60 + second) }
+
+    @Test func accumulatorClosesAMinuteWithAveragesAndMaxima() throws {
+        var acc = MinuteAccumulator()
+        #expect(acc.add(cpu: 0.2, mem: 0.5, temp: 40, working: 0, attention: false, at: at(0, 1)) == nil)
+        #expect(acc.add(cpu: 0.4, mem: 0.7, temp: 50, working: 2, attention: true, at: at(0, 30)) == nil)
+        let closed = acc.add(cpu: 0.9, mem: 0.9, temp: 70, working: 0, attention: false, at: at(1, 2))
+        let done = try #require(closed)
+        #expect(abs(done.cpu - 0.3) < 1e-9)
+        #expect(abs(done.mem - 0.6) < 1e-9)
+        #expect(done.temp == 50)
+        #expect(done.working == 2)
+        #expect(done.attention)
+        #expect(done.t == at(0).timeIntervalSince1970)
+    }
+
+    @Test func pruneKeepsOnlyTheLast24Hours() {
+        let now = at(3000)
+        let samples = [2000.0, 1500, 1441, 1439].map {
+            MinuteSample(t: now.timeIntervalSince1970 - $0 * 60, cpu: 0, mem: 0, temp: nil, working: 0, attention: false)
+        }
+        #expect(History24h.pruned(samples, now: now).count == 1)
+    }
+
+    @Test func savesAndLoadsFromDisk() {
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent("agentstats-history-\(UUID().uuidString).json")
+        defer { try? FileManager.default.removeItem(at: url) }
+        let now = Date()
+        let s = MinuteSample(t: now.timeIntervalSince1970 - 120, cpu: 0.25, mem: 0.5, temp: 44, working: 1, attention: false)
+        History24h.save([s], to: url)
+        #expect(History24h.load(from: url, now: now) == [s])
+    }
+
+    @Test func bucketsCoverTheDayAndCountActiveMinutes() {
+        let now = at(10_000)
+        let base = (now.timeIntervalSince1970 / 600).rounded(.down) * 600   // início do bloco atual
+        let samples = (0..<10).map {
+            MinuteSample(t: base + Double($0) * 60, cpu: 0, mem: 0, temp: nil, working: $0 < 5 ? 1 : 0, attention: $0 == 3)
+        }
+        let b = History24h.buckets(samples, now: now)
+        #expect(b.count == 144)
+        #expect(abs(b.last!.working - 0.5) < 1e-9)
+        #expect(b.last!.attention)
+        #expect(History24h.activeMinutes(samples) == 5)
+    }
+}

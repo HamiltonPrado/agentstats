@@ -61,11 +61,53 @@ extension View {
     }
 }
 
+/// Estados que o ponto mostra. Cada um tem cor E forma própria, para não depender só da cor
+/// (daltonismo, ecrãs a preto e branco): cheio a trabalhar, anel à espera, losango precisa de ti, traço inativo.
+enum StatusKind: Sendable {
+    case working, waiting, attention, idle
+
+    var color: Color {
+        switch self {
+        case .working: return Palette.working
+        case .waiting: return Palette.waiting
+        case .attention: return Palette.attention
+        case .idle: return Color.secondary.opacity(0.6)
+        }
+    }
+}
+
 /// O ponto de estado: a assinatura da app. Fixo, nunca pulsa.
 struct StatusDot: View {
-    let color: Color
+    let kind: StatusKind
     var size: CGFloat = 6
-    var body: some View { Circle().fill(color).frame(width: size, height: size) }
+
+    init(_ kind: StatusKind, size: CGFloat = 6) {
+        self.kind = kind
+        self.size = size
+    }
+
+    var body: some View {
+        Group {
+            switch kind {
+            case .working: Circle().fill(kind.color)
+            case .waiting: Circle().strokeBorder(kind.color, lineWidth: max(1.2, size * 0.22))
+            case .attention:
+                RoundedRectangle(cornerRadius: 1).fill(kind.color)
+                    .rotationEffect(.degrees(45)).padding(size * 0.14)
+            case .idle: Capsule().fill(kind.color).frame(height: max(1.5, size * 0.3))
+            }
+        }
+        .frame(width: size, height: size)
+        .accessibilityHidden(true)   // o estado é sempre dito por extenso ao lado
+    }
+}
+
+/// Animações que respeitam a opção "Reduzir movimento" do macOS.
+@MainActor
+enum Motion {
+    static func ease(_ duration: Double) -> Animation? {
+        NSWorkspace.shared.accessibilityDisplayShouldReduceMotion ? nil : .easeOut(duration: duration)
+    }
 }
 
 struct Card<Content: View>: View {
@@ -93,14 +135,16 @@ struct Card<Content: View>: View {
 struct SectionHeader: View {
     let title: String
     var count: Int? = nil
-    var color: Color? = nil
+    var kind: StatusKind? = nil
     var body: some View {
         HStack(spacing: DS.sm) {
-            if let color { StatusDot(color: color) }
+            if let kind { StatusDot(kind) }
             Text(title).font(DS.meta.weight(.medium)).foregroundStyle(.secondary)
             if let count { Text("\(count)").font(DS.meta.monospacedDigit()).foregroundStyle(.tertiary) }
             Spacer()
         }
+        .accessibilityElement(children: .combine)
+        .accessibilityAddTraits(.isHeader)
     }
 }
 
@@ -135,6 +179,8 @@ struct Sparkline: View {
                 .stroke(color, style: StrokeStyle(lineWidth: 1.5, lineCap: .round, lineJoin: .round))
             }
         }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Gráfico")
     }
 }
 
@@ -150,6 +196,7 @@ struct Bar: View {
             }
         }
         .frame(height: height)
+        .accessibilityHidden(true)   // o valor está sempre escrito ao lado
     }
 }
 
@@ -167,6 +214,7 @@ struct StatRow: View {
             Text(value).monospacedDigit().foregroundStyle(valueColor)
         }
         .font(DS.body)
+        .accessibilityElement(children: .combine)
     }
 }
 
@@ -189,5 +237,46 @@ struct IconButton: View {
         .buttonStyle(.plain)
         .help(help)
         .onHover { hover.value = $0 }
+    }
+}
+
+/// Gráfico das últimas 24 h (um ponto por minuto), com as horas de início e fim.
+struct DayChart: View {
+    let samples: [MinuteSample]
+    let value: (MinuteSample) -> Double?
+    var maxValue: Double
+    let title: String
+    let format: (Double) -> String
+
+    var body: some View {
+        let vals = samples.compactMap(value)
+        VStack(alignment: .leading, spacing: DS.xs) {
+            HStack {
+                Text("Últimas 24 h").font(DS.meta).foregroundStyle(.secondary)
+                Spacer()
+                if let mx = vals.max() {
+                    Text("máximo " + format(mx)).font(DS.meta.monospacedDigit()).foregroundStyle(.tertiary)
+                }
+            }
+            if vals.count > 1 {
+                Sparkline(values: vals, maxValue: maxValue, color: .secondary).frame(height: 32)
+                    .accessibilityLabel("\(title) nas últimas 24 horas")
+                    .accessibilityValue(vals.max().map { "máximo " + format($0) } ?? "")
+                HStack {
+                    Text(samples.first.map { Self.hour($0.t) } ?? "").font(DS.meta.monospacedDigit()).foregroundStyle(.tertiary)
+                    Spacer()
+                    Text("agora").font(DS.meta).foregroundStyle(.tertiary)
+                }
+                .accessibilityHidden(true)
+            } else {
+                Text("A recolher histórico, um ponto por minuto").font(DS.meta).foregroundStyle(.tertiary)
+            }
+        }
+    }
+
+    static func hour(_ t: TimeInterval) -> String {
+        let f = DateFormatter()
+        f.dateFormat = "HH:mm"
+        return f.string(from: Date(timeIntervalSince1970: t))
     }
 }

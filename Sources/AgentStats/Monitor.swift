@@ -48,6 +48,8 @@ final class Monitor {
     var downHistory = History()
     var upHistory = History()
     var tempHistory = History()
+    /// Últimas 24 h, um ponto por minuto (guardado em disco).
+    var day: [MinuteSample] = History24h.load()
 
     @ObservationIgnored let machine: String = Sys.sysctlString("machdep.cpu.brand_string") ?? "Mac"
     @ObservationIgnored let model: String = Sys.sysctlString("hw.model") ?? ""
@@ -83,6 +85,8 @@ final class Monitor {
     @ObservationIgnored private var previousStates: [String: AgentState] = [:]
     @ObservationIgnored private var highSince: [SystemAlert.Kind: Date] = [:]
     @ObservationIgnored private var lastNotified: [SystemAlert.Kind: Date] = [:]
+    @ObservationIgnored private var minuteAcc = MinuteAccumulator()
+    @ObservationIgnored private var lastHistorySave = Date()
 
     var workingCount: Int { sessions.filter { $0.state.isWorking }.count }
     var needsAttentionCount: Int { sessions.filter { $0.state.needsAttention }.count }
@@ -145,7 +149,23 @@ final class Monitor {
         downHistory.push(s.network.downPerSec)
         upHistory.push(s.network.upPerSec)
         checkAlerts()
+        recordMinute()
         onUpdate?()
+    }
+
+    // MARK: Histórico de 24 h
+
+    private func recordMinute(now: Date = Date()) {
+        if let done = minuteAcc.add(cpu: cpu.total, mem: memory.usage, temp: temps?.cpuMax,
+                                    working: workingCount, attention: needsAttentionCount > 0, at: now) {
+            day = History24h.pruned(day + [done], now: now)
+        }
+        if now.timeIntervalSince(lastHistorySave) > 5 * 60 { saveHistory() }
+    }
+
+    func saveHistory() {
+        lastHistorySave = Date()
+        History24h.save(day)
     }
 
     // MARK: Abrir o agente

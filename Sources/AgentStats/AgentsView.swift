@@ -11,6 +11,14 @@ extension AgentState {
         case .finished, .unknown: return Color.secondary.opacity(0.6)
         }
     }
+    var statusKind: StatusKind {
+        switch self {
+        case .runningTool, .thinking: return .working
+        case .needsApproval, .needsAnswer: return .attention
+        case .waitingUser: return .waiting
+        case .finished, .unknown: return .idle
+        }
+    }
     var toolName: String? {
         if case .runningTool(let t) = self { return t }
         if case .needsApproval(let t) = self { return t }
@@ -56,24 +64,25 @@ struct AgentsView: View {
 
         VStack(alignment: .leading, spacing: DS.lg) {
             if !m.usage.todayTotal.isEmpty { TodayUsage(usage: m.usage) }
+            if !m.day.isEmpty { ActivityStrip(day: m.day) }
             if attention.isEmpty && working.isEmpty && waiting.isEmpty && others.isEmpty {
                 EmptyAgents()
             }
             if !attention.isEmpty {
-                group("Precisa de ti", attention.count, Palette.attention) { ForEach(attention) { SessionCard(session: $0) } }
+                group("Precisa de ti", attention.count, .attention) { ForEach(attention) { SessionCard(session: $0) } }
             }
             if !working.isEmpty {
-                group("A trabalhar", working.count, Palette.working) { ForEach(working) { SessionCard(session: $0) } }
+                group("A trabalhar", working.count, .working) { ForEach(working) { SessionCard(session: $0) } }
             }
             if !waiting.isEmpty {
-                group("À tua espera", waiting.count, Palette.waiting) { ForEach(waiting) { SessionCard(session: $0) } }
+                group("À tua espera", waiting.count, .waiting) { ForEach(waiting) { SessionCard(session: $0) } }
             }
             if !others.isEmpty {
                 group("Outros agentes", others.count, nil) { ForEach(others) { OtherAgentRow(agent: $0) } }
             }
             if !recent.isEmpty {
                 VStack(alignment: .leading, spacing: DS.sm) {
-                    Button { withAnimation(.easeOut(duration: 0.2)) { showRecent.toggle() } } label: {
+                    Button { withAnimation(Motion.ease(0.2)) { showRecent.toggle() } } label: {
                         HStack(spacing: DS.xs) {
                             SectionHeader(title: "Recentes", count: recent.count)
                             Image(systemName: "chevron.right")
@@ -89,9 +98,9 @@ struct AgentsView: View {
         }
     }
 
-    private func group<C: View>(_ title: String, _ count: Int, _ color: Color?, @ViewBuilder _ content: () -> C) -> some View {
+    private func group<C: View>(_ title: String, _ count: Int, _ kind: StatusKind?, @ViewBuilder _ content: () -> C) -> some View {
         VStack(alignment: .leading, spacing: DS.sm) {
-            SectionHeader(title: title, count: count, color: color)
+            SectionHeader(title: title, count: count, kind: kind)
             content()
         }
     }
@@ -129,9 +138,10 @@ struct StateIcon: View {
             .frame(width: 24, height: 24)
             .background(RoundedRectangle(cornerRadius: DS.rSmall, style: .continuous).fill(DS.raised))
             .overlay(alignment: .bottomTrailing) {
-                StatusDot(color: state.color, size: 8)
-                    .overlay(Circle().strokeBorder(Color(nsColor: .windowBackgroundColor), lineWidth: 1.5))
-                    .offset(x: 2, y: 2)
+                StatusDot(state.statusKind, size: 8)
+                    .padding(1.5)
+                    .background(Circle().fill(Color(nsColor: .windowBackgroundColor)))
+                    .offset(x: 3, y: 3)
             }
     }
 }
@@ -206,7 +216,27 @@ struct SessionCard: View {
         .onTapGesture { AppState.controller?.open(session) }
         .help("Clica para ir para o agente")
         .onHover { hover.value = $0 }
+        // VoiceOver: o cartão é um só elemento, com tudo dito por extenso e as ações do menu
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(accessibilityText)
+        .accessibilityHint("Abre a app onde o agente corre")
+        .accessibilityAddTraits(.isButton)
+        .accessibilityAction { AppState.controller?.open(session) }
+        .accessibilityAction(named: "Abrir pasta") {
+            if let cwd = session.cwd { NSWorkspace.shared.open(URL(fileURLWithPath: cwd)) }
+        }
+        .accessibilityAction(named: "Mostrar transcript") {
+            NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: session.id)])
+        }
         .contextMenu { menu }
+    }
+
+    private var accessibilityText: String {
+        var parts = [session.title, session.state.label, session.kind]
+        if let d = session.detail { parts.append(isCommand ? "comando: " + d : d) }
+        parts.append(meta)
+        parts.append(Fmt.ago(session.lastActivity))
+        return parts.joined(separator: ", ")
     }
 
     private var actions: some View {
@@ -280,6 +310,7 @@ struct OtherAgentRow: View {
             }
         }
         .cardStyle()
+        .accessibilityElement(children: .combine)
         .contextMenu {
             Button("Terminar processo… (PID \(String(agent.pid)))", role: .destructive) { ProcessKiller.confirmAndTerminate(pid: agent.pid, name: agent.kind) }
         }
@@ -299,6 +330,7 @@ struct TodayUsage: View {
             Text(split).font(DS.meta.monospacedDigit()).foregroundStyle(.tertiary)
         }
         .cardStyle(padding: DS.md)
+        .accessibilityElement(children: .combine)
         .help("Inclui leituras de cache (\(Fmt.tokens(t.cacheRead))), que são a maior parte e custam muito menos do que tokens novos. Entrada nova \(Fmt.tokens(t.input)) · cache escrita \(Fmt.tokens(t.cacheWrite)) · saída \(Fmt.tokens(t.output))")
     }
 
@@ -307,5 +339,45 @@ struct TodayUsage: View {
         if !usage.todayClaude.isEmpty { parts.append("Claude \(Fmt.tokens(usage.todayClaude.total))") }
         if !usage.todayCodex.isEmpty { parts.append("Codex \(Fmt.tokens(usage.todayCodex.total))") }
         return parts.count > 1 ? parts.joined(separator: " · ") : ""
+    }
+}
+
+/// Atividade dos agentes nas últimas 24 h, em blocos de 10 minutos.
+struct ActivityStrip: View {
+    let day: [MinuteSample]
+
+    var body: some View {
+        let buckets = History24h.buckets(day)
+        let active = History24h.activeMinutes(day)
+        VStack(alignment: .leading, spacing: DS.sm) {
+            HStack(alignment: .firstTextBaseline) {
+                Text("Últimas 24 h").font(DS.body).foregroundStyle(.secondary)
+                Spacer()
+                Text(active > 0 ? "agentes ativos " + Fmt.minutes(active) : "sem atividade")
+                    .font(DS.meta.monospacedDigit()).foregroundStyle(.tertiary)
+            }
+            HStack(alignment: .bottom, spacing: 1) {
+                ForEach(Array(buckets.enumerated()), id: \.offset) { _, b in
+                    VStack(spacing: 0) {
+                        Spacer(minLength: 0)
+                        RoundedRectangle(cornerRadius: 1)
+                            .fill(b.attention ? Palette.attention.opacity(0.8) : (b.working > 0 ? Color.accentColor : DS.raised))
+                            .frame(height: b.working > 0 ? max(3, 20 * b.working) : 2)
+                    }
+                }
+            }
+            .frame(height: 20)
+            .accessibilityHidden(true)
+            HStack {
+                Text(DayChart.hour(buckets.first?.start ?? Date().timeIntervalSince1970)).font(DS.meta.monospacedDigit())
+                Spacer()
+                Text("agora").font(DS.meta)
+            }
+            .foregroundStyle(.tertiary)
+            .accessibilityHidden(true)
+        }
+        .cardStyle()
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Atividade dos agentes nas últimas 24 horas: " + (active > 0 ? Fmt.minutes(active) + " com agentes a trabalhar" : "sem atividade"))
     }
 }

@@ -45,6 +45,15 @@ enum AgentStatsApp {
                 SystemAlert(kind: .cpu, value: "92%", since: Date().addingTimeInterval(-45), detail: "WindowServer (74%)"),
                 SystemAlert(kind: .temp, value: "91 °C", since: Date().addingTimeInterval(-30), detail: "WindowServer (74%)"),
             ]
+            // 24 h simuladas: CPU com ciclos, agentes a trabalhar em três períodos, um pedido de aprovação
+            let now = Date().timeIntervalSince1970
+            m.day = (0..<1440).map { i in
+                let t = now - Double(1440 - i) * 60
+                let working = (300..<420).contains(i) || (700..<760).contains(i) || (1300..<1430).contains(i) ? 1 : 0
+                return MinuteSample(t: t, cpu: 0.12 + 0.1 * sin(Double(i) / 40) + (working > 0 ? 0.25 : 0), mem: 0.6,
+                                    temp: 42 + (working > 0 ? 18 : 0) + 4 * sin(Double(i) / 30), working: working,
+                                    attention: i == 735)
+            }
             m.sessions.insert(AgentSession(id: "fake", kind: "Claude Code", title: "Migrar base de dados", cwd: "/Users/demo/api",
                                            model: "claude-opus-5-5", state: .needsApproval("Bash"),
                                            detail: "rm -rf build && npm run migrate", lastActivity: Date().addingTimeInterval(-12),
@@ -156,6 +165,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
             controller = StatusController(monitor: Monitor())
             AppState.controller = controller
             HookEvents.prune()
+            NotificationCenter.default.addObserver(forName: NSApplication.willTerminateNotification, object: nil, queue: .main) { _ in
+                MainActor.assumeIsolated { AppState.controller?.saveHistory() }
+            }
             // Diagnóstico: abre o painel ao arrancar (para medir o consumo com o painel aberto)
             if ProcessInfo.processInfo.environment["AGENTSTATS_OPEN_PANEL"] != nil {
                 DispatchQueue.main.asyncAfter(deadline: .now() + 3) { [weak self] in self?.controller?.openPanel() }
@@ -210,6 +222,19 @@ final class StatusController: NSObject, NSPopoverDelegate {
             .store(in: &cancellables)
     }
 
+    /// O que o VoiceOver diz sobre o ícone da barra de menus.
+    private func spokenSummary() -> String {
+        let m = monitor
+        var parts = ["AgentStats"]
+        if m.needsAttentionCount > 0 { parts.append("\(m.needsAttentionCount) agente\(m.needsAttentionCount == 1 ? "" : "s") precisa\(m.needsAttentionCount == 1 ? "" : "m") de ti") }
+        parts.append("\(m.workingCount) de \(m.liveAgentCount) agentes a trabalhar")
+        if !m.activeAlerts.isEmpty { parts.append(m.activeAlerts.map { $0.kind == .cpu ? "CPU alta" : "temperatura alta" }.joined(separator: " e ")) }
+        parts.append("CPU \(Fmt.pct(m.cpu.total))")
+        parts.append("memória \(Fmt.pct(m.memory.usage))")
+        if let t = m.temps?.cpuMax { parts.append("temperatura \(Fmt.num(t, 0)) graus") }
+        return parts.joined(separator: ", ")
+    }
+
     /// Texto que a barra de menus mostraria: só se volta a desenhar o ícone quando muda.
     private func iconSignature() -> String {
         let d = UserDefaults.standard
@@ -231,6 +256,7 @@ final class StatusController: NSObject, NSPopoverDelegate {
     private func updateIcon() {
         if Monitor.disabled.contains("icon") { return }
         let sig = iconSignature()
+        item.button?.setAccessibilityLabel(spokenSummary())
         guard sig != lastIconSignature else { return }
         // Estado dos agentes e alertas mudam o ícone logo; os números (CPU, rede…) no máximo de 4 em 4 s.
         let urgent = sig.split(separator: "|").prefix(3) != lastIconSignature.split(separator: "|").prefix(3)
@@ -239,6 +265,8 @@ final class StatusController: NSObject, NSPopoverDelegate {
         lastIconUpdate = Date()
         item.button?.image = MenuBarDrawer.image(monitor)
     }
+
+    func saveHistory() { monitor.saveHistory() }
 
     func focusSession(id: String) {
         popover.performClose(nil)

@@ -13,6 +13,8 @@ App de barra de menus para macOS (estilo Stats) que mostra as métricas do siste
   { "hooks": { "Notification": [ { "hooks": [ { "type": "command", "command": "/Applications/AgentStats.app/Contents/MacOS/AgentStats --hook 2>/dev/null || true", "async": true, "timeout": 10 } ] } ] } }
   ```
 - **Ir para o agente:** clicar num cartão ou numa notificação traz para a frente a app onde o agente corre (Claude, Terminal, VS Code…; Codex → app ChatGPT)
+- **Histórico de 24 h:** um ponto por minuto (CPU, memória, temperatura, agentes a trabalhar), guardado em `~/Library/Application Support/AgentStats/history.json`; faixa de atividade dos agentes e gráficos de 24 h no Sistema
+- **Acessibilidade:** estado dos agentes por cor e forma (cheio, anel, losango, traço), descrições para o VoiceOver (cartões, leituras, gráficos, ícone da barra de menus) e respeito pela opção "Reduzir movimento"
 - **Tokens:** total de hoje (Claude + Codex) e por sessão, lido incrementalmente dos transcripts
 - **Alertas:** notificação quando a CPU ou a temperatura ficam 20 s acima do limite (configurável), com o processo mais pesado; aviso ⚠ na barra de menus
 - **Processos:** top por CPU
@@ -29,7 +31,7 @@ open build/AgentStats.app
 Diagnóstico sem interface: `build/AgentStats.app/Contents/MacOS/AgentStats --dump`
 
 ## Testes
-Swift Testing (37 testes: leitura de transcripts do Claude e do Codex, deteção de "precisa de aprovação", contagem de tokens, formatação):
+Swift Testing (41 testes: leitura de transcripts do Claude e do Codex, deteção de "precisa de aprovação", contagem de tokens, formatação):
 
 ```bash
 ./test.sh
