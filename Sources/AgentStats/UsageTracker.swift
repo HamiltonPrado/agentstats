@@ -98,6 +98,12 @@ final class UsageTracker {
         (try? url.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate) ?? .distantPast
     }
 
+    /// Tokens de um único ficheiro (lido de forma incremental, tal como em `update()`). Usado nos testes.
+    func usage(ofFile path: String, codex: Bool) -> (session: TokenUsage, byDay: [String: TokenUsage]) {
+        let st = scan(path, codex: codex)
+        return (st.session, st.byDay)
+    }
+
     // MARK: Leitura incremental
 
     private func scan(_ path: String, codex: Bool) -> FileState {

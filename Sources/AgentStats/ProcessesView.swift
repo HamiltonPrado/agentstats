@@ -2,7 +2,7 @@ import SwiftUI
 import AppKit
 
 struct ProcessesView: View {
-    @EnvironmentObject var m: Monitor
+    @Environment(Monitor.self) private var m
     @AppStorage("proc.sortByMem") private var sortByMem = false
     @Environment(\.colorScheme) private var scheme
 
@@ -48,20 +48,19 @@ struct ProcessesView: View {
 }
 
 struct ProcRow: View {
-    @EnvironmentObject var m: Monitor
+    @Environment(Monitor.self) private var m
     let p: ProcSample
     let sortByMem: Bool
     let maxValue: Double
     @StateObject private var hover = Box(false)
 
-    private var app: NSRunningApplication? { NSRunningApplication(processIdentifier: pid_t(p.pid)) }
 
     var body: some View {
-        let running = app
+        let running = AppInfo.lookup(p.pid)
         let fraction = sortByMem ? Double(p.rssKB) / maxValue : p.cpu / maxValue
         HStack(spacing: 10) {
             Group {
-                if let icon = running?.icon {
+                if let icon = running.icon {
                     Image(nsImage: icon).resizable()
                 } else {
                     Image(systemName: "gearshape.fill").resizable().scaledToFit().padding(4).foregroundStyle(.tertiary)
@@ -70,7 +69,7 @@ struct ProcRow: View {
             .frame(width: 18, height: 18)
 
             VStack(alignment: .leading, spacing: 1) {
-                Text(running?.localizedName ?? p.name).font(.system(size: 11.5, weight: .medium)).lineLimit(1)
+                Text(running.name ?? p.name).font(.system(size: 11.5, weight: .medium)).lineLimit(1)
                 Text("PID \(String(p.pid)) · \(Fmt.etime(p.elapsed))").font(.system(size: 9.5).monospacedDigit()).foregroundStyle(.tertiary)
             }
             Spacer(minLength: 6)
@@ -90,8 +89,8 @@ struct ProcRow: View {
         .background(RoundedRectangle(cornerRadius: 8).fill(Color.primary.opacity(hover.value ? 0.05 : 0)))
         .onHover { hover.value = $0 }
         .contextMenu {
-            Button("Terminar \(running?.localizedName ?? p.name)") { m.terminate(pid: p.pid) }
-            Button("Forçar terminação", role: .destructive) { m.terminate(pid: p.pid, force: true) }
+            Button("Terminar \(running.name ?? p.name)…") { ProcessKiller.confirmAndTerminate(pid: p.pid, name: running.name ?? p.name) }
+            Button("Forçar terminação…", role: .destructive) { ProcessKiller.confirmAndTerminate(pid: p.pid, name: running.name ?? p.name, force: true) }
             Divider()
             Button("Copiar PID (\(String(p.pid)))") {
                 NSPasteboard.general.clearContents()

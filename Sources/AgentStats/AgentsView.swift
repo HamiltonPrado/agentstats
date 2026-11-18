@@ -42,7 +42,7 @@ extension AgentState {
 }
 
 struct AgentsView: View {
-    @EnvironmentObject var m: Monitor
+    @Environment(Monitor.self) private var m
     @AppStorage("agents.showRecent") private var showRecent = false
 
     var body: some View {
@@ -158,7 +158,7 @@ struct StateIcon: View {
 }
 
 struct SessionCard: View {
-    @EnvironmentObject var m: Monitor
+    @Environment(Monitor.self) private var m
     let session: AgentSession
     @StateObject private var hover = Box(false)
 
@@ -258,13 +258,13 @@ struct SessionCard: View {
         Button("Mostrar transcript") { NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: session.id)]) }
         if let p = session.process {
             Divider()
-            Button("Terminar agente (PID \(String(p.pid)))", role: .destructive) { m.terminate(pid: p.pid) }
+            Button("Terminar agente… (PID \(String(p.pid)))", role: .destructive) { ProcessKiller.confirmAndTerminate(pid: p.pid, name: session.title) }
         }
     }
 }
 
 struct OtherAgentRow: View {
-    @EnvironmentObject var m: Monitor
+    @Environment(Monitor.self) private var m
     let agent: AgentProcess
 
     private var subtitle: String {
@@ -295,7 +295,7 @@ struct OtherAgentRow: View {
         }
         .cardStyle(padding: 8)
         .contextMenu {
-            Button("Terminar processo (PID \(String(agent.pid)))", role: .destructive) { m.terminate(pid: agent.pid) }
+            Button("Terminar processo… (PID \(String(agent.pid)))", role: .destructive) { ProcessKiller.confirmAndTerminate(pid: agent.pid, name: agent.kind) }
         }
     }
 }

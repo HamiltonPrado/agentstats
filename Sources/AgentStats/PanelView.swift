@@ -24,7 +24,7 @@ enum Tab: String, CaseIterable, Identifiable {
 }
 
 struct PanelView: View {
-    @EnvironmentObject var m: Monitor
+    @Environment(Monitor.self) private var m
     @Environment(\.colorScheme) private var scheme
     @AppStorage("panel.tab2") private var storedTab: Tab = .agents
     var forcedTab: Tab? = nil
@@ -162,7 +162,7 @@ struct PanelView: View {
 }
 
 private struct ContentHeightKey: PreferenceKey {
-    static var defaultValue: CGFloat = 0
+    static let defaultValue: CGFloat = 0
     static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) { value = max(value, nextValue()) }
 }
 

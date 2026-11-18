@@ -23,6 +23,18 @@ open build/AgentStats.app
 
 Diagnóstico sem interface: `build/AgentStats.app/Contents/MacOS/AgentStats --dump`
 
+## Testes
+Swift Testing (30 testes: leitura de transcripts do Claude e do Codex, deteção de "precisa de aprovação", contagem de tokens, formatação):
+
+```bash
+./test.sh
+```
+
+## Arquitetura
+- `Sampler` (actor) é dono de todos os leitores e devolve uma `Sample` imutável (`Sendable`) por volta
+- `Monitor` (`@Observable`, main actor) aplica cada amostra; as vistas só redesenham o que leem
+- Modo de linguagem Swift 6 (segurança contra data races verificada pelo compilador)
+
 ## Ícone
 Gerado por código em `Scripts/make-icon.swift` → `Resources/AppIcon-1024.png`; o `build.sh` converte-o em `.icns`.
 

@@ -17,7 +17,7 @@ final class CodexReader {
         let updated: Date
     }
 
-    private struct TailInfo {
+    struct TailInfo {
         var state: AgentState = .unknown
         var detail: String?
         var timestamp: Date?
@@ -87,14 +87,27 @@ final class CodexReader {
             // Sem os ficheiros -wal/-shm (app do Codex fechada) a abertura só-leitura falha:
             // em modo imutável o SQLite lê o ficheiro principal sem precisar deles.
             let uri = "file:" + (path.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? path) + "?immutable=1"
-            guard sqlite3_open_v2(uri, &db, SQLITE_OPEN_READONLY | SQLITE_OPEN_URI, nil) == SQLITE_OK else { sqlite3_close(db); return }
+            guard sqlite3_open_v2(uri, &db, SQLITE_OPEN_READONLY | SQLITE_OPEN_URI, nil) == SQLITE_OK else {
+                logOnce("open:\(path)", "Não foi possível abrir \(path): \(String(cString: sqlite3_errmsg(db)))")
+                sqlite3_close(db); return
+            }
         }
         defer { sqlite3_close(db) }
         sqlite3_busy_timeout(db, 200)
         var stmt: OpaquePointer?
-        guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK, let stmt else { return }
+        guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK, let stmt else {
+            logOnce("prepare:\(path)", "Consulta falhou em \(path): \(String(cString: sqlite3_errmsg(db)))")
+            return
+        }
         defer { sqlite3_finalize(stmt) }
         while sqlite3_step(stmt) == SQLITE_ROW { row(stmt) }
+    }
+
+    /// Regista cada tipo de falha uma só vez (a amostragem repete-se a cada poucos segundos).
+    private var logged = Set<String>()
+    private func logOnce(_ key: String, _ message: String) {
+        guard logged.insert(key).inserted else { return }
+        Log.readers.error("Codex: \(message, privacy: .public)")
     }
 
     private func canRead(_ db: OpaquePointer?) -> Bool {
@@ -147,7 +160,7 @@ final class CodexReader {
 
     /// Os títulos de conversas continuadas a partir do ChatGPT trazem um bloco de contexto enorme:
     /// usa o nome da thread ou o texto depois de "## My request:".
-    private static func cleanTitle(name: String?, title: String?, first: String?) -> String {
+    static func cleanTitle(name: String?, title: String?, first: String?) -> String {
         if let n = name?.trimmingCharacters(in: .whitespacesAndNewlines), !n.isEmpty { return n }
         for raw in [title, first].compactMap({ $0 }) {
             var t = raw
@@ -174,6 +187,14 @@ final class CodexReader {
         try? h.seek(toOffset: start)
         var lines = ((try? h.readToEnd()) ?? Data()).split(separator: UInt8(ascii: "\n"))
         if start > 0, !lines.isEmpty { lines.removeFirst() }
+        info = parseTail(lines)
+        tailCache[path] = (mtime, size, info)
+        return info
+    }
+
+    /// Interpreta as linhas de um rollout do Codex, da mais recente para trás (testável sem ficheiros).
+    func parseTail(_ lines: [Data]) -> TailInfo {
+        var info = TailInfo()
 
         for line in lines.reversed() {
             guard let j = try? JSONSerialization.jsonObject(with: Data(line)) as? [String: Any],
@@ -221,12 +242,11 @@ final class CodexReader {
                 break
             }
         }
-        tailCache[path] = (mtime, size, info)
         return info
     }
 
     /// Converte chamadas de ferramentas do Codex em nome + descrição legíveis.
-    private static func describeTool(name: String, input: String) -> (String, String?) {
+    static func describeTool(name: String, input: String) -> (String, String?) {
         // function_call: argumentos em JSON
         if let d = input.data(using: .utf8),
            let j = try? JSONSerialization.jsonObject(with: d) as? [String: Any] {

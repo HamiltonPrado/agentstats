@@ -12,7 +12,7 @@ struct History {
     }
 }
 
-struct SystemAlert: Identifiable {
+struct SystemAlert: Identifiable, Sendable {
     enum Kind: String { case cpu, temp }
     var id: String { kind.rawValue }
     let kind: Kind
@@ -21,68 +21,68 @@ struct SystemAlert: Identifiable {
     let detail: String?
 }
 
+/// Estado observado pela interface. Com `@Observable`, cada vista só é redesenhada quando muda
+/// uma propriedade que ela própria lê (com `ObservableObject`, qualquer mudança redesenhava todas).
 @MainActor
-final class Monitor: ObservableObject {
-    @Published var cpu = CPUSample()
-    @Published var memory = MemorySample()
-    @Published var network = NetworkSample()
-    @Published var disk = DiskSample()
-    @Published var gpu: Double?
-    @Published var temps: TemperatureSample?
-    @Published var battery: BatterySample?
-    @Published var topProcesses: [ProcSample] = []
-    @Published var topMemory: [ProcSample] = []
-    @Published var agents: [AgentProcess] = []
-    @Published var sessions: [AgentSession] = []
-    @Published var thermal: ProcessInfo.ThermalState = .nominal
-    @Published var uptime: TimeInterval = 0
+@Observable
+final class Monitor {
+    var cpu = CPUSample()
+    var memory = MemorySample()
+    var network = NetworkSample()
+    var disk = DiskSample()
+    var gpu: Double?
+    var temps: TemperatureSample?
+    var battery: BatterySample?
+    var topProcesses: [ProcSample] = []
+    var topMemory: [ProcSample] = []
+    var agents: [AgentProcess] = []
+    var sessions: [AgentSession] = []
+    var thermal: ProcessInfo.ThermalState = .nominal
+    var uptime: TimeInterval = 0
+    var activeAlerts: [SystemAlert] = []
+    var usage = UsageSnapshot()
 
-    @Published var cpuHistory = History()
-    @Published var memHistory = History()
-    @Published var gpuHistory = History()
-    @Published var downHistory = History()
-    @Published var upHistory = History()
-    @Published var tempHistory = History()
+    var cpuHistory = History()
+    var memHistory = History()
+    var gpuHistory = History()
+    var downHistory = History()
+    var upHistory = History()
+    var tempHistory = History()
 
-    let machine: String = Sys.sysctlString("machdep.cpu.brand_string") ?? "Mac"
-    let model: String = Sys.sysctlString("hw.model") ?? ""
-    let pCores = Sys.sysctlInt("hw.perflevel0.logicalcpu", Int32.self).map(Int.init)
-    let eCores = Sys.sysctlInt("hw.perflevel1.logicalcpu", Int32.self).map(Int.init)
+    @ObservationIgnored let machine: String = Sys.sysctlString("machdep.cpu.brand_string") ?? "Mac"
+    @ObservationIgnored let model: String = Sys.sysctlString("hw.model") ?? ""
+    @ObservationIgnored let pCores = Sys.sysctlInt("hw.perflevel0.logicalcpu", Int32.self).map(Int.init)
+    @ObservationIgnored let eCores = Sys.sysctlInt("hw.perflevel1.logicalcpu", Int32.self).map(Int.init)
 
-    @AppStorage("refreshInterval") var refreshInterval: Double = 2
-    @AppStorage("notifyOnFinish") var notifyOnFinish = true
+    // MARK: Definições (guardadas em UserDefaults, mas observáveis: a interface atualiza logo)
 
-    // Alertas
-    @AppStorage("alert.cpu.enabled") var cpuAlertEnabled = true
-    @AppStorage("alert.cpu.threshold") var cpuThreshold: Double = 0.85
-    @AppStorage("alert.temp.enabled") var tempAlertEnabled = true
-    @AppStorage("alert.temp.threshold") var tempThreshold: Double = 85
-    @Published var activeAlerts: [SystemAlert] = []
-    @Published var usage = UsageSnapshot()
+    var refreshInterval: Double = Pref.double("refreshInterval", 2) {
+        didSet { Pref.set(refreshInterval, "refreshInterval"); restart() }
+    }
+    var notifyOnFinish: Bool = Pref.bool("notifyOnFinish", true) { didSet { Pref.set(notifyOnFinish, "notifyOnFinish") } }
+    var cpuAlertEnabled: Bool = Pref.bool("alert.cpu.enabled", true) { didSet { Pref.set(cpuAlertEnabled, "alert.cpu.enabled") } }
+    var cpuThreshold: Double = Pref.double("alert.cpu.threshold", 0.85) { didSet { Pref.set(cpuThreshold, "alert.cpu.threshold") } }
+    var tempAlertEnabled: Bool = Pref.bool("alert.temp.enabled", true) { didSet { Pref.set(tempAlertEnabled, "alert.temp.enabled") } }
+    var tempThreshold: Double = Pref.double("alert.temp.threshold", 85) { didSet { Pref.set(tempThreshold, "alert.temp.threshold") } }
+
     /// Com o painel aberto tudo é atualizado a cada amostra; fechado, as partes caras abrandam.
-    var panelOpen = false
-    private var highSince: [SystemAlert.Kind: Date] = [:]
-    private var lastNotified: [SystemAlert.Kind: Date] = [:]
+    @ObservationIgnored var panelOpen = false
+    /// Chamado depois de aplicar cada amostra (o ícone da barra de menus usa-o).
+    @ObservationIgnored var onUpdate: (() -> Void)?
+
     /// Tempo que o valor tem de ficar acima do limite antes de alertar (evita picos curtos).
     static let alertSustain: TimeInterval = 20
     static let alertCooldown: TimeInterval = 10 * 60
-
-    private let cpuReader = CPUReader()
-    private let netReader = NetworkReader()
-    private let diskReader = DiskReader()
-    private let agentReader = AgentReader()
-    private let tempReader = TemperatureReader()
-    private let codexReader = CodexReader()
-    private let procSampler = ProcessSampler()
-    private let usageTracker = UsageTracker()
-    private var lastTemps: TemperatureSample?
-    private let queue = DispatchQueue(label: "agentstats.sampler", qos: .utility)
-    private var timer: Timer?
-    private var tick = 0
-    private var previousStates: [String: AgentState] = [:]
-
-    /// Diagnóstico: AGENTSTATS_DISABLE=temps,procs,sessions,gpu,disk,icon desliga partes para medir custos.
+    /// Diagnóstico: AGENTSTATS_DISABLE=temps,procs,sessions,usage,gpu,disk,icon desliga partes para medir custos.
     static let disabled = Set((ProcessInfo.processInfo.environment["AGENTSTATS_DISABLE"] ?? "").split(separator: ",").map(String.init))
+
+    @ObservationIgnored private let sampler = Sampler()
+    @ObservationIgnored private var timer: Timer?
+    @ObservationIgnored private var tick = 0
+    @ObservationIgnored private var sampling = false
+    @ObservationIgnored private var previousStates: [String: AgentState] = [:]
+    @ObservationIgnored private var highSince: [SystemAlert.Kind: Date] = [:]
+    @ObservationIgnored private var lastNotified: [SystemAlert.Kind: Date] = [:]
 
     var workingCount: Int { sessions.filter { $0.state.isWorking }.count }
     var needsAttentionCount: Int { sessions.filter { $0.state.needsAttention }.count }
@@ -101,67 +101,51 @@ final class Monitor: ObservableObject {
         }
     }
 
-    private var sampling = false
-
     func sample() {
         guard !sampling else { return }
         sampling = true
         tick += 1
-        let slow = tick % 2 == 1 // bateria e temperaturas mudam devagar: metade da frequência
-
         let off = Self.disabled
-        let needTemps = !off.contains("temps") && (tick % 3 == 1 || lastTemps == nil)  // temperaturas: de 6 em 6 s
-        let cpuReader = cpuReader, netReader = netReader, diskReader = diskReader, agentReader = agentReader, tempReader = tempReader, codexReader = codexReader, procSampler = procSampler, usageTracker = usageTracker
-        let needUsage = !off.contains("usage") && tick % 5 == 1   // tokens: de 10 em 10 s
-        // Processos e agentes: a cada amostra com o painel aberto; com ele fechado, de 2 em 2 (4 s).
-        let needAgents = panelOpen || tick % 2 == 1 || agents.isEmpty
-        queue.async {
-            let cpu = cpuReader.read()
-            let mem = MemoryReader.read()
-            let net = netReader.read()
-            let disk = off.contains("disk") ? DiskSample() : diskReader.read()
-            let gpu = off.contains("gpu") ? nil : GPUReader.read()
-            let temps = needTemps ? tempReader.read() : nil
-            let battery = slow ? BatteryReader.read() : nil
-            let procs = !needAgents || off.contains("procs") ? nil : procSampler.read()
-            let agents = procs.map { agentReader.agentProcesses(from: $0) }
-            let sessions = agents.map { ag in
-                off.contains("sessions") ? [] : (agentReader.sessions(processes: ag) + codexReader.sessions())
-                    .sorted { $0.lastActivity > $1.lastActivity }
-            }
-            let usage = needUsage ? usageTracker.update() : nil
-            let top = procs.map { Array($0.sorted { $0.cpu > $1.cpu }.prefix(12)) }
-            let topMem = procs.map { Array($0.sorted { $0.rssKB > $1.rssKB }.prefix(12)) }
-
-            DispatchQueue.main.async {
-                self.cpu = cpu
-                self.memory = mem
-                self.network = net
-                self.disk = disk
-                self.gpu = gpu
-                if let temps { self.temps = temps; self.lastTemps = temps }
-                if let t = self.temps?.cpuMax { self.tempHistory.push(t) }
-                if slow { self.battery = battery }
-                if let usage { self.usage = usage }
-                if let top, let topMem, let agents, let sessions {
-                    self.topProcesses = top
-                    self.topMemory = topMem
-                    self.agents = agents
-                    self.handleTransitions(sessions)
-                    self.sessions = sessions
-                }
-                self.thermal = ProcessInfo.processInfo.thermalState
-                self.uptime = Sys.uptime
-
-                self.cpuHistory.push(cpu.total)
-                self.memHistory.push(mem.usage)
-                self.gpuHistory.push(gpu ?? 0)
-                self.downHistory.push(net.downPerSec)
-                self.upHistory.push(net.upPerSec)
-                self.checkAlerts()
-                self.sampling = false
-            }
+        let request = SampleRequest(
+            temps: !off.contains("temps") && (tick % 3 == 1 || temps == nil),        // de 6 em 6 s
+            battery: tick % 2 == 1,
+            agents: panelOpen || tick % 2 == 1 || agents.isEmpty,                       // painel fechado: de 4 em 4 s
+            usage: !off.contains("usage") && tick % 5 == 1,                             // de 10 em 10 s
+            disabled: off)
+        // O Task herda o main actor; o trabalho pesado corre no ator Sampler e volta como um valor.
+        Task {
+            let s = await sampler.sample(request)
+            apply(s)
+            sampling = false
         }
+    }
+
+    private func apply(_ s: Sample) {
+        cpu = s.cpu
+        memory = s.memory
+        network = s.network
+        disk = s.disk
+        gpu = s.gpu
+        if let t = s.temps { temps = t }
+        if let t = temps?.cpuMax { tempHistory.push(t) }
+        if let b = s.battery { battery = b }
+        if let u = s.usage { usage = u }
+        if let a = s.agents {
+            topProcesses = a.topCPU
+            topMemory = a.topMemory
+            agents = a.agents
+            handleTransitions(a.sessions)
+            sessions = a.sessions
+        }
+        thermal = ProcessInfo.processInfo.thermalState
+        uptime = Sys.uptime
+        cpuHistory.push(s.cpu.total)
+        memHistory.push(s.memory.usage)
+        gpuHistory.push(s.gpu ?? 0)
+        downHistory.push(s.network.downPerSec)
+        upHistory.push(s.network.upPerSec)
+        checkAlerts()
+        onUpdate?()
     }
 
     private func handleTransitions(_ new: [AgentSession]) {
@@ -187,7 +171,7 @@ final class Monitor: ObservableObject {
     // MARK: Alertas
 
     private func checkAlerts(now: Date = Date()) {
-        let culprit = topProcesses.first.map { "\(NSRunningApplication(processIdentifier: pid_t($0.pid))?.localizedName ?? $0.name) (\(String(format: "%.0f%%", $0.cpu)))" }
+        let culprit = topProcesses.first.map { "\(AppInfo.lookup($0.pid).name ?? $0.name) (\(String(format: "%.0f%%", $0.cpu)))" }
 
         var alerts: [SystemAlert] = []
         // CPU: dispara acima do limite, só desliga 5 pontos abaixo (histerese)
@@ -227,10 +211,13 @@ final class Monitor: ObservableObject {
         guard let since = highSince[kind], now.timeIntervalSince(since) >= Self.alertSustain else { return nil }
         return since
     }
+}
 
-    func terminate(pid: Int, force: Bool = false) {
-        kill(pid_t(pid), force ? SIGKILL : SIGTERM)
-    }
+/// Leitura/escrita das definições em UserDefaults (com valor por omissão).
+enum Pref {
+    static func double(_ key: String, _ def: Double) -> Double { UserDefaults.standard.object(forKey: key) as? Double ?? def }
+    static func bool(_ key: String, _ def: Bool) -> Bool { UserDefaults.standard.object(forKey: key) as? Bool ?? def }
+    static func set(_ value: Any, _ key: String) { UserDefaults.standard.set(value, forKey: key) }
 }
 
 // MARK: - Formatação

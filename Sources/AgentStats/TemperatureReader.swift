@@ -31,7 +31,10 @@ final class TemperatureReader {
     private var extraCache: [(name: String, value: Double)] = []
 
     init() {
-        guard let h = dlopen("/System/Library/Frameworks/IOKit.framework/IOKit", RTLD_NOW) else { return }
+        guard let h = dlopen("/System/Library/Frameworks/IOKit.framework/IOKit", RTLD_NOW) else {
+            Log.readers.error("Temperaturas indisponíveis: dlopen do IOKit falhou")
+            return
+        }
         func sym<T>(_ n: String, _ t: T.Type) -> T? { dlsym(h, n).map { unsafeBitCast($0, to: t) } }
         guard let create = sym("IOHIDEventSystemClientCreate", Create.self),
               let setMatching = sym("IOHIDEventSystemClientSetMatching", SetMatching.self) else { return }

@@ -80,7 +80,12 @@ enum Sys {
         guard sysctlbyname(name, nil, &size, nil, 0) == 0, size > 0 else { return nil }
         var buf = [CChar](repeating: 0, count: size)
         guard sysctlbyname(name, &buf, &size, nil, 0) == 0 else { return nil }
-        return String(cString: buf)
+        return string(buf)
+    }
+
+    /// Texto de um buffer C terminado em nulo (sem ler para além do array).
+    static func string(_ chars: [CChar]) -> String {
+        String(decoding: chars.prefix(while: { $0 != 0 }).map { UInt8(bitPattern: $0) }, as: UTF8.self)
     }
 
     static var uptime: TimeInterval {
@@ -98,7 +103,10 @@ enum Sys {
         let pipe = Pipe()
         p.standardOutput = pipe
         p.standardError = FileHandle.nullDevice
-        do { try p.run() } catch { return "" }
+        do { try p.run() } catch {
+            Log.readers.error("Falha a lançar \(path, privacy: .public): \(error.localizedDescription, privacy: .public)")
+            return ""
+        }
         let data = pipe.fileHandleForReading.readDataToEndOfFile()
         p.waitUntilExit()
         return String(decoding: data, as: UTF8.self)
@@ -174,6 +182,8 @@ final class CPUReader {
 // MARK: - Memória
 
 enum MemoryReader {
+    private static let pageSize = UInt64(sysconf(_SC_PAGESIZE))
+
     static func read() -> MemorySample {
         var s = MemorySample()
         var stats = vm_statistics64()
@@ -184,7 +194,7 @@ enum MemoryReader {
             }
         }
         if r == KERN_SUCCESS {
-            let page = UInt64(vm_kernel_page_size)
+            let page = Self.pageSize
             let internalPages = UInt64(stats.internal_page_count)
             let purgeable = UInt64(stats.purgeable_count)
             s.app = (internalPages > purgeable ? internalPages - purgeable : 0) * page
@@ -235,7 +245,7 @@ final class NetworkReader {
                 } else if family == AF_INET, s.localIP == "—", (ifa.ifa_flags & UInt32(IFF_UP)) != 0 {
                     var host = [CChar](repeating: 0, count: Int(NI_MAXHOST))
                     if getnameinfo(addr, socklen_t(addr.pointee.sa_len), &host, socklen_t(host.count), nil, 0, NI_NUMERICHOST) == 0 {
-                        s.localIP = String(cString: host)
+                        s.localIP = Sys.string(host)
                         s.interface = name
                     }
                 }
@@ -465,8 +475,8 @@ final class ProcessSampler {
             var cpu = 0.0
             if dWall > 0, let p = prevTimes[pid], total >= p { cpu = Double(total - p) / dWall * 100 }
 
-            var name = withUnsafeBytes(of: bi.pbi_name) { String(cString: $0.bindMemory(to: CChar.self).baseAddress!) }
-            if name.isEmpty { name = withUnsafeBytes(of: bi.pbi_comm) { String(cString: $0.bindMemory(to: CChar.self).baseAddress!) } }
+            var name = Self.fixedCString(bi.pbi_name)
+            if name.isEmpty { name = Self.fixedCString(bi.pbi_comm) }
             var args = name
             if ProcessReader.argsWanted.contains(name) || name.hasPrefix("python") {
                 if let c = argsCache[pid], c.start == bi.pbi_start_tvsec { args = c.args }
@@ -495,6 +505,12 @@ final class ProcessSampler {
         }
         out.append(contentsOf: fresh.values)
         return out
+    }
+
+    /// Texto de um array C de tamanho fixo. O kernel não garante o terminador nulo quando o nome
+    /// ocupa o array todo, por isso lê no máximo o tamanho do array (nunca para além dele).
+    static func fixedCString<T>(_ tuple: T) -> String {
+        withUnsafeBytes(of: tuple) { raw in String(decoding: raw.prefix(while: { $0 != 0 }), as: UTF8.self) }
     }
 
     /// Formato igual ao `etime` do ps: [DD-]HH:MM:SS

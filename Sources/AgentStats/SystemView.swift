@@ -14,7 +14,7 @@ private struct TileData {
 }
 
 struct SystemView: View {
-    @EnvironmentObject var m: Monitor
+    @Environment(Monitor.self) private var m
     @AppStorage("system.detail") private var selected: Metric = .cpu
 
     var body: some View {

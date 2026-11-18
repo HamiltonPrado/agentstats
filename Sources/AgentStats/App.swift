@@ -47,7 +47,7 @@ enum AgentStatsApp {
         for scheme in [ColorScheme.light, .dark] {
             for tab in Tab.allCases {
                 let view = PanelView(forcedTab: tab, scrollable: false)
-                    .environmentObject(m)
+                    .environment(m)
                     .environment(\.colorScheme, scheme)
                     .background(scheme == .dark ? Color(white: 0.17) : Color(white: 0.95))
                 let r = ImageRenderer(content: view)
@@ -60,7 +60,7 @@ enum AgentStatsApp {
             }
         }
         // barra de menus
-        let bar = ImageRenderer(content: MenuBarLabel().environmentObject(m).padding(4).background(Color.white))
+        let bar = ImageRenderer(content: MenuBarLabel().environment(m).padding(4).background(Color.white))
         bar.scale = 3
         if let tiff = bar.nsImage?.tiffRepresentation, let rep = NSBitmapImageRep(data: tiff),
            let png = rep.representation(using: .png, properties: [:]) {
@@ -98,7 +98,7 @@ enum AgentStatsApp {
         MainActor.assumeIsolated {
             let m = Monitor()
             RunLoop.main.run(until: Date().addingTimeInterval(3))
-            time("Ícone da barra") { _ = MenuBarContent.image(m) }
+            time("Ícone da barra") { _ = MenuBarDrawer.image(m) }
         }
     }
 
@@ -174,10 +174,7 @@ final class StatusController: NSObject, NSPopoverDelegate {
         updateIcon()
 
         // Atualiza o ícone quando há novas amostras ou quando as definições mudam
-        monitor.objectWillChange
-            .debounce(for: .milliseconds(60), scheduler: RunLoop.main)
-            .sink { [weak self] _ in self?.updateIcon() }
-            .store(in: &cancellables)
+        monitor.onUpdate = { [weak self] in self?.updateIcon() }
         NotificationCenter.default.publisher(for: UserDefaults.didChangeNotification)
             .debounce(for: .milliseconds(60), scheduler: RunLoop.main)
             .sink { [weak self] _ in self?.updateIcon() }
@@ -215,6 +212,7 @@ final class StatusController: NSObject, NSPopoverDelegate {
     }
 
     func openPanel() {
+        popover.behavior = .applicationDefined   // diagnóstico: fica aberto mesmo ao clicar noutro sítio
         if !popover.isShown { toggle(nil) }
     }
 
@@ -223,7 +221,7 @@ final class StatusController: NSObject, NSPopoverDelegate {
         if popover.isShown {
             popover.performClose(sender)
         } else {
-            host.rootView = AnyView(PanelView().environmentObject(monitor))
+            host.rootView = AnyView(PanelView().environment(monitor))
             monitor.panelOpen = true
             monitor.sample()   // dados frescos ao abrir
             NSApp.activate(ignoringOtherApps: true)
@@ -241,7 +239,7 @@ final class StatusController: NSObject, NSPopoverDelegate {
 // MARK: - Etiqueta na barra de menus (desenhada como imagem, estilo Stats)
 
 struct MenuBarLabel: View {
-    @EnvironmentObject var m: Monitor
+    @Environment(Monitor.self) private var m
     @AppStorage("bar.agents") var showAgents = true
     @AppStorage("bar.cpu") var showCPU = true
     @AppStorage("bar.ram") var showRAM = true
@@ -263,69 +261,5 @@ struct MenuBarLabel: View {
             Text(value).font(.system(size: 10, weight: .semibold).monospacedDigit())
         }
         .frame(minWidth: 24, alignment: .leading)
-    }
-}
-
-/// Conteúdo da barra de menus (desenhado uma única vez como imagem pelo StatusController).
-struct MenuBarContent: View {
-    @ObservedObject var m: Monitor
-    @AppStorage("bar.agents") var showAgents = true
-    @AppStorage("bar.cpu") var showCPU = true
-    @AppStorage("bar.ram") var showRAM = true
-    @AppStorage("bar.gpu") var showGPU = false
-    @AppStorage("bar.net") var showNet = true
-    @AppStorage("bar.battery") var showBattery = false
-    @AppStorage("bar.temp") var showTemp = true
-
-    var body: some View {
-        HStack(spacing: 7) {
-        if !m.activeAlerts.isEmpty {
-            Image(systemName: "exclamationmark.triangle.fill").font(.system(size: 11, weight: .bold))
-        }
-        if showAgents {
-            HStack(spacing: 2) {
-                Image(systemName: m.workingCount > 0 ? "sparkles" : "sparkle")
-                    .font(.system(size: 11, weight: .semibold))
-                Text("\(m.workingCount)/\(m.liveAgentCount)")
-                    .font(.system(size: 11, weight: .semibold).monospacedDigit())
-            }
-        }
-        if showCPU { cell("CPU", Fmt.pct(m.cpu.total)) }
-        if showRAM { cell("RAM", Fmt.pct(m.memory.usage)) }
-        if showGPU, let g = m.gpu { cell("GPU", Fmt.pct(g)) }
-        if showTemp, let t = m.temps?.cpuMax { cell("TEMP", String(format: "%.0f°", t)) }
-        if showNet {
-            VStack(alignment: .trailing, spacing: -1) {
-                Text("↑ " + Fmt.rate(m.network.upPerSec, short: true))
-                Text("↓ " + Fmt.rate(m.network.downPerSec, short: true))
-            }
-            .font(.system(size: 8.5, weight: .medium).monospacedDigit())
-            .frame(minWidth: 40, alignment: .trailing)
-        }
-        if showBattery, let b = m.battery { cell(b.isCharging ? "BAT ⚡︎" : "BAT", Fmt.pct(b.percent)) }
-        if !(showAgents || showCPU || showRAM || showGPU || showNet || showBattery || showTemp) {
-            Image(systemName: "gauge.with.dots.needle.33percent").font(.system(size: 12))
-        }
-    }
-    .foregroundStyle(.black)
-    .padding(.horizontal, 1)
-    .frame(height: 18)
-    }
-
-    private func cell(_ title: String, _ value: String) -> some View {
-        VStack(alignment: .leading, spacing: -2) {
-            Text(title).font(.system(size: 7, weight: .semibold))
-            Text(value).font(.system(size: 10, weight: .semibold).monospacedDigit())
-        }
-        .frame(minWidth: 24, alignment: .leading)
-    }
-
-    /// Imagem-modelo (adapta-se ao tema claro/escuro da barra).
-    @MainActor static func image(_ m: Monitor) -> NSImage? {
-        let r = ImageRenderer(content: MenuBarContent(m: m))
-        r.scale = NSScreen.main?.backingScaleFactor ?? 2
-        guard let img = r.nsImage else { return nil }
-        img.isTemplate = true
-        return img
     }
 }

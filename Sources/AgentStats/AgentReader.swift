@@ -76,7 +76,7 @@ final class AgentReader {
     private let projectsDir = FileManager.default.homeDirectoryForCurrentUser
         .appendingPathComponent(".claude/projects")
 
-    private struct TailInfo {
+    struct TailInfo {
         var cwd: String?
         var model: String?
         var state: AgentState = .unknown
@@ -165,7 +165,7 @@ final class AgentReader {
                 memKB: p.rssKB + desc.reduce(0) { $0 + $1.rssKB },
                 elapsed: p.elapsed,
                 cwd: Sys.cwd(of: p.pid),
-                children: Array(NSOrderedSet(array: busy).array as! [String]).prefix(4).map { $0 },
+                children: Array(busy.uniqued().prefix(4)),
                 isSubagent: hasAgentAncestor(p) || role == "executor",
                 role: role,
                 shellChildren: desc.filter { ["zsh", "bash", "sh"].contains($0.name) }.count
@@ -305,7 +305,15 @@ final class AgentReader {
         let data = (try? h.readToEnd()) ?? Data()
         var lines = data.split(separator: UInt8(ascii: "\n"))
         if start > 0, !lines.isEmpty { lines.removeFirst() }
+        info = parseTail(lines)
+        tailCache[url.path] = (mtime, size, info)
+        return info
+    }
 
+    /// Interpreta as linhas de um transcript do Claude Code, da mais recente para trás.
+    /// (Separado da leitura do ficheiro para poder ser testado.)
+    func parseTail(_ lines: [Data]) -> TailInfo {
+        var info = TailInfo()
         var stateFound = false
         for line in lines.reversed() {
             guard let j = try? JSONSerialization.jsonObject(with: Data(line)) as? [String: Any] else { continue }
@@ -345,7 +353,6 @@ final class AgentReader {
             }
             if stateFound && info.cwd != nil && info.model != nil { break }
         }
-        tailCache[url.path] = (mtime, size, info)
         return info
     }
 
@@ -368,5 +375,13 @@ final class AgentReader {
     static func oneLine(_ s: String) -> String {
         let l = s.replacingOccurrences(of: "\n", with: " ").trimmingCharacters(in: .whitespaces)
         return l.count > 90 ? String(l.prefix(90)) + "…" : l
+    }
+}
+
+extension Sequence where Element: Hashable {
+    /// Remove repetidos mantendo a ordem da primeira ocorrência.
+    func uniqued() -> [Element] {
+        var seen = Set<Element>()
+        return filter { seen.insert($0).inserted }
     }
 }

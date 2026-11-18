@@ -2,7 +2,7 @@ import SwiftUI
 import ServiceManagement
 
 struct SettingsView: View {
-    @EnvironmentObject var m: Monitor
+    @Environment(Monitor.self) private var m
     @AppStorage("bar.agents") var showAgents = true
     @AppStorage("bar.cpu") var showCPU = true
     @AppStorage("bar.ram") var showRAM = true
@@ -14,6 +14,7 @@ struct SettingsView: View {
     @StateObject private var loginErr = Box<String?>(nil)
 
     var body: some View {
+        @Bindable var m = m
         VStack(alignment: .leading, spacing: 14) {
             group("Barra de menus") {
                 VStack(alignment: .leading, spacing: 8) {
@@ -79,7 +80,7 @@ struct SettingsView: View {
             }
 
             HStack {
-                Text("AgentStats 1.3").font(.system(size: 10.5, weight: .medium)).foregroundStyle(.secondary)
+                Text("AgentStats 1.4").font(.system(size: 10.5, weight: .medium)).foregroundStyle(.secondary)
                 Spacer()
                 Link("Código no GitHub", destination: URL(string: "https://github.com/HamiltonPrado/agentstats")!)
                     .font(.system(size: 10.5))
