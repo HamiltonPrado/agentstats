@@ -30,19 +30,21 @@ struct PanelView: View {
     var forcedTab: Tab? = nil
     var scrollable = true
     @StateObject private var contentHeight = Box<CGFloat>(300)
-    static let maxContentHeight: CGFloat = 600
+    static let maxContentHeight: CGFloat = 480
+    static let width: CGFloat = 340
 
     private var tab: Tab { forcedTab ?? storedTab }
 
     var body: some View {
         VStack(spacing: 0) {
             header
-            if tab != .settings { tabBar.padding(.horizontal, 12).padding(.bottom, 10) }
+            if !m.activeAlerts.isEmpty { AlertBanner(alerts: m.activeAlerts).padding(.horizontal, 10).padding(.bottom, 8) }
+            if tab != .settings { tabBar.padding(.horizontal, 10).padding(.bottom, 8) }
             Divider().opacity(0.6)
             if scrollable {
                 // Altura ajusta-se ao conteúdo; só faz scroll acima do máximo.
                 ScrollView {
-                    content.padding(12)
+                    content.padding(10)
                         .background(GeometryReader { g in
                             Color.clear.preference(key: ContentHeightKey.self, value: g.size.height)
                         })
@@ -52,12 +54,12 @@ struct PanelView: View {
                     if abs(h - contentHeight.value) > 0.5 { contentHeight.value = h }
                 }
             } else {
-                content.padding(12)
+                content.padding(10)
             }
             Divider().opacity(0.6)
             footer
         }
-        .frame(width: 400)
+        .frame(width: Self.width)
     }
 
     @ViewBuilder private var content: some View {
@@ -72,15 +74,15 @@ struct PanelView: View {
     // MARK: Cabeçalho
 
     private var header: some View {
-        HStack(spacing: 10) {
+        HStack(spacing: 8) {
             ZStack {
-                RoundedRectangle(cornerRadius: 8, style: .continuous).fill(Palette.brand)
-                Image(systemName: "sparkles").font(.system(size: 14, weight: .bold)).foregroundStyle(.white)
+                RoundedRectangle(cornerRadius: 6, style: .continuous).fill(Palette.brand)
+                Image(systemName: "sparkles").font(.system(size: 11, weight: .bold)).foregroundStyle(.white)
             }
-            .frame(width: 30, height: 30)
+            .frame(width: 24, height: 24)
 
             VStack(alignment: .leading, spacing: 1) {
-                Text(tab == .settings ? "Definições" : "AgentStats").font(.system(size: 13.5, weight: .bold))
+                Text(tab == .settings ? "Definições" : "AgentStats").font(.system(size: 12.5, weight: .bold))
                 statusLine
             }
             Spacer()
@@ -90,7 +92,7 @@ struct PanelView: View {
                 IconButton(systemName: "gearshape", help: "Definições") { storedTab = .settings }
             }
         }
-        .padding(.horizontal, 14).padding(.top, 12).padding(.bottom, 10)
+        .padding(.horizontal, 12).padding(.top, 10).padding(.bottom, 8)
     }
 
     private var statusLine: some View {
@@ -102,11 +104,11 @@ struct PanelView: View {
             : ("Nenhum agente a trabalhar", .secondary)
         return HStack(spacing: 5) {
             Circle().fill(color).frame(width: 6, height: 6)
-            Text(text).font(.system(size: 11)).foregroundStyle(.secondary)
+            Text(text).font(.system(size: 10.5)).foregroundStyle(.secondary).lineLimit(1)
             Text("·").foregroundStyle(.tertiary)
-            Text("CPU \(Fmt.pct(m.cpu.total))").font(.system(size: 11).monospacedDigit()).foregroundStyle(.secondary)
+            Text("CPU \(Fmt.pct(m.cpu.total))").font(.system(size: 10.5).monospacedDigit()).foregroundStyle(.secondary)
             if let t = m.temps?.cpuMax {
-                Text("· \(String(format: "%.0f°", t))").font(.system(size: 11).monospacedDigit()).foregroundStyle(.secondary)
+                Text("· \(String(format: "%.0f°", t))").font(.system(size: 10.5).monospacedDigit()).foregroundStyle(.secondary)
             }
         }
     }
@@ -118,8 +120,8 @@ struct PanelView: View {
             ForEach(Tab.main) { t in
                 Button { withAnimation(.easeInOut(duration: 0.15)) { storedTab = t } } label: {
                     HStack(spacing: 5) {
-                        Image(systemName: t.icon).font(.system(size: 10.5, weight: .semibold))
-                        Text(t.title).font(.system(size: 11.5, weight: .medium))
+                        Image(systemName: t.icon).font(.system(size: 10, weight: .semibold))
+                        Text(t.title).font(.system(size: 11, weight: .medium))
                         if t == .agents, m.workingCount > 0 {
                             Text("\(m.workingCount)")
                                 .font(.system(size: 9, weight: .bold).monospacedDigit())
@@ -129,7 +131,7 @@ struct PanelView: View {
                         }
                     }
                     .foregroundStyle(tab == t ? Color.primary : Color.secondary)
-                    .frame(maxWidth: .infinity).frame(height: 26)
+                    .frame(maxWidth: .infinity).frame(height: 22)
                     .background(
                         RoundedRectangle(cornerRadius: 7, style: .continuous)
                             .fill(tab == t ? (scheme == .dark ? Color.white.opacity(0.14) : Color.white) : .clear)
@@ -157,11 +159,37 @@ struct PanelView: View {
             }
             IconButton(systemName: "power", help: "Sair do AgentStats") { NSApp.terminate(nil) }
         }
-        .padding(.horizontal, 12).padding(.vertical, 6)
+        .padding(.horizontal, 10).padding(.vertical, 3)
     }
 }
 
 private struct ContentHeightKey: PreferenceKey {
     static var defaultValue: CGFloat = 0
     static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) { value = max(value, nextValue()) }
+}
+
+struct AlertBanner: View {
+    let alerts: [SystemAlert]
+    var body: some View {
+        VStack(alignment: .leading, spacing: 3) {
+            ForEach(alerts) { a in
+                HStack(spacing: 6) {
+                    Image(systemName: a.kind == .cpu ? "cpu" : "thermometer.high")
+                        .font(.system(size: 10, weight: .bold))
+                    Text(a.kind == .cpu ? "CPU alta · \(a.value)" : "Temperatura alta · \(a.value)")
+                        .font(.system(size: 11, weight: .semibold))
+                    if let d = a.detail {
+                        Text(d).font(.system(size: 10.5)).opacity(0.8).lineLimit(1).truncationMode(.tail)
+                    }
+                    Spacer(minLength: 0)
+                    Text(Fmt.ago(a.since).replacingOccurrences(of: "há ", with: ""))
+                        .font(.system(size: 9.5).monospacedDigit()).opacity(0.7)
+                }
+            }
+        }
+        .foregroundStyle(.white)
+        .padding(.horizontal, 9).padding(.vertical, 6)
+        .background(RoundedRectangle(cornerRadius: 8, style: .continuous)
+            .fill(LinearGradient(colors: [.red, .orange], startPoint: .leading, endPoint: .trailing)))
+    }
 }

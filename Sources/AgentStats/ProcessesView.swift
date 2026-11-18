@@ -7,7 +7,7 @@ struct ProcessesView: View {
     @Environment(\.colorScheme) private var scheme
 
     var body: some View {
-        let list = sortByMem ? m.topMemory : m.topProcesses
+        let list = Array((sortByMem ? m.topMemory : m.topProcesses).prefix(10))
         let maxValue = max(sortByMem ? Double(list.first?.rssKB ?? 1) : (list.first?.cpu ?? 1), 1)
 
         VStack(alignment: .leading, spacing: 10) {
@@ -21,7 +21,7 @@ struct ProcessesView: View {
             VStack(spacing: 0) {
                 ForEach(Array(list.enumerated()), id: \.element.id) { i, p in
                     ProcRow(p: p, sortByMem: sortByMem, maxValue: maxValue)
-                    if i < list.count - 1 { Divider().opacity(0.4).padding(.leading, 40) }
+                    if i < list.count - 1 { Divider().opacity(0.4).padding(.leading, 30) }
                 }
             }
             .cardStyle(padding: 4)
@@ -67,10 +67,10 @@ struct ProcRow: View {
                     Image(systemName: "gearshape.fill").resizable().scaledToFit().padding(4).foregroundStyle(.tertiary)
                 }
             }
-            .frame(width: 22, height: 22)
+            .frame(width: 18, height: 18)
 
             VStack(alignment: .leading, spacing: 1) {
-                Text(running?.localizedName ?? p.name).font(.system(size: 12, weight: .medium)).lineLimit(1)
+                Text(running?.localizedName ?? p.name).font(.system(size: 11.5, weight: .medium)).lineLimit(1)
                 Text("PID \(String(p.pid)) · \(Fmt.etime(p.elapsed))").font(.system(size: 9.5).monospacedDigit()).foregroundStyle(.tertiary)
             }
             Spacer(minLength: 6)
@@ -83,10 +83,10 @@ struct ProcRow: View {
                         .frame(width: 62, alignment: .trailing)
                 }
                 .font(.system(size: 11, weight: .medium).monospacedDigit())
-                Bar(value: fraction, color: sortByMem ? .purple : .blue, height: 3).frame(width: 110)
+                Bar(value: fraction, color: sortByMem ? .purple : .blue, height: 3).frame(width: 100)
             }
         }
-        .padding(.horizontal, 8).padding(.vertical, 6)
+        .padding(.horizontal, 6).padding(.vertical, 4)
         .background(RoundedRectangle(cornerRadius: 8).fill(Color.primary.opacity(hover.value ? 0.05 : 0)))
         .onHover { hover.value = $0 }
         .contextMenu {

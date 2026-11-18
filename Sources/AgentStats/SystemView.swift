@@ -19,10 +19,9 @@ struct SystemView: View {
 
     var body: some View {
         VStack(spacing: 10) {
-            Grid(horizontalSpacing: 8, verticalSpacing: 8) {
-                GridRow { tile(.cpu); tile(.memory) }
-                GridRow { tile(.temp); tile(.gpu) }
-                GridRow { tile(.disk); tile(.battery) }
+            Grid(horizontalSpacing: 6, verticalSpacing: 6) {
+                GridRow { tile(.cpu); tile(.memory); tile(.temp) }
+                GridRow { tile(.gpu); tile(.disk); tile(.battery) }
             }
             networkStrip
             detail
@@ -43,7 +42,7 @@ struct SystemView: View {
                             fraction: m.memory.usage, color: m.memory.pressure >= 2 ? .orange : .purple)
         case .temp:
             let t = m.temps?.cpuMax
-            return TileData(title: "Temperatura", icon: "thermometer.medium",
+            return TileData(title: "Temp.", icon: "thermometer.medium",
                             value: t.map { String(format: "%.0f°", $0) } ?? "—",
                             sub: thermalLabel, fraction: t.map { $0 / 110 }, color: Palette.temp(t ?? 0))
         case .gpu:
@@ -69,19 +68,26 @@ struct SystemView: View {
         let d = data(metric)
         let isSel = selected == metric
         return Button { withAnimation(.easeInOut(duration: 0.18)) { selected = metric } } label: {
-            HStack(spacing: 10) {
-                RingGauge(value: d.fraction, color: d.color) {
-                    Image(systemName: d.icon).font(.system(size: 12, weight: .semibold)).foregroundStyle(d.color)
+            // Mosaico compacto: valor dentro do anel, título por baixo; o detalhe fica no cartão de baixo
+            VStack(spacing: 4) {
+                RingGauge(value: d.fraction, color: d.color, lineWidth: 3.5) {
+                    Text(d.value)
+                        .font(.system(size: d.value.count > 4 ? 10 : 11.5, weight: .bold, design: .rounded).monospacedDigit())
+                        .minimumScaleFactor(0.7).lineLimit(1)
+                        .padding(.horizontal, 4)
                 }
-                .frame(width: 38, height: 38)
-                VStack(alignment: .leading, spacing: 1) {
-                    Text(d.title).font(.system(size: 10.5, weight: .medium)).foregroundStyle(.secondary)
-                    Text(d.value).font(.system(size: 17, weight: .bold, design: .rounded).monospacedDigit())
-                    Text(d.sub).font(.system(size: 9.5)).foregroundStyle(.tertiary).lineLimit(1)
+                .frame(width: 42, height: 42)
+                HStack(spacing: 3) {
+                    Image(systemName: d.icon).font(.system(size: 8.5, weight: .semibold)).foregroundStyle(d.color)
+                    Text(d.title).font(.system(size: 10, weight: .medium)).foregroundStyle(.secondary).lineLimit(1)
                 }
-                Spacer(minLength: 0)
             }
-            .cardStyle(padding: 10, highlight: isSel ? Color.accentColor.opacity(0.7) : nil)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 8)
+            .background(RoundedRectangle(cornerRadius: 10, style: .continuous).fill(Color.primary.opacity(0.045)))
+            .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .strokeBorder(isSel ? Color.accentColor.opacity(0.7) : Color.primary.opacity(0.07), lineWidth: isSel ? 1.2 : 0.5))
+            .help(d.sub)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -91,8 +97,8 @@ struct SystemView: View {
         let isSel = selected == .network
         let mx = max((m.downHistory.values + m.upHistory.values).max() ?? 1, 10_000)
         return Button { withAnimation(.easeInOut(duration: 0.18)) { selected = .network } } label: {
-            HStack(spacing: 12) {
-                VStack(alignment: .leading, spacing: 3) {
+            HStack(spacing: 10) {
+                VStack(alignment: .leading, spacing: 1) {
                     Label { Text(Fmt.rate(m.network.downPerSec)).monospacedDigit() } icon: {
                         Image(systemName: "arrow.down").foregroundStyle(.blue)
                     }
@@ -100,15 +106,15 @@ struct SystemView: View {
                         Image(systemName: "arrow.up").foregroundStyle(.pink)
                     }
                 }
-                .font(.system(size: 12, weight: .semibold))
-                .frame(width: 100, alignment: .leading)
+                .font(.system(size: 11, weight: .semibold))
+                .frame(width: 90, alignment: .leading)
                 ZStack {
                     Sparkline(values: m.downHistory.values, maxValue: mx, color: .blue)
                     Sparkline(values: m.upHistory.values, maxValue: mx, color: .pink)
                 }
-                .frame(height: 34)
+                .frame(height: 26)
             }
-            .cardStyle(padding: 10, highlight: isSel ? Color.accentColor.opacity(0.7) : nil)
+            .cardStyle(padding: 8, highlight: isSel ? Color.accentColor.opacity(0.7) : nil)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -130,18 +136,18 @@ struct SystemView: View {
 
     private var cpuDetail: some View {
         Card(title: "CPU", icon: "cpu", trailing: Fmt.pct(m.cpu.total), tint: .blue) {
-            Sparkline(values: m.cpuHistory.values, maxValue: 1, color: .blue).frame(height: 44)
+            Sparkline(values: m.cpuHistory.values, maxValue: 1, color: .blue).frame(height: 30)
             HStack(alignment: .bottom, spacing: 3) {
                 ForEach(Array(m.cpu.cores.enumerated()), id: \.offset) { _, v in
                     VStack(spacing: 0) {
                         Spacer(minLength: 0)
-                        RoundedRectangle(cornerRadius: 2).fill(Palette.usage(v)).frame(height: max(3, 26 * v))
+                        RoundedRectangle(cornerRadius: 2).fill(Palette.usage(v)).frame(height: max(3, 20 * v))
                     }
                     .frame(maxWidth: .infinity)
                     .background(RoundedRectangle(cornerRadius: 2).fill(Color.primary.opacity(0.06)))
                 }
             }
-            .frame(height: 26)
+            .frame(height: 20)
             Divider().opacity(0.5)
             StatRow(label: "Utilizador", value: Fmt.pct(m.cpu.user), color: .blue)
             StatRow(label: "Sistema", value: Fmt.pct(m.cpu.system), color: .red)
@@ -154,7 +160,7 @@ struct SystemView: View {
 
     private var memoryDetail: some View {
         Card(title: "Memória", icon: "memorychip", trailing: "\(Fmt.bytes(m.memory.used)) / \(Fmt.bytes(m.memory.total))", tint: .purple) {
-            Sparkline(values: m.memHistory.values, maxValue: 1, color: .purple).frame(height: 40)
+            Sparkline(values: m.memHistory.values, maxValue: 1, color: .purple).frame(height: 28)
             GeometryReader { g in
                 let t = Double(max(m.memory.total, 1))
                 HStack(spacing: 1.5) {
@@ -190,7 +196,7 @@ struct SystemView: View {
     @ViewBuilder private var gpuDetail: some View {
         if let g = m.gpu {
             Card(title: "GPU", icon: "cube.transparent", trailing: Fmt.pct(g), tint: .teal) {
-                Sparkline(values: m.gpuHistory.values, maxValue: 1, color: .teal).frame(height: 50)
+                Sparkline(values: m.gpuHistory.values, maxValue: 1, color: .teal).frame(height: 30)
                 StatRow(label: "Utilização atual", value: Fmt.pct(g))
                 StatRow(label: "Máximo (último minuto)", value: Fmt.pct(m.gpuHistory.values.max() ?? 0))
             }
@@ -275,7 +281,7 @@ struct TemperatureCard: View {
         Card(title: "Temperaturas", icon: "thermometer.medium",
              trailing: t.cpuMax.map { String(format: "%.0f ºC", $0) }, tint: Palette.temp(t.cpuMax ?? 0)) {
             if history.count > 1 {
-                Sparkline(values: history, maxValue: 110, color: Palette.temp(t.cpuMax ?? 0)).frame(height: 40)
+                Sparkline(values: history, maxValue: 110, color: Palette.temp(t.cpuMax ?? 0)).frame(height: 28)
             }
             if let a = t.cpuAvg, let mx = t.cpuMax {
                 StatRow(label: "CPU (média · máx.)", value: String(format: "%.1f · %.1f ºC", a, mx), color: Palette.temp(mx))

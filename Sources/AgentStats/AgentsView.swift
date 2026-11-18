@@ -49,7 +49,7 @@ struct AgentsView: View {
         // o executor do Codex é um auxiliar interno da app: não aparece em separado
         let others = m.agents.filter { !linked.contains($0.pid) && $0.role != "executor" }
 
-        VStack(alignment: .leading, spacing: 16) {
+        VStack(alignment: .leading, spacing: 12) {
             if working.isEmpty && waiting.isEmpty && others.isEmpty {
                 EmptyAgents()
             }
@@ -81,7 +81,7 @@ struct AgentsView: View {
     }
 
     private func group<C: View>(_ title: String, _ count: Int, _ color: Color, @ViewBuilder _ content: () -> C) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 6) {
             SectionHeader(title: title, count: count, color: color)
             content()
         }
@@ -104,7 +104,7 @@ struct EmptyAgents: View {
             FlowPills(items: supported).padding(.top, 4)
         }
         .frame(maxWidth: .infinity)
-        .padding(.vertical, 28)
+        .padding(.vertical, 16)
     }
 }
 
@@ -129,18 +129,18 @@ struct StateIcon: View {
     var body: some View {
         ZStack {
             if state.isWorking {
-                RoundedRectangle(cornerRadius: 9, style: .continuous)
+                RoundedRectangle(cornerRadius: 7, style: .continuous)
                     .stroke(state.color, lineWidth: 1.5)
                     .scaleEffect(anim.value ? 1.3 : 1)
                     .opacity(anim.value ? 0 : 0.8)
                     .animation(.easeOut(duration: 1.5).repeatForever(autoreverses: false), value: anim.value)
             }
-            RoundedRectangle(cornerRadius: 9, style: .continuous).fill(state.color.opacity(0.16))
+            RoundedRectangle(cornerRadius: 7, style: .continuous).fill(state.color.opacity(0.16))
             Image(systemName: state.icon)
-                .font(.system(size: 13, weight: .semibold))
+                .font(.system(size: 11, weight: .semibold))
                 .foregroundStyle(state.color)
         }
-        .frame(width: 32, height: 32)
+        .frame(width: 26, height: 26)
         .onAppear { anim.value = true }
     }
 }
@@ -153,11 +153,11 @@ struct SessionCard: View {
     private var isCommand: Bool { session.state.toolName == "Bash" }
 
     var body: some View {
-        HStack(alignment: .top, spacing: 10) {
+        HStack(alignment: .top, spacing: 8) {
             StateIcon(state: session.state)
-            VStack(alignment: .leading, spacing: 5) {
+            VStack(alignment: .leading, spacing: 3) {
                 HStack(alignment: .center, spacing: 6) {
-                    Text(session.title).font(.system(size: 12.5, weight: .semibold)).lineLimit(1)
+                    Text(session.title).font(.system(size: 12, weight: .semibold)).lineLimit(1)
                     Spacer(minLength: 4)
                     if hover.value { actions } else {
                         Text(Fmt.ago(session.lastActivity)).font(.system(size: 10).monospacedDigit()).foregroundStyle(.tertiary)
@@ -167,6 +167,9 @@ struct SessionCard: View {
 
                 HStack(spacing: 5) {
                     Text(session.state.label).font(.system(size: 11, weight: .semibold)).foregroundStyle(session.state.color)
+                    Text("· " + (session.kind == "Claude Code" ? "Claude" : session.kind))
+                        .font(.system(size: 10.5, weight: .medium))
+                        .foregroundStyle(session.kind == "Codex" ? Color.teal : Color.orange)
                     if session.subagents > 0 {
                         Pill(text: "\(session.subagents) subagente\(session.subagents == 1 ? "" : "s")", icon: "person.2.fill", color: .purple)
                     }
@@ -183,8 +186,6 @@ struct SessionCard: View {
                 }
 
                 HStack(spacing: 4) {
-                    Pill(text: session.kind == "Claude Code" ? "Claude" : session.kind, icon: session.kind == "Codex" ? "chevron.left.forwardslash.chevron.right" : "asterisk",
-                         color: session.kind == "Codex" ? .teal : .orange)
                     Pill(text: session.project, icon: "folder.fill").layoutPriority(-1)
                     if let model = Fmt.model(session.model) { Pill(text: model, icon: "cpu", color: .indigo) }
                     if let p = session.process {
@@ -199,7 +200,7 @@ struct SessionCard: View {
                 }
             }
         }
-        .cardStyle(padding: 10, highlight: session.state.isWorking ? session.state.color.opacity(0.4) : nil)
+        .cardStyle(padding: 8, highlight: session.state.isWorking ? session.state.color.opacity(0.4) : nil)
         .opacity(session.state == .finished ? 0.7 : 1)
         .onHover { hover.value = $0 }
         .contextMenu { menu }
@@ -262,7 +263,7 @@ struct OtherAgentRow: View {
                 Image(systemName: agent.isSubagent ? "arrow.turn.down.right" : "terminal")
                     .font(.system(size: 12, weight: .semibold)).foregroundStyle(.blue)
             }
-            .frame(width: 32, height: 32)
+            .frame(width: 26, height: 26)
             VStack(alignment: .leading, spacing: 2) {
                 Text(agent.kind + (agent.role == "app" ? " · app ChatGPT" : agent.role == "executor" ? " · executor" : agent.isSubagent ? " · subagente" : "")).font(.system(size: 12.5, weight: .semibold))
                 Text(subtitle)
@@ -274,7 +275,7 @@ struct OtherAgentRow: View {
                 Text(Fmt.etime(agent.elapsed)).font(.system(size: 10).monospacedDigit()).foregroundStyle(.tertiary)
             }
         }
-        .cardStyle(padding: 10)
+        .cardStyle(padding: 8)
         .contextMenu {
             Button("Terminar processo (PID \(String(agent.pid)))", role: .destructive) { m.terminate(pid: agent.pid) }
         }

@@ -16,13 +16,13 @@ enum Palette {
 
 extension View {
     /// Estilo base de cartão: fundo subtil, borda fina, cantos contínuos.
-    func cardStyle(padding: CGFloat = 12, highlight: Color? = nil) -> some View {
+    func cardStyle(padding: CGFloat = 10, highlight: Color? = nil) -> some View {
         self
             .padding(padding)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(Color.primary.opacity(0.045)))
+            .background(RoundedRectangle(cornerRadius: 10, style: .continuous).fill(Color.primary.opacity(0.045)))
             .overlay(
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
                     .strokeBorder(highlight ?? Color.primary.opacity(0.07), lineWidth: highlight == nil ? 0.5 : 1.2)
             )
     }
@@ -36,7 +36,7 @@ struct Card<Content: View>: View {
     @ViewBuilder var content: Content
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 9) {
+        VStack(alignment: .leading, spacing: 7) {
             HStack(spacing: 6) {
                 Image(systemName: icon).font(.system(size: 11, weight: .semibold)).foregroundStyle(tint)
                 Text(title).font(.system(size: 12, weight: .semibold))
@@ -143,7 +143,7 @@ struct StatRow: View {
             Spacer(minLength: 8)
             Text(value).monospacedDigit().foregroundStyle(.primary)
         }
-        .font(.system(size: 11.5))
+        .font(.system(size: 11))
     }
 }
 

@@ -33,6 +33,25 @@ struct SettingsView: View {
                 }
             }
 
+            group("Alertas") {
+                VStack(alignment: .leading, spacing: 10) {
+                    row("cpu", .red, "CPU alta", "Notifica após 20 s acima do limite", $m.cpuAlertEnabled)
+                    if m.cpuAlertEnabled {
+                        Picker("", selection: $m.cpuThreshold) {
+                            Text("70%").tag(0.7); Text("80%").tag(0.8); Text("85%").tag(0.85); Text("90%").tag(0.9); Text("95%").tag(0.95)
+                        }
+                        .pickerStyle(.segmented).labelsHidden().padding(.leading, 32)
+                    }
+                    row("thermometer.high", .orange, "Temperatura alta", "Máximo da CPU", $m.tempAlertEnabled)
+                    if m.tempAlertEnabled {
+                        Picker("", selection: $m.tempThreshold) {
+                            Text("75°").tag(75.0); Text("80°").tag(80.0); Text("85°").tag(85.0); Text("90°").tag(90.0); Text("95°").tag(95.0)
+                        }
+                        .pickerStyle(.segmented).labelsHidden().padding(.leading, 32)
+                    }
+                }
+            }
+
             group("Geral") {
                 VStack(alignment: .leading, spacing: 10) {
                     HStack {
@@ -60,7 +79,7 @@ struct SettingsView: View {
             }
 
             HStack {
-                Text("AgentStats 1.1").font(.system(size: 10.5, weight: .medium)).foregroundStyle(.secondary)
+                Text("AgentStats 1.2").font(.system(size: 10.5, weight: .medium)).foregroundStyle(.secondary)
                 Spacer()
                 Link("Código no GitHub", destination: URL(string: "https://github.com/HamiltonPrado/agentstats")!)
                     .font(.system(size: 10.5))

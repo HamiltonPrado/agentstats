@@ -7,6 +7,7 @@ App de barra de menus para macOS (estilo Stats) que mostra as métricas do siste
 - **Agentes:** sessões do Claude Code e do Codex (CLI e app ChatGPT, via `~/.codex`) com estado em tempo real (a executar ferramenta, a pensar, à espera), projeto, modelo, CPU/RAM, subprocessos e subagentes. Deteta também Codex, Gemini CLI, Aider, Cursor Agent, OpenCode, Goose e Amp. Notificação quando um agente termina.
 - **Temperaturas:** CPU (média e máx.), chip, SSD e bateria via sensores HID do Apple Silicon — sem precisar do Xcode
 - **Sistema:** CPU (total, por núcleo, carga, estado térmico), memória (apps, wired, comprimida, cache, swap, pressão), GPU, rede, disco e bateria
+- **Alertas:** notificação quando a CPU ou a temperatura ficam 20 s acima do limite (configurável), com o processo mais pesado; aviso ⚠ na barra de menus
 - **Processos:** top por CPU
 - Abrir ao iniciar sessão
 

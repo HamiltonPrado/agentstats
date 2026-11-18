@@ -1,5 +1,6 @@
 import Foundation
 import SwiftUI
+import AppKit
 import UserNotifications
 
 struct History {
@@ -9,6 +10,15 @@ struct History {
         values.append(v)
         if values.count > capacity { values.removeFirst(values.count - capacity) }
     }
+}
+
+struct SystemAlert: Identifiable {
+    enum Kind: String { case cpu, temp }
+    var id: String { kind.rawValue }
+    let kind: Kind
+    let value: String
+    let since: Date
+    let detail: String?
 }
 
 @MainActor
@@ -42,6 +52,18 @@ final class Monitor: ObservableObject {
     @AppStorage("refreshInterval") var refreshInterval: Double = 2
     @AppStorage("notifyOnFinish") var notifyOnFinish = true
 
+    // Alertas
+    @AppStorage("alert.cpu.enabled") var cpuAlertEnabled = true
+    @AppStorage("alert.cpu.threshold") var cpuThreshold: Double = 0.85
+    @AppStorage("alert.temp.enabled") var tempAlertEnabled = true
+    @AppStorage("alert.temp.threshold") var tempThreshold: Double = 85
+    @Published var activeAlerts: [SystemAlert] = []
+    private var highSince: [SystemAlert.Kind: Date] = [:]
+    private var lastNotified: [SystemAlert.Kind: Date] = [:]
+    /// Tempo que o valor tem de ficar acima do limite antes de alertar (evita picos curtos).
+    static let alertSustain: TimeInterval = 20
+    static let alertCooldown: TimeInterval = 10 * 60
+
     private let cpuReader = CPUReader()
     private let netReader = NetworkReader()
     private let diskReader = DiskReader()
@@ -59,9 +81,7 @@ final class Monitor: ObservableObject {
     init() {
         sample()
         restart()
-        if notifyOnFinish {
-            UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { _, _ in }
-        }
+        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { _, _ in }
     }
 
     func restart() {
@@ -117,6 +137,7 @@ final class Monitor: ObservableObject {
                 self.gpuHistory.push(gpu ?? 0)
                 self.downHistory.push(net.downPerSec)
                 self.upHistory.push(net.upPerSec)
+                self.checkAlerts()
                 self.sampling = false
             }
         }
@@ -134,6 +155,50 @@ final class Monitor: ObservableObject {
             UNUserNotificationCenter.current().add(
                 UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: nil))
         }
+    }
+
+    // MARK: Alertas
+
+    private func checkAlerts(now: Date = Date()) {
+        let culprit = topProcesses.first.map { "\(NSRunningApplication(processIdentifier: pid_t($0.pid))?.localizedName ?? $0.name) (\(String(format: "%.0f%%", $0.cpu)))" }
+
+        var alerts: [SystemAlert] = []
+        // CPU: dispara acima do limite, só desliga 5 pontos abaixo (histerese)
+        if let a = evaluate(.cpu, enabled: cpuAlertEnabled, value: cpu.total,
+                            on: cpuThreshold, off: cpuThreshold - 0.05, now: now) {
+            alerts.append(SystemAlert(kind: .cpu, value: Fmt.pct(cpu.total), since: a, detail: culprit))
+        }
+        if let t = temps?.cpuMax,
+           let a = evaluate(.temp, enabled: tempAlertEnabled, value: t,
+                            on: tempThreshold, off: tempThreshold - 5, now: now) {
+            alerts.append(SystemAlert(kind: .temp, value: String(format: "%.0f ºC", t), since: a, detail: culprit))
+        }
+        if alerts.map(\.kind) != activeAlerts.map(\.kind) || alerts.map(\.value) != activeAlerts.map(\.value) {
+            activeAlerts = alerts
+        }
+
+        for alert in alerts where now.timeIntervalSince(lastNotified[alert.kind] ?? .distantPast) > Self.alertCooldown {
+            lastNotified[alert.kind] = now
+            let content = UNMutableNotificationContent()
+            content.title = alert.kind == .cpu ? "CPU alta: \(alert.value)" : "Temperatura alta: \(alert.value)"
+            content.body = alert.detail.map { "Processo mais pesado: \($0)" } ?? "Há mais de \(Int(Self.alertSustain)) s acima do limite."
+            content.sound = .default
+            UNUserNotificationCenter.current().add(
+                UNNotificationRequest(identifier: "alert-\(alert.kind.rawValue)", content: content, trigger: nil))
+        }
+    }
+
+    /// Devolve desde quando o alerta está ativo, ou nil se não está.
+    private func evaluate(_ kind: SystemAlert.Kind, enabled: Bool, value: Double, on: Double, off: Double, now: Date) -> Date? {
+        guard enabled else { highSince[kind] = nil; return nil }
+        let wasHigh = highSince[kind] != nil
+        if value >= on || (wasHigh && value > off) {
+            if highSince[kind] == nil { highSince[kind] = now }
+        } else {
+            highSince[kind] = nil
+        }
+        guard let since = highSince[kind], now.timeIntervalSince(since) >= Self.alertSustain else { return nil }
+        return since
     }
 
     func terminate(pid: Int, force: Bool = false) {

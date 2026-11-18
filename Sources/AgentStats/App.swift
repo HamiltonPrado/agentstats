@@ -33,6 +33,12 @@ enum AgentStatsApp {
     @MainActor static func snapshot(to dir: String) {
         let m = Monitor()
         RunLoop.main.run(until: Date().addingTimeInterval(7))
+        if ProcessInfo.processInfo.environment["AGENTSTATS_FAKE_ALERT"] != nil {
+            m.activeAlerts = [
+                SystemAlert(kind: .cpu, value: "92%", since: Date().addingTimeInterval(-45), detail: "WindowServer (74%)"),
+                SystemAlert(kind: .temp, value: "91 ºC", since: Date().addingTimeInterval(-30), detail: "WindowServer (74%)"),
+            ]
+        }
         for scheme in [ColorScheme.light, .dark] {
             for tab in Tab.allCases {
                 let view = PanelView(forcedTab: tab, scrollable: false)
@@ -168,6 +174,9 @@ struct MenuBarLabel: View {
     @MainActor
     private func render() -> NSImage {
         let content = HStack(spacing: 7) {
+            if !m.activeAlerts.isEmpty {
+                Image(systemName: "exclamationmark.triangle.fill").font(.system(size: 11, weight: .bold))
+            }
             if showAgents {
                 HStack(spacing: 2) {
                     Image(systemName: m.workingCount > 0 ? "sparkles" : "sparkle")
