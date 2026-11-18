@@ -7,6 +7,8 @@ App de barra de menus para macOS (estilo Stats) que mostra as métricas do siste
 - **Agentes:** sessões do Claude Code e do Codex (CLI e app ChatGPT, via `~/.codex`) com estado em tempo real (a executar ferramenta, a pensar, à espera), projeto, modelo, CPU/RAM, subprocessos e subagentes. Deteta também Codex, Gemini CLI, Aider, Cursor Agent, OpenCode, Goose e Amp. Notificação quando um agente termina.
 - **Temperaturas:** CPU (média e máx.), chip, SSD e bateria via sensores HID do Apple Silicon — sem precisar do Xcode
 - **Sistema:** CPU (total, por núcleo, carga, estado térmico), memória (apps, wired, comprimida, cache, swap, pressão), GPU, rede, disco e bateria
+- **Precisa de ti:** deteta quando um agente do Claude Code está bloqueado à espera de aprovação (Bash/Edit/Write) ou tem uma pergunta para ti; destaca a vermelho, ✋ na barra de menus e notificação
+- **Tokens:** total de hoje (Claude + Codex) e por sessão, lido incrementalmente dos transcripts
 - **Alertas:** notificação quando a CPU ou a temperatura ficam 20 s acima do limite (configurável), com o processo mais pesado; aviso ⚠ na barra de menus
 - **Processos:** top por CPU
 - Abrir ao iniciar sessão
@@ -27,3 +29,9 @@ Gerado por código em `Scripts/make-icon.swift` → `Resources/AppIcon-1024.png`
 ```bash
 swiftc -O Scripts/make-icon.swift -o /tmp/make-icon && /tmp/make-icon Resources/AppIcon-1024.png
 ```
+
+## Diagnóstico
+- `AgentStats --dump` — métricas e agentes detetados
+- `AgentStats --bench` — custo (ms) de cada leitor
+- `AgentStats --snapshot <pasta>` — renderiza o painel em PNG (`AGENTSTATS_FAKE_ALERT=1` simula alertas e um pedido de aprovação)
+- `AGENTSTATS_DISABLE=icon,temps,procs,sessions,usage,gpu,disk` — desliga partes para medir o consumo

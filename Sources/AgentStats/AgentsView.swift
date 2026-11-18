@@ -5,6 +5,7 @@ extension AgentState {
     var color: Color {
         switch self {
         case .runningTool, .thinking: return .green
+        case .needsApproval, .needsAnswer: return .red
         case .waitingUser: return .orange
         case .finished: return .gray
         case .unknown: return .blue
@@ -12,11 +13,14 @@ extension AgentState {
     }
     var toolName: String? {
         if case .runningTool(let t) = self { return t }
+        if case .needsApproval(let t) = self { return t }
         return nil
     }
     var icon: String {
         switch self {
         case .runningTool(let t): return AgentState.toolIcon(t)
+        case .needsApproval: return "hand.raised.fill"
+        case .needsAnswer: return "questionmark.bubble.fill"
         case .thinking: return "brain"
         case .waitingUser: return "bubble.left.and.text.bubble.right"
         case .finished: return "checkmark"
@@ -42,6 +46,7 @@ struct AgentsView: View {
     @AppStorage("agents.showRecent") private var showRecent = false
 
     var body: some View {
+        let attention = m.sessions.filter { $0.state.needsAttention }
         let working = m.sessions.filter { $0.state.isWorking }
         let waiting = m.sessions.filter { $0.state == .waitingUser }
         let recent = m.sessions.filter { !$0.state.isWorking && $0.state != .waitingUser }
@@ -50,8 +55,12 @@ struct AgentsView: View {
         let others = m.agents.filter { !linked.contains($0.pid) && $0.role != "executor" }
 
         VStack(alignment: .leading, spacing: 12) {
-            if working.isEmpty && waiting.isEmpty && others.isEmpty {
+            if !m.usage.todayTotal.isEmpty { TodayUsage(usage: m.usage) }
+            if attention.isEmpty && working.isEmpty && waiting.isEmpty && others.isEmpty {
                 EmptyAgents()
+            }
+            if !attention.isEmpty {
+                group("Precisa de ti", attention.count, .red) { ForEach(attention) { SessionCard(session: $0) } }
             }
             if !working.isEmpty {
                 group("A trabalhar", working.count, .green) { ForEach(working) { SessionCard(session: $0) } }
@@ -128,7 +137,7 @@ struct StateIcon: View {
 
     var body: some View {
         ZStack {
-            if state.isWorking {
+            if state.isWorking || state.needsAttention {
                 RoundedRectangle(cornerRadius: 7, style: .continuous)
                     .stroke(state.color, lineWidth: 1.5)
                     .scaleEffect(anim.value ? 1.3 : 1)
@@ -188,10 +197,16 @@ struct SessionCard: View {
                 HStack(spacing: 4) {
                     Pill(text: session.project, icon: "folder.fill").layoutPriority(-1)
                     if let model = Fmt.model(session.model) { Pill(text: model, icon: "cpu", color: .indigo) }
-                    if let p = session.process {
-                        Spacer(minLength: 2)
-                        Text("\(String(format: "%.0f%%", p.cpu)) · \(Fmt.bytes(p.memKB * 1024))")
+                    Spacer(minLength: 2)
+                    let tokens = m.usage.perSession[session.id].flatMap { $0.isEmpty ? nil : Fmt.tokens($0.total) + " tok" }
+                    let cpu = session.process.map { String(format: "%.0f%%", $0.cpu) }
+                    let stats = [cpu, tokens].compactMap { $0 }
+                    if !stats.isEmpty {
+                        Text(stats.joined(separator: " · "))
                             .font(.system(size: 10).monospacedDigit()).foregroundStyle(.tertiary)
+                            .help(m.usage.perSession[session.id].map { u in
+                                "Tokens nesta sessão: \(Fmt.tokens(u.total)) — saída \(Fmt.tokens(u.output)), entrada \(Fmt.tokens(u.input)), cache lida \(Fmt.tokens(u.cacheRead)), cache escrita \(Fmt.tokens(u.cacheWrite))"
+                            } ?? "")
                     }
                 }
                 if let p = session.process, !p.children.isEmpty, session.state.isWorking {
@@ -200,7 +215,7 @@ struct SessionCard: View {
                 }
             }
         }
-        .cardStyle(padding: 8, highlight: session.state.isWorking ? session.state.color.opacity(0.4) : nil)
+        .cardStyle(padding: 8, highlight: session.state.isWorking || session.state.needsAttention ? session.state.color.opacity(session.state.needsAttention ? 0.8 : 0.4) : nil)
         .opacity(session.state == .finished ? 0.7 : 1)
         .onHover { hover.value = $0 }
         .contextMenu { menu }
@@ -279,5 +294,24 @@ struct OtherAgentRow: View {
         .contextMenu {
             Button("Terminar processo (PID \(String(agent.pid)))", role: .destructive) { m.terminate(pid: agent.pid) }
         }
+    }
+}
+
+/// Resumo dos tokens de hoje (Claude + Codex).
+struct TodayUsage: View {
+    let usage: UsageSnapshot
+    var body: some View {
+        let t = usage.todayTotal
+        HStack(spacing: 8) {
+            Image(systemName: "chart.bar.fill").font(.system(size: 10, weight: .semibold)).foregroundStyle(.purple)
+            Text("Hoje").font(.system(size: 11, weight: .semibold))
+            Text("\(Fmt.tokens(t.total)) tokens").font(.system(size: 11).monospacedDigit())
+            Text("· \(Fmt.tokens(t.output)) saída").font(.system(size: 10.5).monospacedDigit()).foregroundStyle(.secondary)
+            Spacer(minLength: 4)
+            if !usage.todayClaude.isEmpty { Pill(text: Fmt.tokens(usage.todayClaude.total), icon: "asterisk", color: .orange) }
+            if !usage.todayCodex.isEmpty { Pill(text: Fmt.tokens(usage.todayCodex.total), icon: "chevron.left.forwardslash.chevron.right", color: .teal) }
+        }
+        .cardStyle(padding: 7)
+        .help("Inclui leituras de cache (\(Fmt.tokens(t.cacheRead))), que são a maior parte e custam muito menos do que tokens novos. Entrada nova: \(Fmt.tokens(t.input)) · cache escrita: \(Fmt.tokens(t.cacheWrite)) · saída: \(Fmt.tokens(t.output)).")
     }
 }

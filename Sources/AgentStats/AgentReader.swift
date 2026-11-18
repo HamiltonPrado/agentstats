@@ -5,6 +5,8 @@ import Foundation
 enum AgentState: Equatable {
     case runningTool(String)
     case thinking
+    case needsApproval(String)   // bloqueado à espera de autorização para uma ferramenta
+    case needsAnswer             // fez uma pergunta (AskUserQuestion / plano para aprovar)
     case waitingUser
     case finished
     case unknown
@@ -13,6 +15,8 @@ enum AgentState: Equatable {
         switch self {
         case .runningTool(let t): return "A executar \(t)"
         case .thinking: return "A pensar…"
+        case .needsApproval(let t): return "Precisa de aprovação · \(t)"
+        case .needsAnswer: return "Tem uma pergunta para ti"
         case .waitingUser: return "À tua espera"
         case .finished: return "Terminada"
         case .unknown: return "Ativo"
@@ -22,6 +26,13 @@ enum AgentState: Equatable {
     var isWorking: Bool {
         switch self {
         case .runningTool, .thinking: return true
+        default: return false
+        }
+    }
+
+    var needsAttention: Bool {
+        switch self {
+        case .needsApproval, .needsAnswer: return true
         default: return false
         }
     }
@@ -38,6 +49,7 @@ struct AgentProcess: Identifiable {
     let children: [String]    // nomes dos subprocessos ativos
     let isSubagent: Bool
     var role: String? = nil   // ex.: "app" / "executor" para os servidores do Codex
+    var shellChildren: Int = 0 // shells filhas (o Claude Code corre cada comando Bash numa zsh)
 }
 
 struct AgentSession: Identifiable {
@@ -155,7 +167,8 @@ final class AgentReader {
                 cwd: Sys.cwd(of: p.pid),
                 children: Array(NSOrderedSet(array: busy).array as! [String]).prefix(4).map { $0 },
                 isSubagent: hasAgentAncestor(p) || role == "executor",
-                role: role
+                role: role,
+                shellChildren: desc.filter { ["zsh", "bash", "sh"].contains($0.name) }.count
             )
         }
         .sorted { $0.cpu > $1.cpu }
@@ -199,6 +212,9 @@ final class AgentReader {
             var state = info.state
             if proc == nil && age > 90 { state = .finished }
             if state == .unknown && age < 15 { state = .thinking }
+            if let proc, case .runningTool(let tool) = state {
+                state = Self.approvalState(tool: tool, since: info.timestamp ?? c.mtime, process: proc) ?? state
+            }
 
             result.append(AgentSession(
                 id: c.url.path,
@@ -214,6 +230,24 @@ final class AgentReader {
             ))
         }
         return result
+    }
+
+    /// Heurística para "à espera de aprovação": o pedido da ferramenta está pendente mas nada está a correr.
+    /// - Bash: o Claude Code corre cada comando numa zsh filha; pendente sem zsh → à espera de autorização.
+    /// - Edit/Write/…: são instantâneas; pendentes há mais de 5 s → à espera de autorização.
+    /// - AskUserQuestion / ExitPlanMode: esperam sempre por uma resposta tua.
+    static func approvalState(tool: String, since: Date, process: AgentProcess) -> AgentState? {
+        let age = Date().timeIntervalSince(since)
+        switch tool {
+        case "AskUserQuestion", "ExitPlanMode":
+            return .needsAnswer
+        case "Bash":
+            return age > 3 && process.shellChildren == 0 ? .needsApproval(tool) : nil
+        case "Edit", "Write", "MultiEdit", "NotebookEdit":
+            return age > 5 ? .needsApproval(tool) : nil
+        default:
+            return nil
+        }
     }
 
     private func activeSubagents(for transcript: URL) -> Int {

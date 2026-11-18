@@ -98,8 +98,10 @@ struct PanelView: View {
     private var statusLine: some View {
         let working = m.workingCount
         let waiting = m.sessions.filter { $0.state == .waitingUser }.count
+        let attention = m.needsAttentionCount
         let (text, color): (String, Color) =
-            working > 0 ? ("\(working) agente\(working == 1 ? "" : "s") a trabalhar", .green)
+            attention > 0 ? ("\(attention) precisa\(attention == 1 ? "" : "m") de ti", .red)
+            : working > 0 ? ("\(working) agente\(working == 1 ? "" : "s") a trabalhar", .green)
             : waiting > 0 ? ("\(waiting) à tua espera", .orange)
             : ("Nenhum agente a trabalhar", .secondary)
         return HStack(spacing: 5) {

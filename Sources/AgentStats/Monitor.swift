@@ -58,6 +58,7 @@ final class Monitor: ObservableObject {
     @AppStorage("alert.temp.enabled") var tempAlertEnabled = true
     @AppStorage("alert.temp.threshold") var tempThreshold: Double = 85
     @Published var activeAlerts: [SystemAlert] = []
+    @Published var usage = UsageSnapshot()
     private var highSince: [SystemAlert.Kind: Date] = [:]
     private var lastNotified: [SystemAlert.Kind: Date] = [:]
     /// Tempo que o valor tem de ficar acima do limite antes de alertar (evita picos curtos).
@@ -70,12 +71,19 @@ final class Monitor: ObservableObject {
     private let agentReader = AgentReader()
     private let tempReader = TemperatureReader()
     private let codexReader = CodexReader()
+    private let procSampler = ProcessSampler()
+    private let usageTracker = UsageTracker()
+    private var lastTemps: TemperatureSample?
     private let queue = DispatchQueue(label: "agentstats.sampler", qos: .utility)
     private var timer: Timer?
     private var tick = 0
     private var previousStates: [String: AgentState] = [:]
 
+    /// Diagnóstico: AGENTSTATS_DISABLE=temps,procs,sessions,gpu,disk,icon desliga partes para medir custos.
+    static let disabled = Set((ProcessInfo.processInfo.environment["AGENTSTATS_DISABLE"] ?? "").split(separator: ",").map(String.init))
+
     var workingCount: Int { sessions.filter { $0.state.isWorking }.count }
+    var needsAttentionCount: Int { sessions.filter { $0.state.needsAttention }.count }
     var liveAgentCount: Int { agents.filter { !$0.isSubagent }.count }
 
     init() {
@@ -97,21 +105,25 @@ final class Monitor: ObservableObject {
         guard !sampling else { return }
         sampling = true
         tick += 1
-        let slow = tick % 3 == 1 // bateria e disco não precisam de tanta frequência
+        let slow = tick % 2 == 1 // bateria e temperaturas mudam devagar: metade da frequência
 
-        let cpuReader = cpuReader, netReader = netReader, diskReader = diskReader, agentReader = agentReader, tempReader = tempReader, codexReader = codexReader
+        let off = Self.disabled
+        let needTemps = !off.contains("temps") && (tick % 3 == 1 || lastTemps == nil)  // temperaturas: de 6 em 6 s
+        let cpuReader = cpuReader, netReader = netReader, diskReader = diskReader, agentReader = agentReader, tempReader = tempReader, codexReader = codexReader, procSampler = procSampler, usageTracker = usageTracker
+        let needUsage = !off.contains("usage") && tick % 5 == 1   // tokens: de 10 em 10 s
         queue.async {
             let cpu = cpuReader.read()
             let mem = MemoryReader.read()
             let net = netReader.read()
-            let disk = diskReader.read()
-            let gpu = GPUReader.read()
-            let temps = tempReader.read()
+            let disk = off.contains("disk") ? DiskSample() : diskReader.read()
+            let gpu = off.contains("gpu") ? nil : GPUReader.read()
+            let temps = needTemps ? tempReader.read() : nil
             let battery = slow ? BatteryReader.read() : nil
-            let procs = ProcessReader.read()
+            let procs = off.contains("procs") ? [] : procSampler.read()
             let agents = agentReader.agentProcesses(from: procs)
-            let sessions = (agentReader.sessions(processes: agents) + codexReader.sessions())
+            let sessions = off.contains("sessions") ? [] : (agentReader.sessions(processes: agents) + codexReader.sessions())
                 .sorted { $0.lastActivity > $1.lastActivity }
+            let usage = needUsage ? usageTracker.update() : nil
             let top = Array(procs.sorted { $0.cpu > $1.cpu }.prefix(12))
             let topMem = Array(procs.sorted { $0.rssKB > $1.rssKB }.prefix(12))
 
@@ -121,9 +133,10 @@ final class Monitor: ObservableObject {
                 self.network = net
                 self.disk = disk
                 self.gpu = gpu
-                self.temps = temps
-                if let t = temps?.cpuMax { self.tempHistory.push(t) }
+                if let temps { self.temps = temps; self.lastTemps = temps }
+                if let t = self.temps?.cpuMax { self.tempHistory.push(t) }
                 if slow { self.battery = battery }
+                if let usage { self.usage = usage }
                 self.topProcesses = top
                 self.topMemory = topMem
                 self.agents = agents
@@ -147,10 +160,16 @@ final class Monitor: ObservableObject {
         defer { previousStates = Dictionary(new.map { ($0.id, $0.state) }, uniquingKeysWith: { a, _ in a }) }
         guard notifyOnFinish, !previousStates.isEmpty else { return }
         for s in new {
-            guard let old = previousStates[s.id], old.isWorking, s.state == .waitingUser else { continue }
+            guard let old = previousStates[s.id] else { continue }
             let content = UNMutableNotificationContent()
-            content.title = "Agente terminou · \(s.project)"
-            content.body = s.detail ?? s.title
+            if s.state.needsAttention && !old.needsAttention {
+                content.title = s.state == .needsAnswer ? "Agente tem uma pergunta · \(s.project)" : "Agente precisa de aprovação · \(s.project)"
+                content.body = s.detail ?? s.title
+                content.interruptionLevel = .timeSensitive
+            } else if (old.isWorking || old.needsAttention), s.state == .waitingUser {
+                content.title = "Agente terminou · \(s.project)"
+                content.body = s.detail ?? s.title
+            } else { continue }
             content.sound = .default
             UNUserNotificationCenter.current().add(
                 UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: nil))
@@ -220,6 +239,18 @@ enum Fmt {
         return num + (short ? units[i] : " " + units[i])
     }
     static func pct(_ v: Double) -> String { String(format: "%.0f%%", v * 100) }
+    /// 950 → "950"; 12 300 → "12,3k"; 4 560 000 → "4,6M"
+    static func tokens(_ n: Int) -> String {
+        let d = Double(n)
+        let s: String
+        switch d {
+        case ..<1000: return "\(n)"
+        case ..<1_000_000: s = String(format: d < 10_000 ? "%.1fk" : "%.0fk", d / 1000)
+        case ..<1_000_000_000: s = String(format: d < 10_000_000 ? "%.1fM" : "%.0fM", d / 1_000_000)
+        default: s = String(format: "%.1fB", d / 1_000_000_000)
+        }
+        return s.replacingOccurrences(of: ".", with: ",")
+    }
     static func duration(_ t: TimeInterval) -> String {
         let s = Int(t)
         let d = s / 86400, h = (s % 86400) / 3600, m = (s % 3600) / 60
