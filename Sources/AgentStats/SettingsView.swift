@@ -15,59 +15,56 @@ struct SettingsView: View {
 
     var body: some View {
         @Bindable var m = m
-        VStack(alignment: .leading, spacing: 14) {
+        VStack(alignment: .leading, spacing: DS.lg) {
             group("Barra de menus") {
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Pré-visualização").font(.system(size: 10)).foregroundStyle(.tertiary)
+                VStack(alignment: .leading, spacing: DS.md) {
                     MenuBarLabel()
-                        .padding(.horizontal, 8).padding(.vertical, 4)
+                        .padding(.horizontal, DS.sm).padding(.vertical, DS.xs)
                         .frame(maxWidth: .infinity, alignment: .trailing)
-                        .background(RoundedRectangle(cornerRadius: 6).fill(Color.primary.opacity(0.06)))
-                    Divider().opacity(0.5)
-                    row("sparkles", .purple, "Agentes", "A trabalhar / total", $showAgents)
-                    row("cpu", .blue, "CPU", nil, $showCPU)
-                    row("memorychip", .purple, "Memória", nil, $showRAM)
-                    row("thermometer.medium", .orange, "Temperatura", "Máximo da CPU", $showTemp)
-                    row("cube.transparent", .teal, "GPU", nil, $showGPU)
-                    row("network", .blue, "Rede", "Upload e download", $showNet)
-                    row("battery.75percent", .green, "Bateria", nil, $showBattery)
+                        .background(RoundedRectangle(cornerRadius: DS.rSmall, style: .continuous).fill(DS.raised))
+                        .help("Pré-visualização")
+                    row("terminal", "Agentes", "A trabalhar e total", $showAgents)
+                    row("cpu", "CPU", nil, $showCPU)
+                    row("memorychip", "Memória", nil, $showRAM)
+                    row("thermometer.medium", "Temperatura", "Máximo da CPU", $showTemp)
+                    row("cube", "GPU", nil, $showGPU)
+                    row("network", "Rede", "Upload e download", $showNet)
+                    row("battery.75percent", "Bateria", nil, $showBattery)
                 }
             }
 
             group("Alertas") {
-                VStack(alignment: .leading, spacing: 10) {
-                    row("cpu", .red, "CPU alta", "Notifica após 20 s acima do limite", $m.cpuAlertEnabled)
+                VStack(alignment: .leading, spacing: DS.md) {
+                    row("cpu", "CPU alta", "Notifica após 20 s acima do limite", $m.cpuAlertEnabled)
                     if m.cpuAlertEnabled {
                         Picker("", selection: $m.cpuThreshold) {
                             Text("70%").tag(0.7); Text("80%").tag(0.8); Text("85%").tag(0.85); Text("90%").tag(0.9); Text("95%").tag(0.95)
                         }
-                        .pickerStyle(.segmented).labelsHidden().padding(.leading, 32)
+                        .pickerStyle(.segmented).labelsHidden().padding(.leading, 28)
                     }
-                    row("thermometer.high", .orange, "Temperatura alta", "Máximo da CPU", $m.tempAlertEnabled)
+                    row("thermometer.high", "Temperatura alta", "Máximo da CPU", $m.tempAlertEnabled)
                     if m.tempAlertEnabled {
                         Picker("", selection: $m.tempThreshold) {
                             Text("75°").tag(75.0); Text("80°").tag(80.0); Text("85°").tag(85.0); Text("90°").tag(90.0); Text("95°").tag(95.0)
                         }
-                        .pickerStyle(.segmented).labelsHidden().padding(.leading, 32)
+                        .pickerStyle(.segmented).labelsHidden().padding(.leading, 28)
                     }
                 }
             }
 
             group("Geral") {
-                VStack(alignment: .leading, spacing: 10) {
-                    HStack {
-                        icon("arrow.clockwise", .gray)
-                        Text("Atualizar a cada").font(.system(size: 12))
+                VStack(alignment: .leading, spacing: DS.md) {
+                    HStack(spacing: DS.md) {
+                        icon("arrow.clockwise")
+                        Text("Atualizar a cada").font(DS.body)
                         Spacer()
-                        Picker("", selection: Binding(
-                            get: { m.refreshInterval },
-                            set: { m.refreshInterval = $0; m.restart() })) {
+                        Picker("", selection: $m.refreshInterval) {
                             Text("1 s").tag(1.0); Text("2 s").tag(2.0); Text("5 s").tag(5.0)
                         }
-                        .pickerStyle(.segmented).labelsHidden().frame(width: 130)
+                        .pickerStyle(.segmented).labelsHidden().frame(width: 128)
                     }
-                    row("bell.badge", .red, "Notificações", "Quando um agente termina", $m.notifyOnFinish)
-                    row("power", .green, "Abrir ao iniciar sessão", nil, Binding(
+                    row("bell", "Notificações", "Ao terminar e quando precisa de ti", $m.notifyOnFinish)
+                    row("power", "Abrir ao iniciar sessão", nil, Binding(
                         get: { login.value },
                         set: { on in
                             do {
@@ -75,42 +72,39 @@ struct SettingsView: View {
                                 login.value = on; loginErr.value = nil
                             } catch { loginErr.value = error.localizedDescription }
                         }))
-                    if let e = loginErr.value { Text(e).font(.caption).foregroundStyle(.red) }
+                    if let e = loginErr.value { Text(e).font(DS.meta).foregroundStyle(.red) }
                 }
             }
 
             HStack {
-                Text("AgentStats 1.4").font(.system(size: 10.5, weight: .medium)).foregroundStyle(.secondary)
+                Text("AgentStats 1.5").font(DS.meta).foregroundStyle(.tertiary)
                 Spacer()
                 Link("Código no GitHub", destination: URL(string: "https://github.com/HamiltonPrado/agentstats")!)
-                    .font(.system(size: 10.5))
+                    .font(DS.meta)
             }
-            .padding(.horizontal, 4)
+            .padding(.horizontal, DS.xs)
         }
     }
 
     private func group<C: View>(_ title: String, @ViewBuilder _ content: () -> C) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text(title.uppercased()).font(.system(size: 10, weight: .bold)).tracking(0.6).foregroundStyle(.secondary)
-                .padding(.leading, 4)
+        VStack(alignment: .leading, spacing: DS.sm) {
+            Text(title).font(DS.meta.weight(.medium)).foregroundStyle(.secondary)
+                .padding(.leading, DS.xs)
             content().cardStyle()
         }
     }
 
-    private func icon(_ name: String, _ color: Color) -> some View {
-        ZStack {
-            RoundedRectangle(cornerRadius: 6, style: .continuous).fill(color.gradient)
-            Image(systemName: name).font(.system(size: 10.5, weight: .semibold)).foregroundStyle(.white)
-        }
-        .frame(width: 22, height: 22)
+    /// Ícones de linha, todos do mesmo tamanho e na cor do texto secundário.
+    private func icon(_ name: String) -> some View {
+        Image(systemName: name).font(DS.body).foregroundStyle(.secondary).frame(width: 16)
     }
 
-    private func row(_ iconName: String, _ color: Color, _ title: String, _ sub: String?, _ binding: Binding<Bool>) -> some View {
-        HStack(spacing: 10) {
-            icon(iconName, color)
-            VStack(alignment: .leading, spacing: 0) {
-                Text(title).font(.system(size: 12))
-                if let sub { Text(sub).font(.system(size: 10)).foregroundStyle(.tertiary) }
+    private func row(_ iconName: String, _ title: String, _ sub: String?, _ binding: Binding<Bool>) -> some View {
+        HStack(spacing: DS.md) {
+            icon(iconName)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title).font(DS.body)
+                if let sub { Text(sub).font(DS.meta).foregroundStyle(.tertiary) }
             }
             Spacer()
             Toggle("", isOn: binding).toggleStyle(.switch).controlSize(.mini).labelsHidden()

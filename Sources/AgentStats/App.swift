@@ -37,7 +37,7 @@ enum AgentStatsApp {
         if ProcessInfo.processInfo.environment["AGENTSTATS_FAKE_ALERT"] != nil {
             m.activeAlerts = [
                 SystemAlert(kind: .cpu, value: "92%", since: Date().addingTimeInterval(-45), detail: "WindowServer (74%)"),
-                SystemAlert(kind: .temp, value: "91 ºC", since: Date().addingTimeInterval(-30), detail: "WindowServer (74%)"),
+                SystemAlert(kind: .temp, value: "91 °C", since: Date().addingTimeInterval(-30), detail: "WindowServer (74%)"),
             ]
             m.sessions.insert(AgentSession(id: "fake", kind: "Claude Code", title: "Migrar base de dados", cwd: "/Users/demo/api",
                                            model: "claude-opus-5-5", state: .needsApproval("Bash"),

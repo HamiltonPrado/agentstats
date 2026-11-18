@@ -7,42 +7,81 @@ final class Box<T>: ObservableObject {
     init(_ v: T) { value = v }
 }
 
+// MARK: - Sistema de design
+//
+// Direção: um painel de instrumentos à noite — atento, exato, discreto.
+// Superfícies em grafite neutro (os materiais do macOS), uma só cor de destaque (a do sistema),
+// e cor de estado apenas onde tem significado: verde a trabalhar, âmbar à espera, vermelho precisa de ti.
+
+enum DS {
+    // Espaçamento: grelha de 4
+    static let xs: CGFloat = 4
+    static let sm: CGFloat = 8
+    static let md: CGFloat = 12
+    static let lg: CGFloat = 16
+
+    // Tipo: quatro tamanhos, pesos 400 e 500
+    static let meta = Font.system(size: 11)
+    static let body = Font.system(size: 12)
+    static let title = Font.system(size: 13, weight: .medium)
+    static let figure = Font.system(size: 20, weight: .medium).monospacedDigit()
+    static let mono = Font.system(size: 11, design: .monospaced)
+
+    // Raios (aninhados: interior = exterior − padding)
+    static let rSmall: CGFloat = 6
+    static let rControl: CGFloat = 8
+    static let rCard: CGFloat = 12
+
+    // Superfícies (passos do mesmo neutro) e linha fina
+    static let surface = Color.primary.opacity(0.04)
+    static let raised = Color.primary.opacity(0.08)
+    static let hairline = Color.primary.opacity(0.08)
+}
+
 enum Palette {
-    static func usage(_ v: Double) -> Color { v > 0.85 ? .red : v > 0.6 ? .orange : .green }
-    static func temp(_ c: Double) -> Color { c >= 90 ? .red : c >= 75 ? .orange : c >= 60 ? .yellow : .green }
-    static let brand = LinearGradient(colors: [Color(red: 0.55, green: 0.36, blue: 0.96), Color(red: 0.23, green: 0.51, blue: 0.96)],
-                                      startPoint: .topLeading, endPoint: .bottomTrailing)
+    /// Cor de calor só quando há algo a assinalar; o normal fica neutro.
+    static func heat(_ fraction: Double) -> Color { fraction > 0.85 ? .red : fraction > 0.7 ? .orange : .secondary }
+    static func temp(_ c: Double) -> Color { c >= 90 ? .red : c >= 80 ? .orange : .secondary }
+    static let working = Color.green
+    static let waiting = Color.orange
+    static let attention = Color.red
 }
 
 extension View {
-    /// Estilo base de cartão: fundo subtil, borda fina, cantos contínuos.
-    func cardStyle(padding: CGFloat = 10, highlight: Color? = nil) -> some View {
+    /// Cartão: superfície neutra com linha fina; `highlight` só para o que precisa de atenção.
+    func cardStyle(padding: CGFloat = DS.md, highlight: Color? = nil) -> some View {
         self
             .padding(padding)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(RoundedRectangle(cornerRadius: 10, style: .continuous).fill(Color.primary.opacity(0.045)))
+            .background(RoundedRectangle(cornerRadius: DS.rCard, style: .continuous).fill(DS.surface))
             .overlay(
-                RoundedRectangle(cornerRadius: 10, style: .continuous)
-                    .strokeBorder(highlight ?? Color.primary.opacity(0.07), lineWidth: highlight == nil ? 0.5 : 1.2)
+                RoundedRectangle(cornerRadius: DS.rCard, style: .continuous)
+                    .strokeBorder(highlight ?? DS.hairline, lineWidth: 1)
             )
     }
+}
+
+/// O ponto de estado: a assinatura da app. Fixo, nunca pulsa.
+struct StatusDot: View {
+    let color: Color
+    var size: CGFloat = 6
+    var body: some View { Circle().fill(color).frame(width: size, height: size) }
 }
 
 struct Card<Content: View>: View {
     let title: String
     let icon: String
     var trailing: String? = nil
-    var tint: Color = .secondary
     @ViewBuilder var content: Content
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 7) {
-            HStack(spacing: 6) {
-                Image(systemName: icon).font(.system(size: 11, weight: .semibold)).foregroundStyle(tint)
-                Text(title).font(.system(size: 12, weight: .semibold))
+        VStack(alignment: .leading, spacing: DS.sm) {
+            HStack(spacing: DS.sm) {
+                Image(systemName: icon).font(DS.body).foregroundStyle(.secondary).frame(width: 16)
+                Text(title).font(DS.title)
                 Spacer()
                 if let trailing {
-                    Text(trailing).font(.system(size: 12, weight: .semibold).monospacedDigit()).foregroundStyle(.secondary)
+                    Text(trailing).font(DS.body.monospacedDigit()).foregroundStyle(.secondary)
                 }
             }
             content
@@ -54,12 +93,12 @@ struct Card<Content: View>: View {
 struct SectionHeader: View {
     let title: String
     var count: Int? = nil
-    var color: Color = .secondary
+    var color: Color? = nil
     var body: some View {
-        HStack(spacing: 6) {
-            Circle().fill(color).frame(width: 6, height: 6)
-            Text(title.uppercased()).font(.system(size: 10, weight: .bold)).tracking(0.6).foregroundStyle(.secondary)
-            if let count { Text("\(count)").font(.system(size: 10, weight: .bold).monospacedDigit()).foregroundStyle(.tertiary) }
+        HStack(spacing: DS.sm) {
+            if let color { StatusDot(color: color) }
+            Text(title).font(DS.meta.weight(.medium)).foregroundStyle(.secondary)
+            if let count { Text("\(count)").font(DS.meta.monospacedDigit()).foregroundStyle(.tertiary) }
             Spacer()
         }
     }
@@ -69,6 +108,7 @@ struct Sparkline: View {
     let values: [Double]
     var maxValue: Double? = nil
     var color: Color = .accentColor
+    var fill = true
 
     var body: some View {
         GeometryReader { g in
@@ -78,13 +118,15 @@ struct Sparkline: View {
                         y: g.size.height * (1 - CGFloat(min(v / mx, 1))))
             }
             ZStack {
-                Path { p in
-                    guard let f = pts.first, let l = pts.last else { return }
-                    p.move(to: CGPoint(x: f.x, y: g.size.height))
-                    pts.forEach { p.addLine(to: $0) }
-                    p.addLine(to: CGPoint(x: l.x, y: g.size.height))
+                if fill {
+                    Path { p in
+                        guard let f = pts.first, let l = pts.last else { return }
+                        p.move(to: CGPoint(x: f.x, y: g.size.height))
+                        pts.forEach { p.addLine(to: $0) }
+                        p.addLine(to: CGPoint(x: l.x, y: g.size.height))
+                    }
+                    .fill(color.opacity(0.10))
                 }
-                .fill(LinearGradient(colors: [color.opacity(0.28), color.opacity(0.02)], startPoint: .top, endPoint: .bottom))
                 Path { p in
                     guard let f = pts.first else { return }
                     p.move(to: f)
@@ -98,12 +140,12 @@ struct Sparkline: View {
 
 struct Bar: View {
     let value: Double
-    var color: Color = .accentColor
-    var height: CGFloat = 6
+    var color: Color = .secondary
+    var height: CGFloat = 4
     var body: some View {
         GeometryReader { g in
             ZStack(alignment: .leading) {
-                Capsule().fill(Color.primary.opacity(0.08))
+                Capsule().fill(DS.raised)
                 Capsule().fill(color).frame(width: max(height, g.size.width * CGFloat(min(max(value, 0), 1))))
             }
         }
@@ -111,74 +153,37 @@ struct Bar: View {
     }
 }
 
-struct RingGauge<Center: View>: View {
-    let value: Double?
-    let color: Color
-    var lineWidth: CGFloat = 4.5
-    @ViewBuilder var center: Center
-
-    var body: some View {
-        ZStack {
-            Circle().stroke(color.opacity(0.15), lineWidth: lineWidth)
-            if let value {
-                Circle()
-                    .trim(from: 0, to: CGFloat(min(max(value, 0.005), 1)))
-                    .stroke(color, style: StrokeStyle(lineWidth: lineWidth, lineCap: .round))
-                    .rotationEffect(.degrees(-90))
-                    .animation(.easeOut(duration: 0.5), value: value)
-            }
-            center
-        }
-    }
-}
-
 struct StatRow: View {
     let label: String
     let value: String
-    var color: Color? = nil
+    /// Amostra da legenda, quando a linha corresponde a uma série de um gráfico.
+    var swatch: Color? = nil
+    var valueColor: Color = .primary
     var body: some View {
-        HStack(spacing: 6) {
-            if let color { RoundedRectangle(cornerRadius: 2).fill(color).frame(width: 8, height: 8) }
+        HStack(spacing: DS.sm) {
+            if let swatch { RoundedRectangle(cornerRadius: 2).fill(swatch).frame(width: 8, height: 8) }
             Text(label).foregroundStyle(.secondary)
-            Spacer(minLength: 8)
-            Text(value).monospacedDigit().foregroundStyle(.primary)
+            Spacer(minLength: DS.sm)
+            Text(value).monospacedDigit().foregroundStyle(valueColor)
         }
-        .font(.system(size: 11))
-    }
-}
-
-struct Pill: View {
-    let text: String
-    var icon: String? = nil
-    var color: Color = .secondary
-    var body: some View {
-        HStack(spacing: 3) {
-            if let icon { Image(systemName: icon).font(.system(size: 8.5, weight: .semibold)) }
-            Text(text).lineLimit(1)
-        }
-        .font(.system(size: 10, weight: .medium))
-        .foregroundStyle(color)
-        .padding(.horizontal, 6).padding(.vertical, 2.5)
-        .background(Capsule().fill(color.opacity(0.12)))
+        .font(DS.body)
     }
 }
 
 struct IconButton: View {
     let systemName: String
     var help: String = ""
-    var active = false
-    var tint: Color = .secondary
     let action: () -> Void
     @StateObject private var hover = Box(false)
 
     var body: some View {
         Button(action: action) {
             Image(systemName: systemName)
-                .font(.system(size: 12, weight: .medium))
-                .foregroundStyle(active ? Color.accentColor : tint)
-                .frame(width: 26, height: 26)
-                .background(RoundedRectangle(cornerRadius: 7, style: .continuous)
-                    .fill(active ? Color.accentColor.opacity(0.15) : Color.primary.opacity(hover.value ? 0.08 : 0)))
+                .font(DS.body)
+                .foregroundStyle(.secondary)
+                .frame(width: 24, height: 24)
+                .background(RoundedRectangle(cornerRadius: DS.rSmall, style: .continuous)
+                    .fill(hover.value ? DS.raised : .clear))
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)

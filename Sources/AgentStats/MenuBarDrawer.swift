@@ -32,7 +32,7 @@ enum MenuBarDrawer {
         if !m.activeAlerts.isEmpty { s.append(.symbol("exclamationmark.triangle.fill", 11)) }
         if m.needsAttentionCount > 0 { s.append(.symbol("hand.raised.fill", 11)) }
         if agents {
-            s.append(.symbol(m.workingCount > 0 ? "sparkles" : "sparkle", 11))
+            s.append(.symbol(m.workingCount > 0 ? "circle.fill" : "circle", 7))   // o ponto de estado
             s.append(.text("\(m.workingCount)/\(m.liveAgentCount)", agentFont))
         }
         if cpu { s.append(.cell(title: "CPU", value: Fmt.pct(m.cpu.total))) }
@@ -43,7 +43,7 @@ enum MenuBarDrawer {
             s.append(.twoLines("↑ " + Fmt.rate(m.network.upPerSec, short: true),
                                "↓ " + Fmt.rate(m.network.downPerSec, short: true), minWidth: 40))
         }
-        if bat, let b = m.battery { s.append(.cell(title: b.isCharging ? "BAT ⚡︎" : "BAT", value: Fmt.pct(b.percent))) }
+        if bat, let b = m.battery { s.append(.cell(title: b.isCharging ? "CARGA" : "BAT", value: Fmt.pct(b.percent))) }
         if s.isEmpty { s.append(.symbol("gauge.with.dots.needle.33percent", 12)) }
         return s
     }
@@ -73,7 +73,7 @@ enum MenuBarDrawer {
         var widths = segs.map(width)
         var gaps: [CGFloat] = []
         for i in segs.indices.dropLast() {
-            if case .symbol(let n, _) = segs[i], n.hasPrefix("sparkle"), case .text = segs[i + 1] { gaps.append(2) }
+            if case .symbol(let n, _) = segs[i], n.hasPrefix("circle"), case .text = segs[i + 1] { gaps.append(2) }
             else { gaps.append(spacing) }
         }
         let total = widths.reduce(0, +) + gaps.reduce(0, +) + 2

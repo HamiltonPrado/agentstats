@@ -182,7 +182,7 @@ final class Monitor {
         if let t = temps?.cpuMax,
            let a = evaluate(.temp, enabled: tempAlertEnabled, value: t,
                             on: tempThreshold, off: tempThreshold - 5, now: now) {
-            alerts.append(SystemAlert(kind: .temp, value: String(format: "%.0f ºC", t), since: a, detail: culprit))
+            alerts.append(SystemAlert(kind: .temp, value: String(format: "%.0f °C", t), since: a, detail: culprit))
         }
         if alerts.map(\.kind) != activeAlerts.map(\.kind) || alerts.map(\.value) != activeAlerts.map(\.value) {
             activeAlerts = alerts
@@ -223,16 +223,29 @@ enum Pref {
 // MARK: - Formatação
 
 enum Fmt {
+    /// Bytes com vírgula decimal (pt-PT), igual ao resto da app: 10,24 GB
     static func bytes(_ b: UInt64) -> String {
-        ByteCountFormatter.string(fromByteCount: Int64(b), countStyle: .memory)
+        ByteCountFormatter.string(fromByteCount: Int64(b), countStyle: .memory).replacingOccurrences(of: ".", with: ",")
+    }
+    /// Versão curta para espaços pequenos: 193 GB, 10 GB, 512 MB
+    static func bytesShort(_ b: UInt64) -> String {
+        let gb = Double(b) / 1_073_741_824
+        if gb >= 1 { return num(gb, gb < 10 ? 1 : 0) + " GB" }
+        return num(Double(b) / 1_048_576, 0) + " MB"
     }
     static func rate(_ bps: Double, short: Bool = false) -> String {
         let units = short ? ["B", "K", "M", "G"] : ["B/s", "KB/s", "MB/s", "GB/s"]
         var v = bps, i = 0
         while v >= 1000 && i < units.count - 1 { v /= 1000; i += 1 }
-        let num = v >= 100 || i == 0 ? String(format: "%.0f", v) : String(format: "%.1f", v)
-        return num + (short ? units[i] : " " + units[i])
+        let n = v >= 100 || i == 0 ? Fmt.num(v, 0) : Fmt.num(v, 1)
+        return n + (short ? units[i] : " " + units[i])
     }
+    /// Número com vírgula decimal (pt-PT), igual em todo o lado: 46,9 · 1,2 · 0,85
+    static func num(_ v: Double, _ digits: Int) -> String {
+        String(format: "%.\(digits)f", v).replacingOccurrences(of: ".", with: ",")
+    }
+    /// Temperatura com o símbolo de grau correto: 46,9 °C
+    static func temp(_ c: Double, _ digits: Int = 1) -> String { num(c, digits) + " °C" }
     static func pct(_ v: Double) -> String { String(format: "%.0f%%", v * 100) }
     /// 950 → "950"; 12 300 → "12,3k"; 4 560 000 → "4,6M"
     static func tokens(_ n: Int) -> String {

@@ -51,7 +51,7 @@ struct BatterySample {
     var minutesRemaining: Int? = nil
     var cycles: Int = 0
     var health: Double? = nil      // 0...1
-    var temperature: Double? = nil // ºC
+    var temperature: Double? = nil // °C
     var watts: Double? = nil
 }
 
