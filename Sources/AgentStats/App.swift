@@ -1,12 +1,21 @@
 import SwiftUI
 import AppKit
 import ServiceManagement
+import Combine
 
 @main
-struct AgentStatsApp: App {
-    @StateObject private var monitor = Monitor()
+enum AgentStatsApp {
+    /// Arranque em AppKit puro: só existe o ícone na barra de menus (sem janelas SwiftUI).
+    static func main() {
+        handleCommandLine()
+        let app = NSApplication.shared
+        let delegate = AppDelegate()
+        app.delegate = delegate
+        app.setActivationPolicy(.accessory)
+        withExtendedLifetime(delegate) { app.run() }
+    }
 
-    init() {
+    static func handleCommandLine() {
         if CommandLine.arguments.contains("--dump") { Self.dump(); exit(0) }
         if CommandLine.arguments.contains("--register-login") {
             do { try SMAppService.mainApp.register(); print("login: \(SMAppService.mainApp.status.rawValue)") }
@@ -72,15 +81,71 @@ struct AgentStatsApp: App {
         }
     }
 
-    var body: some Scene {
-        MenuBarExtra {
-            PanelView()
-                .environmentObject(monitor)
-        } label: {
-            MenuBarLabel()
-                .environmentObject(monitor)
+}
+
+final class AppDelegate: NSObject, NSApplicationDelegate {
+    private var controller: StatusController?
+
+    func applicationDidFinishLaunching(_ notification: Notification) {
+        MainActor.assumeIsolated {
+            controller = StatusController(monitor: Monitor())
         }
-        .menuBarExtraStyle(.window)
+    }
+}
+
+@MainActor
+final class StatusController: NSObject, NSPopoverDelegate {
+    private let monitor: Monitor
+    private let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
+    private let popover = NSPopover()
+    private var cancellables = Set<AnyCancellable>()
+
+    init(monitor: Monitor) {
+        self.monitor = monitor
+        super.init()
+
+        let host = NSHostingController(rootView: PanelView().environmentObject(monitor))
+        host.sizingOptions = [.preferredContentSize]
+        popover.contentViewController = host
+        popover.behavior = .transient
+        popover.animates = true
+        popover.delegate = self
+
+        if let button = item.button {
+            button.target = self
+            button.action = #selector(toggle(_:))
+            button.imagePosition = .imageOnly
+        }
+        updateIcon()
+
+        // Atualiza o ícone quando há novas amostras ou quando as definições mudam
+        monitor.objectWillChange
+            .debounce(for: .milliseconds(60), scheduler: RunLoop.main)
+            .sink { [weak self] _ in self?.updateIcon() }
+            .store(in: &cancellables)
+        NotificationCenter.default.publisher(for: UserDefaults.didChangeNotification)
+            .debounce(for: .milliseconds(60), scheduler: RunLoop.main)
+            .sink { [weak self] _ in self?.updateIcon() }
+            .store(in: &cancellables)
+    }
+
+    private func updateIcon() {
+        let r = ImageRenderer(content: MenuBarLabel().environmentObject(monitor))
+        r.scale = NSScreen.main?.backingScaleFactor ?? 2
+        guard let img = r.nsImage else { return }
+        img.isTemplate = true
+        item.button?.image = img
+    }
+
+    @objc private func toggle(_ sender: Any?) {
+        guard let button = item.button else { return }
+        if popover.isShown {
+            popover.performClose(sender)
+        } else {
+            NSApp.activate(ignoringOtherApps: true)
+            popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
+            popover.contentViewController?.view.window?.makeKey()
+        }
     }
 }
 
