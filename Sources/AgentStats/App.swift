@@ -137,6 +137,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         MainActor.assumeIsolated {
             controller = StatusController(monitor: Monitor())
+            // Diagnóstico: abre o painel ao arrancar (para medir o consumo com o painel aberto)
+            if ProcessInfo.processInfo.environment["AGENTSTATS_OPEN_PANEL"] != nil {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 3) { [weak self] in self?.controller?.openPanel() }
+            }
         }
     }
 }
@@ -203,6 +207,10 @@ final class StatusController: NSObject, NSPopoverDelegate {
         guard sig != lastIconSignature else { return }
         lastIconSignature = sig
         item.button?.image = MenuBarDrawer.image(monitor)
+    }
+
+    func openPanel() {
+        if !popover.isShown { toggle(nil) }
     }
 
     @objc private func toggle(_ sender: Any?) {

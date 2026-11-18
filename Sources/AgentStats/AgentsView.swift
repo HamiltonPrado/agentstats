@@ -133,24 +133,27 @@ struct FlowPills: View {
 
 struct StateIcon: View {
     let state: AgentState
-    @StateObject private var anim = Box(false)
 
     var body: some View {
-        ZStack {
-            if state.isWorking || state.needsAttention {
-                RoundedRectangle(cornerRadius: 7, style: .continuous)
-                    .stroke(state.color, lineWidth: 1.5)
-                    .scaleEffect(anim.value ? 1.3 : 1)
-                    .opacity(anim.value ? 0 : 0.8)
-                    .animation(.easeOut(duration: 1.5).repeatForever(autoreverses: false), value: anim.value)
+        ZStack(alignment: .bottomTrailing) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 7, style: .continuous).fill(state.color.opacity(0.16))
+                if state.needsAttention {
+                    RoundedRectangle(cornerRadius: 7, style: .continuous).strokeBorder(state.color, lineWidth: 1.2)
+                }
+                Image(systemName: state.icon)
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(state.color)
             }
-            RoundedRectangle(cornerRadius: 7, style: .continuous).fill(state.color.opacity(0.16))
-            Image(systemName: state.icon)
-                .font(.system(size: 11, weight: .semibold))
-                .foregroundStyle(state.color)
+            .frame(width: 26, height: 26)
+            // Indicador nativo (animado pelo macOS fora do processo): bem mais leve que uma animação SwiftUI contínua
+            if state.isWorking {
+                ProgressView().controlSize(.mini).scaleEffect(0.6)
+                    .frame(width: 10, height: 10)
+                    .background(Circle().fill(.background))
+                    .offset(x: 3, y: 3)
+            }
         }
-        .frame(width: 26, height: 26)
-        .onAppear { anim.value = true }
     }
 }
 

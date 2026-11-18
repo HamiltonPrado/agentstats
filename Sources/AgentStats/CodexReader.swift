@@ -23,6 +23,8 @@ final class CodexReader {
         var timestamp: Date?
     }
     private var tailCache: [String: (mtime: Date, size: UInt64, info: TailInfo)] = [:]
+    private var fallbackCache: [Thread] = []
+    private var fallbackAt = Date.distantPast
 
     private let iso: ISO8601DateFormatter = {
         let f = ISO8601DateFormatter()
@@ -34,8 +36,12 @@ final class CodexReader {
         guard FileManager.default.fileExists(atPath: home.path) else { return [] }
         let active = activeThreadIDs()
         var threads = recentThreads()
-        // Recurso: se a base de dados falhar, usa os ficheiros rollout recentes
-        if threads.isEmpty { threads = recentRolloutsFallback() }
+        // Recurso: só sem base de dados (versões antigas do Codex) usa os ficheiros rollout recentes,
+        // com cache de 30 s (percorrer ~/.codex/sessions a cada amostra é caro).
+        if threads.isEmpty && !FileManager.default.fileExists(atPath: home.appendingPathComponent("state_5.sqlite").path) {
+            if Date().timeIntervalSince(fallbackAt) > 30 { fallbackCache = recentRolloutsFallback(); fallbackAt = Date() }
+            threads = fallbackCache
+        }
 
         let now = Date()
         var out: [AgentSession] = []
@@ -74,14 +80,25 @@ final class CodexReader {
     // MARK: SQLite
 
     private func query(_ path: String, _ sql: String, _ row: (OpaquePointer) -> Void) {
+        guard FileManager.default.fileExists(atPath: path) else { return }
         var db: OpaquePointer?
-        guard sqlite3_open_v2(path, &db, SQLITE_OPEN_READONLY, nil) == SQLITE_OK else { sqlite3_close(db); return }
+        if sqlite3_open_v2(path, &db, SQLITE_OPEN_READONLY, nil) != SQLITE_OK || !canRead(db) {
+            sqlite3_close(db); db = nil
+            // Sem os ficheiros -wal/-shm (app do Codex fechada) a abertura só-leitura falha:
+            // em modo imutável o SQLite lê o ficheiro principal sem precisar deles.
+            let uri = "file:" + (path.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? path) + "?immutable=1"
+            guard sqlite3_open_v2(uri, &db, SQLITE_OPEN_READONLY | SQLITE_OPEN_URI, nil) == SQLITE_OK else { sqlite3_close(db); return }
+        }
         defer { sqlite3_close(db) }
         sqlite3_busy_timeout(db, 200)
         var stmt: OpaquePointer?
         guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK, let stmt else { return }
         defer { sqlite3_finalize(stmt) }
         while sqlite3_step(stmt) == SQLITE_ROW { row(stmt) }
+    }
+
+    private func canRead(_ db: OpaquePointer?) -> Bool {
+        sqlite3_exec(db, "SELECT 1 FROM sqlite_master LIMIT 1", nil, nil, nil) == SQLITE_OK
     }
 
     private func text(_ s: OpaquePointer, _ i: Int32) -> String? {

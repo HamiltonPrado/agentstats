@@ -35,3 +35,4 @@ swiftc -O Scripts/make-icon.swift -o /tmp/make-icon && /tmp/make-icon Resources/
 - `AgentStats --bench` — custo (ms) de cada leitor
 - `AgentStats --snapshot <pasta>` — renderiza o painel em PNG (`AGENTSTATS_FAKE_ALERT=1` simula alertas e um pedido de aprovação)
 - `AGENTSTATS_DISABLE=icon,temps,procs,sessions,usage,gpu,disk` — desliga partes para medir o consumo
+- `AGENTSTATS_OPEN_PANEL=1` — abre o painel ao arrancar (para medir o consumo com ele aberto)
