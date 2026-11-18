@@ -13,6 +13,39 @@ struct AgentStatsApp: App {
             catch { print("erro: \(error)") }
             exit(0)
         }
+        let args = CommandLine.arguments
+        if let i = args.firstIndex(of: "--snapshot"), i + 1 < args.count {
+            MainActor.assumeIsolated { Self.snapshot(to: args[i + 1]) }
+            exit(0)
+        }
+    }
+
+    /// Renderiza cada separador do painel em PNG (claro e escuro) para rever a interface.
+    @MainActor static func snapshot(to dir: String) {
+        let m = Monitor()
+        RunLoop.main.run(until: Date().addingTimeInterval(7))
+        for scheme in [ColorScheme.light, .dark] {
+            for tab in Tab.allCases {
+                let view = PanelView(forcedTab: tab, scrollable: false)
+                    .environmentObject(m)
+                    .environment(\.colorScheme, scheme)
+                    .background(scheme == .dark ? Color(white: 0.17) : Color(white: 0.95))
+                let r = ImageRenderer(content: view)
+                r.scale = 2
+                guard let img = r.nsImage, let tiff = img.tiffRepresentation,
+                      let rep = NSBitmapImageRep(data: tiff),
+                      let png = rep.representation(using: .png, properties: [:]) else { continue }
+                let name = "\(tab.rawValue)-\(scheme == .dark ? "dark" : "light").png"
+                try? png.write(to: URL(fileURLWithPath: dir).appendingPathComponent(name))
+            }
+        }
+        // barra de menus
+        let bar = ImageRenderer(content: MenuBarLabel().environmentObject(m).padding(4).background(Color.white))
+        bar.scale = 3
+        if let tiff = bar.nsImage?.tiffRepresentation, let rep = NSBitmapImageRep(data: tiff),
+           let png = rep.representation(using: .png, properties: [:]) {
+            try? png.write(to: URL(fileURLWithPath: dir).appendingPathComponent("menubar.png"))
+        }
     }
 
     /// Diagnóstico: `AgentStats --dump` imprime as métricas e os agentes e sai.

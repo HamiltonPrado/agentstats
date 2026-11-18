@@ -21,6 +21,7 @@ final class Monitor: ObservableObject {
     @Published var temps: TemperatureSample?
     @Published var battery: BatterySample?
     @Published var topProcesses: [ProcSample] = []
+    @Published var topMemory: [ProcSample] = []
     @Published var agents: [AgentProcess] = []
     @Published var sessions: [AgentSession] = []
     @Published var thermal: ProcessInfo.ThermalState = .nominal
@@ -89,7 +90,8 @@ final class Monitor: ObservableObject {
             let procs = ProcessReader.read()
             let agents = agentReader.agentProcesses(from: procs)
             let sessions = agentReader.sessions(processes: agents)
-            let top = Array(procs.sorted { $0.cpu > $1.cpu }.prefix(8))
+            let top = Array(procs.sorted { $0.cpu > $1.cpu }.prefix(12))
+            let topMem = Array(procs.sorted { $0.rssKB > $1.rssKB }.prefix(12))
 
             DispatchQueue.main.async {
                 self.cpu = cpu
@@ -101,6 +103,7 @@ final class Monitor: ObservableObject {
                 if let t = temps?.cpuMax { self.tempHistory.push(t) }
                 if slow { self.battery = battery }
                 self.topProcesses = top
+                self.topMemory = topMem
                 self.agents = agents
                 self.handleTransitions(sessions)
                 self.sessions = sessions
@@ -131,8 +134,8 @@ final class Monitor: ObservableObject {
         }
     }
 
-    func terminate(pid: Int) {
-        kill(pid_t(pid), SIGTERM)
+    func terminate(pid: Int, force: Bool = false) {
+        kill(pid_t(pid), force ? SIGKILL : SIGTERM)
     }
 }
 
@@ -164,8 +167,25 @@ enum Fmt {
         if s < 3600 { return "há \(s / 60) min" }
         return "há \(s / 3600)h"
     }
+    /// "claude-opus-5-5" → "Opus 5.5"; "claude-sonnet-4-5-20250929" → "Sonnet 4.5"
     static func model(_ m: String?) -> String? {
         guard let m else { return nil }
-        return m.replacingOccurrences(of: "claude-", with: "").replacingOccurrences(of: "-", with: " ").capitalized
+        let parts = m.replacingOccurrences(of: "claude-", with: "").components(separatedBy: "-")
+            .filter { !($0.count >= 8 && $0.allSatisfy(\.isNumber)) }
+        let words = parts.filter { !$0.allSatisfy(\.isNumber) }.map { $0.capitalized }
+        let version = parts.filter { $0.allSatisfy(\.isNumber) }.joined(separator: ".")
+        return (words + (version.isEmpty ? [] : [version])).joined(separator: " ")
+    }
+    static func minutes(_ m: Int) -> String { m >= 60 ? "\(m / 60)h \(m % 60)min" : "\(m) min" }
+    /// "02-22:16:01" (formato etime do ps) → "2d 22h"
+    static func etime(_ e: String) -> String {
+        var days = 0, rest = Substring(e)
+        if let dash = e.firstIndex(of: "-") { days = Int(e[..<dash]) ?? 0; rest = e[e.index(after: dash)...] }
+        let f = rest.split(separator: ":").compactMap { Int($0) }
+        let (h, m, s) = f.count == 3 ? (f[0], f[1], f[2]) : (0, f.first ?? 0, f.count > 1 ? f[1] : 0)
+        if days > 0 { return "\(days)d \(h)h" }
+        if h > 0 { return "\(h)h \(m)min" }
+        if m > 0 { return "\(m)min" }
+        return "\(s)s"
     }
 }
