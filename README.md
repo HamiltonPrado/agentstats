@@ -19,3 +19,10 @@ open build/AgentStats.app
 ```
 
 Diagnóstico sem interface: `build/AgentStats.app/Contents/MacOS/AgentStats --dump`
+
+## Ícone
+Gerado por código em `Scripts/make-icon.swift` → `Resources/AppIcon-1024.png`; o `build.sh` converte-o em `.icns`.
+
+```bash
+swiftc -O Scripts/make-icon.swift -o /tmp/make-icon && /tmp/make-icon Resources/AppIcon-1024.png
+```
