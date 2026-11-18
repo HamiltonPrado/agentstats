@@ -18,6 +18,7 @@ final class Monitor: ObservableObject {
     @Published var network = NetworkSample()
     @Published var disk = DiskSample()
     @Published var gpu: Double?
+    @Published var temps: TemperatureSample?
     @Published var battery: BatterySample?
     @Published var topProcesses: [ProcSample] = []
     @Published var agents: [AgentProcess] = []
@@ -30,6 +31,7 @@ final class Monitor: ObservableObject {
     @Published var gpuHistory = History()
     @Published var downHistory = History()
     @Published var upHistory = History()
+    @Published var tempHistory = History()
 
     let machine: String = Sys.sysctlString("machdep.cpu.brand_string") ?? "Mac"
     let model: String = Sys.sysctlString("hw.model") ?? ""
@@ -43,6 +45,7 @@ final class Monitor: ObservableObject {
     private let netReader = NetworkReader()
     private let diskReader = DiskReader()
     private let agentReader = AgentReader()
+    private let tempReader = TemperatureReader()
     private let queue = DispatchQueue(label: "agentstats.sampler", qos: .utility)
     private var timer: Timer?
     private var tick = 0
@@ -74,13 +77,14 @@ final class Monitor: ObservableObject {
         tick += 1
         let slow = tick % 3 == 1 // bateria e disco não precisam de tanta frequência
 
-        let cpuReader = cpuReader, netReader = netReader, diskReader = diskReader, agentReader = agentReader
+        let cpuReader = cpuReader, netReader = netReader, diskReader = diskReader, agentReader = agentReader, tempReader = tempReader
         queue.async {
             let cpu = cpuReader.read()
             let mem = MemoryReader.read()
             let net = netReader.read()
             let disk = diskReader.read()
             let gpu = GPUReader.read()
+            let temps = tempReader.read()
             let battery = slow ? BatteryReader.read() : nil
             let procs = ProcessReader.read()
             let agents = agentReader.agentProcesses(from: procs)
@@ -93,6 +97,8 @@ final class Monitor: ObservableObject {
                 self.network = net
                 self.disk = disk
                 self.gpu = gpu
+                self.temps = temps
+                if let t = temps?.cpuMax { self.tempHistory.push(t) }
                 if slow { self.battery = battery }
                 self.topProcesses = top
                 self.agents = agents

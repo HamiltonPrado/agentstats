@@ -361,6 +361,8 @@ struct SystemView: View {
                 }
             }
 
+            if let t = m.temps { TemperatureCard(t: t, history: m.tempHistory.values) }
+
             Card(title: "Rede", icon: "network", trailing: m.network.interface) {
                 ZStack {
                     let mx = max((m.downHistory.values + m.upHistory.values).max() ?? 1, 1024)
@@ -489,6 +491,7 @@ struct SettingsView: View {
     @AppStorage("bar.gpu") var showGPU = false
     @AppStorage("bar.net") var showNet = true
     @AppStorage("bar.battery") var showBattery = false
+    @AppStorage("bar.temp") var showTemp = true
     @StateObject private var login = Box(SMAppService.mainApp.status == .enabled)
     @StateObject private var loginErr = Box<String?>(nil)
 
@@ -499,6 +502,7 @@ struct SettingsView: View {
                 Toggle("CPU", isOn: $showCPU)
                 Toggle("RAM", isOn: $showRAM)
                 Toggle("GPU", isOn: $showGPU)
+                Toggle("Temperatura da CPU", isOn: $showTemp)
                 Toggle("Rede", isOn: $showNet)
                 Toggle("Bateria", isOn: $showBattery)
             }
@@ -531,4 +535,35 @@ struct SettingsView: View {
 final class Box<T>: ObservableObject {
     @Published var value: T
     init(_ v: T) { value = v }
+}
+
+// MARK: - Temperaturas
+
+func tempColor(_ c: Double) -> Color { c >= 90 ? .red : c >= 75 ? .orange : c >= 60 ? .yellow : .green }
+
+struct TemperatureCard: View {
+    let t: TemperatureSample
+    let history: [Double]
+    @StateObject private var expanded = Box(false)
+
+    var body: some View {
+        Card(title: "Temperaturas", icon: "thermometer.medium", trailing: t.cpuMax.map { String(format: "%.0f ºC", $0) }) {
+            if history.count > 1 {
+                Sparkline(values: history, maxValue: 110, color: tempColor(t.cpuMax ?? 0)).frame(height: 30)
+            }
+            if let a = t.cpuAvg, let mx = t.cpuMax {
+                StatRow(label: "CPU (média / máx.)", value: String(format: "%.1f / %.1f ºC", a, mx), color: tempColor(mx))
+            }
+            if let c = t.chipAvg { StatRow(label: "Chip (SoC)", value: String(format: "%.1f ºC", c), color: tempColor(c)) }
+            if let s = t.ssd { StatRow(label: "SSD", value: String(format: "%.1f ºC", s), color: tempColor(s)) }
+            if let b = t.battery { StatRow(label: "Bateria", value: String(format: "%.1f ºC", b), color: tempColor(b)) }
+            Button(expanded.value ? "Esconder sensores" : "Ver todos os sensores (\(t.sensors.count))") { expanded.value.toggle() }
+                .buttonStyle(.borderless).font(.caption)
+            if expanded.value {
+                ForEach(Array(t.sensors.enumerated()), id: \.offset) { _, s in
+                    StatRow(label: s.name, value: String(format: "%.1f ºC", s.value))
+                }
+            }
+        }
+    }
 }

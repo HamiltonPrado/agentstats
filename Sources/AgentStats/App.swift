@@ -23,6 +23,7 @@ struct AgentStatsApp: App {
         let c = cpuR.read(), mem = MemoryReader.read(), n = netR.read(), d = diskR.read()
         print("CPU \(Fmt.pct(c.total)) (\(c.cores.count) núcleos) load \(c.load)")
         print("RAM \(Fmt.bytes(mem.used))/\(Fmt.bytes(mem.total)) app \(Fmt.bytes(mem.app)) wired \(Fmt.bytes(mem.wired)) comp \(Fmt.bytes(mem.compressed)) swap \(Fmt.bytes(mem.swapUsed)) pressão \(mem.pressure)")
+        if let t = TemperatureReader().read() { print("Temp CPU média \(t.cpuAvg ?? 0) máx \(t.cpuMax ?? 0) chip \(t.chipAvg ?? 0) SSD \(t.ssd ?? 0) bateria \(t.battery ?? 0) · \(t.sensors.count) sensores") } else { print("Temp n/d") }
         print("GPU \(GPUReader.read().map(Fmt.pct) ?? "n/d")")
         print("Rede ↓\(Fmt.rate(n.downPerSec)) ↑\(Fmt.rate(n.upPerSec)) \(n.interface) \(n.localIP)")
         print("Disco \(Fmt.bytes(d.used))/\(Fmt.bytes(d.total)) R \(Fmt.rate(d.readPerSec)) W \(Fmt.rate(d.writePerSec))")
@@ -60,6 +61,7 @@ struct MenuBarLabel: View {
     @AppStorage("bar.gpu") var showGPU = false
     @AppStorage("bar.net") var showNet = true
     @AppStorage("bar.battery") var showBattery = false
+    @AppStorage("bar.temp") var showTemp = true
 
     var body: some View {
         Image(nsImage: render())
@@ -79,6 +81,7 @@ struct MenuBarLabel: View {
             if showCPU { cell("CPU", Fmt.pct(m.cpu.total)) }
             if showRAM { cell("RAM", Fmt.pct(m.memory.usage)) }
             if showGPU, let g = m.gpu { cell("GPU", Fmt.pct(g)) }
+            if showTemp, let t = m.temps?.cpuMax { cell("TEMP", String(format: "%.0f°", t)) }
             if showNet {
                 VStack(alignment: .trailing, spacing: -1) {
                     Text("↑ " + Fmt.rate(m.network.upPerSec, short: true))
@@ -88,7 +91,7 @@ struct MenuBarLabel: View {
                 .frame(minWidth: 40, alignment: .trailing)
             }
             if showBattery, let b = m.battery { cell(b.isCharging ? "BAT ⚡︎" : "BAT", Fmt.pct(b.percent)) }
-            if !(showAgents || showCPU || showRAM || showGPU || showNet || showBattery) {
+            if !(showAgents || showCPU || showRAM || showGPU || showNet || showBattery || showTemp) {
                 Image(systemName: "gauge.with.dots.needle.33percent").font(.system(size: 12))
             }
         }
