@@ -37,10 +37,12 @@ struct AgentProcess: Identifiable {
     let cwd: String?
     let children: [String]    // nomes dos subprocessos ativos
     let isSubagent: Bool
+    var role: String? = nil   // ex.: "app" / "executor" para os servidores do Codex
 }
 
 struct AgentSession: Identifiable {
     let id: String            // caminho do transcript
+    let kind: String          // "Claude Code", "Codex", …
     let title: String
     let cwd: String?
     let model: String?
@@ -138,6 +140,8 @@ final class AgentReader {
         return procs.compactMap { p -> AgentProcess? in
             guard let kind = agentKind(p) else { return nil }
             let desc = descendants(p.pid)
+            // A app ChatGPT/Codex arranca um app-server e um exec-server auxiliar
+            let role: String? = p.args.contains("app-server") ? "app" : p.args.contains("exec-server") ? "executor" : nil
             let busy = desc
                 .filter { !["zsh", "bash", "sh", "caffeinate"].contains($0.name) || $0.cpu > 1 }
                 .sorted { $0.cpu > $1.cpu }
@@ -150,7 +154,8 @@ final class AgentReader {
                 elapsed: p.elapsed,
                 cwd: Sys.cwd(of: p.pid),
                 children: Array(NSOrderedSet(array: busy).array as! [String]).prefix(4).map { $0 },
-                isSubagent: hasAgentAncestor(p)
+                isSubagent: hasAgentAncestor(p) || role == "executor",
+                role: role
             )
         }
         .sorted { $0.cpu > $1.cpu }
@@ -197,6 +202,7 @@ final class AgentReader {
 
             result.append(AgentSession(
                 id: c.url.path,
+                kind: "Claude Code",
                 title: title(for: c.url),
                 cwd: info.cwd,
                 model: info.model,

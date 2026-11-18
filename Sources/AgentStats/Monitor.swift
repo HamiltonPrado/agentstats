@@ -47,6 +47,7 @@ final class Monitor: ObservableObject {
     private let diskReader = DiskReader()
     private let agentReader = AgentReader()
     private let tempReader = TemperatureReader()
+    private let codexReader = CodexReader()
     private let queue = DispatchQueue(label: "agentstats.sampler", qos: .utility)
     private var timer: Timer?
     private var tick = 0
@@ -78,7 +79,7 @@ final class Monitor: ObservableObject {
         tick += 1
         let slow = tick % 3 == 1 // bateria e disco não precisam de tanta frequência
 
-        let cpuReader = cpuReader, netReader = netReader, diskReader = diskReader, agentReader = agentReader, tempReader = tempReader
+        let cpuReader = cpuReader, netReader = netReader, diskReader = diskReader, agentReader = agentReader, tempReader = tempReader, codexReader = codexReader
         queue.async {
             let cpu = cpuReader.read()
             let mem = MemoryReader.read()
@@ -89,7 +90,8 @@ final class Monitor: ObservableObject {
             let battery = slow ? BatteryReader.read() : nil
             let procs = ProcessReader.read()
             let agents = agentReader.agentProcesses(from: procs)
-            let sessions = agentReader.sessions(processes: agents)
+            let sessions = (agentReader.sessions(processes: agents) + codexReader.sessions())
+                .sorted { $0.lastActivity > $1.lastActivity }
             let top = Array(procs.sorted { $0.cpu > $1.cpu }.prefix(12))
             let topMem = Array(procs.sorted { $0.rssKB > $1.rssKB }.prefix(12))
 

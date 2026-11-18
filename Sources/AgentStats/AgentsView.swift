@@ -46,7 +46,8 @@ struct AgentsView: View {
         let waiting = m.sessions.filter { $0.state == .waitingUser }
         let recent = m.sessions.filter { !$0.state.isWorking && $0.state != .waitingUser }
         let linked = Set(m.sessions.compactMap { $0.process?.pid })
-        let others = m.agents.filter { !linked.contains($0.pid) }
+        // o executor do Codex é um auxiliar interno da app: não aparece em separado
+        let others = m.agents.filter { !linked.contains($0.pid) && $0.role != "executor" }
 
         VStack(alignment: .leading, spacing: 16) {
             if working.isEmpty && waiting.isEmpty && others.isEmpty {
@@ -182,7 +183,9 @@ struct SessionCard: View {
                 }
 
                 HStack(spacing: 4) {
-                    Pill(text: session.project, icon: "folder.fill")
+                    Pill(text: session.kind == "Claude Code" ? "Claude" : session.kind, icon: session.kind == "Codex" ? "chevron.left.forwardslash.chevron.right" : "asterisk",
+                         color: session.kind == "Codex" ? .teal : .orange)
+                    Pill(text: session.project, icon: "folder.fill").layoutPriority(-1)
                     if let model = Fmt.model(session.model) { Pill(text: model, icon: "cpu", color: .indigo) }
                     if let p = session.process {
                         Spacer(minLength: 2)
@@ -244,6 +247,14 @@ struct SessionCard: View {
 struct OtherAgentRow: View {
     @EnvironmentObject var m: Monitor
     let agent: AgentProcess
+
+    private var subtitle: String {
+        if agent.role == "app" {
+            let n = m.sessions.filter { $0.kind == agent.kind && $0.state.isWorking }.count
+            return n > 0 ? "\(n) tarefa\(n == 1 ? "" : "s") em curso" : "Aberto · sem tarefas em curso"
+        }
+        return agent.cwd.map { ($0 as NSString).abbreviatingWithTildeInPath } ?? "PID \(String(agent.pid))"
+    }
     var body: some View {
         HStack(spacing: 10) {
             ZStack {
@@ -253,8 +264,8 @@ struct OtherAgentRow: View {
             }
             .frame(width: 32, height: 32)
             VStack(alignment: .leading, spacing: 2) {
-                Text(agent.kind + (agent.isSubagent ? " · subagente" : "")).font(.system(size: 12.5, weight: .semibold))
-                Text(agent.cwd.map { ($0 as NSString).abbreviatingWithTildeInPath } ?? "PID \(String(agent.pid))")
+                Text(agent.kind + (agent.role == "app" ? " · app ChatGPT" : agent.role == "executor" ? " · executor" : agent.isSubagent ? " · subagente" : "")).font(.system(size: 12.5, weight: .semibold))
+                Text(subtitle)
                     .font(.system(size: 10.5)).foregroundStyle(.secondary).lineLimit(1).truncationMode(.middle)
             }
             Spacer()

@@ -67,8 +67,8 @@ struct AgentStatsApp: App {
         let agents = agentR.agentProcesses(from: procs)
         print("Processos: \(procs.count) · agentes: \(agents.count)")
         for a in agents { print("  [\(a.kind)] pid \(a.pid) cpu \(a.cpu) sub=\(a.isSubagent) cwd \(a.cwd ?? "-") filhos \(a.children)") }
-        for s in agentR.sessions(processes: agents) {
-            print("  • \(s.title) | \(s.state.label) | \(s.detail ?? "") | \(s.project) | \(s.model ?? "-") | pid \(s.process?.pid ?? 0)")
+        for s in agentR.sessions(processes: agents) + CodexReader().sessions(recentWindow: 7 * 86400) {
+            print("  • [\(s.kind)] \(s.title) | \(s.state.label) | \(s.detail ?? "") | \(s.project) | \(s.model ?? "-") | pid \(s.process?.pid ?? 0)")
         }
     }
 

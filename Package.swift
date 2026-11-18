@@ -11,6 +11,7 @@ let package = Package(
             linkerSettings: [
                 .linkedFramework("IOKit"),
                 .linkedFramework("ServiceManagement"),
+                .linkedLibrary("sqlite3"),
             ]
         )
     ],
