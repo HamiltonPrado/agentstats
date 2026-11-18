@@ -75,11 +75,7 @@ struct PanelView: View {
 
     private var header: some View {
         HStack(spacing: 8) {
-            ZStack {
-                RoundedRectangle(cornerRadius: 6, style: .continuous).fill(Palette.brand)
-                Image(systemName: "sparkles").font(.system(size: 11, weight: .bold)).foregroundStyle(.white)
-            }
-            .frame(width: 24, height: 24)
+            AppLogo().frame(width: 28, height: 28)
 
             VStack(alignment: .leading, spacing: 1) {
                 Text(tab == .settings ? "Definições" : "AgentStats").font(.system(size: 12.5, weight: .bold))
@@ -193,5 +189,22 @@ struct AlertBanner: View {
         .padding(.horizontal, 9).padding(.vertical, 6)
         .background(RoundedRectangle(cornerRadius: 8, style: .continuous)
             .fill(LinearGradient(colors: [.red, .orange], startPoint: .leading, endPoint: .trailing)))
+    }
+}
+
+/// Ícone da app (o mesmo do Finder). O .icns tem margem à volta do corpo, por isso é ampliado
+/// para o corpo ocupar o espaço todo.
+struct AppLogo: View {
+    private static let icon: NSImage? = Bundle.main.image(forResource: "AppIcon")
+    var body: some View {
+        if let icon = Self.icon {
+            Image(nsImage: icon).resizable().interpolation(.high)
+                .scaleEffect(1024 / 824)
+        } else {
+            ZStack {
+                RoundedRectangle(cornerRadius: 6, style: .continuous).fill(Palette.brand)
+                Image(systemName: "sparkles").font(.system(size: 11, weight: .bold)).foregroundStyle(.white)
+            }
+        }
     }
 }
