@@ -10,6 +10,7 @@ struct SettingsView: View {
     @AppStorage("bar.gpu") var showGPU = false
     @AppStorage("bar.net") var showNet = true
     @AppStorage("bar.battery") var showBattery = false
+    @AppStorage(GlobalHotKey.defaultsKey) var hotkey = GlobalHotKey.defaultPreset
     @StateObject private var login = Box(SMAppService.mainApp.status == .enabled)
     @StateObject private var loginErr = Box<String?>(nil)
 
@@ -64,6 +65,19 @@ struct SettingsView: View {
                         .pickerStyle(.segmented).labelsHidden().frame(width: 128)
                     }
                     row("bell", "Notificações", "Ao terminar e quando precisa de ti", $m.notifyOnFinish)
+                    HStack(spacing: DS.md) {
+                        icon("keyboard")
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Atalho para abrir o painel").font(DS.body)
+                            Text("Funciona em qualquer app").font(DS.meta).foregroundStyle(.tertiary)
+                        }
+                        Spacer()
+                        Picker("", selection: $hotkey) {
+                            Text("Desligado").tag("off")
+                            ForEach(GlobalHotKey.presets, id: \.key) { p in Text(p.combo.label).tag(p.key) }
+                        }
+                        .labelsHidden().frame(width: 104)
+                    }
                     row("power", "Abrir ao iniciar sessão", nil, Binding(
                         get: { login.value },
                         set: { on in
@@ -77,7 +91,7 @@ struct SettingsView: View {
             }
 
             HStack {
-                Text("AgentStats 1.7").font(DS.meta).foregroundStyle(.tertiary)
+                Text("AgentStats 1.8").font(DS.meta).foregroundStyle(.tertiary)
                 Spacer()
                 Link("Código no GitHub", destination: URL(string: "https://github.com/HamiltonPrado/agentstats")!)
                     .font(DS.meta)

@@ -14,8 +14,9 @@ App de barra de menus para macOS (estilo Stats) que mostra as métricas do siste
   ```
 - **Ir para o agente:** clicar num cartão ou numa notificação traz para a frente a app onde o agente corre (Claude, Terminal, VS Code…; Codex → app ChatGPT)
 - **Histórico de 24 h:** um ponto por minuto (CPU, memória, temperatura, agentes a trabalhar), guardado em `~/Library/Application Support/AgentStats/history.json`; faixa de atividade dos agentes e gráficos de 24 h no Sistema
+- **Atalho global:** ⌥⌘A abre e fecha o painel em qualquer app (configurável nas Definições: ⌃⌥A, ⌥⌘S ou desligado)
 - **Acessibilidade:** estado dos agentes por cor e forma (cheio, anel, losango, traço), descrições para o VoiceOver (cartões, leituras, gráficos, ícone da barra de menus) e respeito pela opção "Reduzir movimento"
-- **Tokens:** total de hoje (Claude + Codex) e por sessão, lido incrementalmente dos transcripts
+- **Tokens:** total de hoje (Claude + Codex) e por sessão; ao clicar, os últimos 7 dias e os projetos que mais gastaram. Lido incrementalmente dos transcripts
 - **Alertas:** notificação quando a CPU ou a temperatura ficam 20 s acima do limite (configurável), com o processo mais pesado; aviso ⚠ na barra de menus
 - **Processos:** top por CPU
 - Abrir ao iniciar sessão
@@ -31,11 +32,14 @@ open build/AgentStats.app
 Diagnóstico sem interface: `build/AgentStats.app/Contents/MacOS/AgentStats --dump`
 
 ## Testes
-Swift Testing (41 testes: leitura de transcripts do Claude e do Codex, deteção de "precisa de aprovação", contagem de tokens, formatação):
+Swift Testing (45 testes: leitura de transcripts do Claude e do Codex, deteção de "precisa de aprovação", contagem de tokens, formatação):
 
 ```bash
 ./test.sh
 ```
+
+## Integração contínua
+Cada push para `main` compila e testa no GitHub Actions (`.github/workflows/ci.yml`). A app compilada fica em Actions → execução → Artifacts (`AgentStats-<commit>`, 30 dias).
 
 ## Arquitetura
 - `Sampler` (actor) é dono de todos os leitores e devolve uma `Sample` imutável (`Sendable`) por volta

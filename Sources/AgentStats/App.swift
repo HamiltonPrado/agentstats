@@ -110,6 +110,8 @@ enum AgentStatsApp {
         time("Tokens (incremental)") { _ = usage.update() }
         let u = usage.update()
         print("Hoje: Claude \(Fmt.tokens(u.todayClaude.total)) (saída \(Fmt.tokens(u.todayClaude.output))) · Codex \(Fmt.tokens(u.todayCodex.total)) · sessões com uso: \(u.perSession.filter { !$0.value.isEmpty }.count)")
+        print("Semana:", u.week.map { "\($0.day.suffix(5)) \(Fmt.tokens($0.total.total))" }.joined(separator: " · "))
+        print("Projetos:", u.projects.prefix(5).map { "\($0.name) \(Fmt.tokens($0.usage.total))" }.joined(separator: " · "))
         MainActor.assumeIsolated {
             let m = Monitor()
             RunLoop.main.run(until: Date().addingTimeInterval(3))
@@ -196,6 +198,7 @@ final class StatusController: NSObject, NSPopoverDelegate {
     private var lastIconSignature = ""
     private var lastIconUpdate = Date.distantPast
     private var cancellables = Set<AnyCancellable>()
+    private let hotKey = GlobalHotKey()
 
     init(monitor: Monitor) {
         self.monitor = monitor
@@ -218,8 +221,15 @@ final class StatusController: NSObject, NSPopoverDelegate {
         monitor.onUpdate = { [weak self] in self?.updateIcon() }
         NotificationCenter.default.publisher(for: UserDefaults.didChangeNotification)
             .debounce(for: .milliseconds(60), scheduler: RunLoop.main)
-            .sink { [weak self] _ in self?.updateIcon() }
+            .sink { [weak self] _ in
+                self?.updateIcon()
+                self?.hotKey.register(GlobalHotKey.configured)   // só re-regista se a escolha mudou
+            }
             .store(in: &cancellables)
+
+        // Atalho global para abrir e fechar o painel
+        GlobalHotKey.handler = { [weak self] in self?.toggle(nil) }
+        hotKey.register(GlobalHotKey.configured)
     }
 
     /// O que o VoiceOver diz sobre o ícone da barra de menus.

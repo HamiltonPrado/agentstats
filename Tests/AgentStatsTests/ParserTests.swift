@@ -391,3 +391,43 @@ struct HistoryTests {
         #expect(History24h.activeMinutes(samples) == 5)
     }
 }
+
+// MARK: - Tokens por projeto e por semana
+
+@Suite("Tokens por projeto")
+struct ProjectUsageTests {
+    private func tempFile(_ content: String) throws -> URL {
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent("agentstats-\(UUID().uuidString).jsonl")
+        try content.write(to: url, atomically: true, encoding: .utf8)
+        return url
+    }
+
+    @Test func claudeProjectComesFromTheWorkingFolder() throws {
+        let line = #"{"type":"assistant","cwd":"/Users/demo/Projetos/loja-online","timestamp":"\#(isoNow)","message":{"id":"m1","usage":{"input_tokens":1,"output_tokens":2}}}"#
+        let url = try tempFile(line + "\n")
+        defer { try? FileManager.default.removeItem(at: url) }
+        #expect(UsageTracker().usage(ofFile: url.path, codex: false).project == "loja-online")
+    }
+
+    @Test func codexProjectComesFromSessionMeta() throws {
+        let meta = #"{"timestamp":"\#(isoNow)","type":"session_meta","payload":{"cwd":"/Users/demo/nas-config","id":"x"}}"#
+        let tokens = #"{"timestamp":"\#(isoNow)","type":"event_msg","payload":{"type":"token_count","info":{"last_token_usage":{"input_tokens":10,"cached_input_tokens":0,"output_tokens":5}}}}"#
+        let url = try tempFile(meta + "\n" + tokens + "\n")
+        defer { try? FileManager.default.removeItem(at: url) }
+        let r = UsageTracker().usage(ofFile: url.path, codex: true)
+        #expect(r.project == "nas-config")
+        #expect(r.session.total == 15)
+    }
+
+    @Test(arguments: [("2026-11-15", "dom"), ("2026-11-19", "qui"), ("2026-11-21", "sáb")])
+    func weekdayAbbreviations(_ day: String, _ expected: String) {
+        #expect(TodayUsage.weekday(day) == expected)
+    }
+
+    @MainActor @Test func hotkeyPresetsHaveUniqueKeysAndLabels() {
+        let keys = GlobalHotKey.presets.map(\.key), labels = GlobalHotKey.presets.map(\.combo.label)
+        #expect(Set(keys).count == keys.count)
+        #expect(Set(labels).count == labels.count)
+        #expect(keys.contains(GlobalHotKey.defaultPreset))
+    }
+}

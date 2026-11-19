@@ -13,11 +13,30 @@ struct TokenUsage: Equatable {
     }
 }
 
+/// Tokens de um dia, separados por agente.
+struct DayUsage: Equatable {
+    var day: String            // yyyy-MM-dd (hora local)
+    var claude = TokenUsage()
+    var codex = TokenUsage()
+    var total: TokenUsage { claude + codex }
+}
+
+/// Tokens de um projeto (a pasta onde o agente trabalhou) nos últimos 7 dias.
+struct ProjectUsage: Equatable {
+    var name: String
+    var usage: TokenUsage
+}
+
 struct UsageSnapshot {
     var perSession: [String: TokenUsage] = [:]   // chave: caminho do transcript/rollout
     var todayClaude = TokenUsage()
     var todayCodex = TokenUsage()
     var todayTotal: TokenUsage { todayClaude + todayCodex }
+    /// Últimos 7 dias, do mais antigo para hoje (dias sem uso incluídos, com zero).
+    var week: [DayUsage] = []
+    /// Projetos com mais tokens nos últimos 7 dias, do maior para o menor.
+    var projects: [ProjectUsage] = []
+    var weekTotal: TokenUsage { week.reduce(TokenUsage()) { $0 + $1.total } }
 }
 
 /// Soma os tokens registados nos transcripts do Claude Code e nos rollouts do Codex.
@@ -28,6 +47,7 @@ final class UsageTracker {
         var session = TokenUsage()
         var byDay: [String: TokenUsage] = [:]
         var seenIDs = Set<String>()   // o Claude repete a mesma mensagem (e o mesmo usage) em várias linhas
+        var project: String?          // último componente da pasta onde o agente trabalhou
     }
     private var files: [String: FileState] = [:]
     private let home = FileManager.default.homeDirectoryForCurrentUser
@@ -44,21 +64,30 @@ final class UsageTracker {
         return f
     }()
 
-    func update() -> UsageSnapshot {
-        let today = dayFormat.string(from: Date())
-        let since = Calendar.current.startOfDay(for: Date())
+    func update(now: Date = Date()) -> UsageSnapshot {
+        let cal = Calendar.current
+        let today = dayFormat.string(from: now)
+        let days = (0..<7).reversed().compactMap { cal.date(byAdding: .day, value: -$0, to: now) }.map { dayFormat.string(from: $0) }
+        let since = cal.startOfDay(for: cal.date(byAdding: .day, value: -6, to: now) ?? now)
         var snap = UsageSnapshot()
+        var week = Dictionary(uniqueKeysWithValues: days.map { ($0, DayUsage(day: $0)) })
+        var projects: [String: TokenUsage] = [:]
 
-        for url in claudeFiles(modifiedSince: since) {
-            let st = scan(url.path, codex: false)
-            snap.perSession[url.path] = st.session
-            snap.todayClaude = snap.todayClaude + (st.byDay[today] ?? TokenUsage())
-        }
-        for path in codexFiles(modifiedSince: since) {
-            let st = scan(path, codex: true)
+        func add(_ st: FileState, path: String, codex: Bool) {
             snap.perSession[path] = st.session
-            snap.todayCodex = snap.todayCodex + (st.byDay[today] ?? TokenUsage())
+            for (day, u) in st.byDay where week[day] != nil {
+                if codex { week[day]!.codex = week[day]!.codex + u } else { week[day]!.claude = week[day]!.claude + u }
+                projects[st.project ?? "Sem projeto", default: TokenUsage()] = projects[st.project ?? "Sem projeto", default: TokenUsage()] + u
+            }
         }
+        for url in claudeFiles(modifiedSince: since) { add(scan(url.path, codex: false), path: url.path, codex: false) }
+        for path in codexFiles(modifiedSince: since) { add(scan(path, codex: true), path: path, codex: true) }
+
+        snap.week = days.compactMap { week[$0] }
+        snap.todayClaude = week[today]?.claude ?? TokenUsage()
+        snap.todayCodex = week[today]?.codex ?? TokenUsage()
+        snap.projects = projects.map { ProjectUsage(name: $0.key, usage: $0.value) }
+            .sorted { $0.usage.total > $1.usage.total }
         return snap
     }
 
@@ -99,9 +128,9 @@ final class UsageTracker {
     }
 
     /// Tokens de um único ficheiro (lido de forma incremental, tal como em `update()`). Usado nos testes.
-    func usage(ofFile path: String, codex: Bool) -> (session: TokenUsage, byDay: [String: TokenUsage]) {
+    func usage(ofFile path: String, codex: Bool) -> (session: TokenUsage, byDay: [String: TokenUsage], project: String?) {
         let st = scan(path, codex: codex)
-        return (st.session, st.byDay)
+        return (st.session, st.byDay, st.project)
     }
 
     // MARK: Leitura incremental
@@ -121,9 +150,17 @@ final class UsageTracker {
         st.offset += UInt64(complete.count)
 
         let marker = Data((codex ? "\"token_count\"" : "\"usage\"").utf8)
+        let metaMarker = Data("\"session_meta\"".utf8)
         for line in complete.split(separator: UInt8(ascii: "\n")) {
-            guard line.count > 20, line.range(of: marker) != nil,
+            // Codex: a pasta do projeto só vem na linha inicial (session_meta)
+            let isMeta = codex && st.project == nil && line.range(of: metaMarker) != nil
+            guard line.count > 20, isMeta || line.range(of: marker) != nil,
                   let j = try? JSONSerialization.jsonObject(with: Data(line)) as? [String: Any] else { continue }
+            if st.project == nil {
+                let cwd = codex ? (j["payload"] as? [String: Any])?["cwd"] as? String : j["cwd"] as? String
+                if let cwd, !cwd.isEmpty { st.project = (cwd as NSString).lastPathComponent }
+            }
+            if isMeta { continue }
             let day = (j["timestamp"] as? String).flatMap { iso.date(from: $0) }.map { dayFormat.string(from: $0) } ?? ""
             var u: TokenUsage?
             if codex {
