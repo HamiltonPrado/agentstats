@@ -1,10 +1,12 @@
 # Compila a AgentStats e corre os testes a cada push e pull request.
-# A app compilada fica disponível para descarregar em cada execução (separador Actions → Artifacts).
+# - Em cada execução, a app compilada fica em Actions → Artifacts (30 dias).
+# - Ao enviar uma tag de versão (ex.: v1.9), publica também uma Release com a app, que não expira.
 name: CI
 
 on:
   push:
     branches: [main]
+    tags: ["v*"]
   pull_request:
   workflow_dispatch:
 
@@ -12,6 +14,9 @@ on:
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
+
+permissions:
+  contents: write   # necessário para criar a Release nas tags
 
 jobs:
   build:
@@ -23,18 +28,41 @@ jobs:
       - name: Versão do Swift
         run: swift --version
 
+      - name: Versão da app
+        id: version
+        run: |
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+            v="${GITHUB_REF_NAME#v}"
+            # a tag tem de corresponder ao ficheiro VERSION, para não publicar uma versão trocada
+            if [[ "$v" != "$(cat VERSION)" ]]; then
+              echo "::error::A tag $GITHUB_REF_NAME não corresponde ao ficheiro VERSION ($(cat VERSION))"; exit 1
+            fi
+          else
+            v="$(cat VERSION)"
+          fi
+          echo "version=$v" >> "$GITHUB_OUTPUT"
+
       - name: Testes
         run: ./test.sh
 
       - name: Compilar a app
-        run: ./build.sh
+        run: VERSION="${{ steps.version.outputs.version }}" BUILD_NUMBER="${{ github.run_number }}" ./build.sh
 
       - name: Empacotar
         run: ditto -c -k --keepParent build/AgentStats.app AgentStats.zip
 
-      - name: Publicar a app
+      - name: Publicar a app (artifact)
         uses: actions/upload-artifact@v4
         with:
           name: AgentStats-${{ github.sha }}
           path: AgentStats.zip
           retention-days: 30
+
+      - name: Publicar a Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" AgentStats.zip \
+            --title "AgentStats ${{ steps.version.outputs.version }}" \
+            --generate-notes

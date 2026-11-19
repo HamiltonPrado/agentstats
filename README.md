@@ -21,6 +21,23 @@ App de barra de menus para macOS (estilo Stats) que mostra as métricas do siste
 - **Processos:** top por CPU
 - Abrir ao iniciar sessão
 
+## Instalar sem clonar
+
+Com o [GitHub CLI](https://cli.github.com) (`gh`) com sessão iniciada, instala a última versão publicada:
+
+```bash
+tmp=$(mktemp -d) && gh release download --repo HamiltonPrado/agentstats --pattern AgentStats.zip --dir "$tmp" && ditto -x -k "$tmp/AgentStats.zip" "$tmp" && { pkill -x AgentStats; ditto "$tmp/AgentStats.app" /Applications/AgentStats.app && open /Applications/AgentStats.app; }
+```
+
+Descarregada pelo `gh`, a app não fica em quarentena e abre sem aviso. Descarregada pelo browser (Releases → AgentStats.zip), o macOS bloqueia-a da primeira vez: Definições do Sistema → Privacidade e Segurança → **Abrir mesmo assim** (a app é assinada localmente, sem conta de programador Apple).
+
+## Publicar uma versão
+
+1. Atualiza o ficheiro `VERSION` (ex.: `1.9`) e faz commit
+2. `git tag v1.9 && git push origin v1.9`
+
+A CI testa, compila e cria a Release com `AgentStats.zip`. Se a tag não corresponder ao `VERSION`, a publicação falha.
+
 ## Compilar
 Requer macOS 14+ e as Command Line Tools (`xcode-select --install`).
 

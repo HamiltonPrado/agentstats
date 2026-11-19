@@ -91,7 +91,7 @@ struct SettingsView: View {
             }
 
             HStack {
-                Text("AgentStats 1.8").font(DS.meta).foregroundStyle(.tertiary)
+                Text("AgentStats " + (Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "")).font(DS.meta).foregroundStyle(.tertiary)
                 Spacer()
                 Link("Código no GitHub", destination: URL(string: "https://github.com/HamiltonPrado/agentstats")!)
                     .font(DS.meta)
