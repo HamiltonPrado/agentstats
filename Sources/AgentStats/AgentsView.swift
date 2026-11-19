@@ -401,7 +401,7 @@ struct TodayUsage: View {
     }
 
     /// "2026-11-19" → "qui" (abreviatura fixa de 3 letras, para as barras ficarem alinhadas)
-    static func weekday(_ day: String) -> String {
+    nonisolated static func weekday(_ day: String) -> String {
         let parse = DateFormatter()
         parse.dateFormat = "yyyy-MM-dd"
         guard let d = parse.date(from: day) else { return "" }
