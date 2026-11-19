@@ -1,0 +1,40 @@
+# Compila a AgentStats e corre os testes a cada push e pull request.
+# A app compilada fica disponível para descarregar em cada execução (separador Actions → Artifacts).
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+# Um push novo cancela a execução anterior do mesmo branch (poupa minutos de macOS).
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: macos-15
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Versão do Swift
+        run: swift --version
+
+      - name: Testes
+        run: ./test.sh
+
+      - name: Compilar a app
+        run: ./build.sh
+
+      - name: Empacotar
+        run: ditto -c -k --keepParent build/AgentStats.app AgentStats.zip
+
+      - name: Publicar a app
+        uses: actions/upload-artifact@v4
+        with:
+          name: AgentStats-${{ github.sha }}
+          path: AgentStats.zip
+          retention-days: 30
