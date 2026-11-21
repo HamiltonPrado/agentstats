@@ -128,7 +128,9 @@ final class Monitor {
         keepAwakeController.onTimeout = { [weak self] in self?.keepAwake = false }
         sample()
         restart()
-        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { _, _ in }
+        // @Sendable: o sistema chama esta resposta numa fila de fundo. Sem isto, a closure herdava o
+        // main actor do init e, compilada com o Swift do Xcode 16, a app rebentava ao arrancar (v1.16).
+        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { @Sendable _, _ in }
     }
 
     func restart() {

@@ -48,6 +48,10 @@ jobs:
       - name: Compilar a app
         run: VERSION="${{ steps.version.outputs.version }}" BUILD_NUMBER="${{ github.run_number }}" ./build.sh
 
+      - name: Teste de arranque
+        # Abre a app (modo de capturas, ~7 s) para apanhar crashes ao arrancar que os testes não veem.
+        run: build/AgentStats.app/Contents/MacOS/AgentStats --snapshot "$RUNNER_TEMP"
+
       - name: Empacotar
         run: ditto -c -k --keepParent build/AgentStats.app AgentStats.zip
 
