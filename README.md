@@ -1,98 +1,96 @@
 # AgentStats
 
-[![CI](https://github.com/HamiltonPrado/agentstats/actions/workflows/ci.yml/badge.svg)](https://github.com/HamiltonPrado/agentstats/actions/workflows/ci.yml)
-[![Release](https://img.shields.io/github/v/release/HamiltonPrado/agentstats?color=blue)](https://github.com/HamiltonPrado/agentstats/releases)
-![macOS](https://img.shields.io/badge/macOS-14%2B%20%7C%20Apple%20Silicon-black)
+![CI](https://github.com/HamiltonPrado/agentstats/actions/workflows/ci.yml/badge.svg)
+![Última versão](https://img.shields.io/github/v/release/HamiltonPrado/agentstats?color=blue)
+![macOS 14+](https://img.shields.io/badge/macOS-14%2B-black)
 ![Swift 6](https://img.shields.io/badge/Swift-6.0-F05138?logo=swift&logoColor=white)
-![Licença](https://img.shields.io/badge/licen%C3%A7a-MIT-green)
 
-App de barra de menus para macOS (estilo Stats) que mostra as métricas do sistema e os agentes de IA a trabalhar em tempo real.
+**Agentes de IA e métricas do Mac, num só painel.** O AgentStats vive na barra de menus e mostra o que está a correr, o que precisa da tua atenção e como estão os recursos do sistema.
 
-🌐 **Website oficial:** [hamiltonprado.github.io/agentstats](https://hamiltonprado.github.io/agentstats)
+**[Descarregar a versão mais recente](https://github.com/HamiltonPrado/agentstats/releases/latest)** · [Website](https://hamiltonprado.github.io/agentstats) · [Reportar um problema](https://github.com/HamiltonPrado/agentstats/issues)
 
 <p align="center">
-  <img src="Resources/screenshots/menubar.png" alt="Barra de menus do AgentStats" width="600"><br>
-  <em>Barra de menus compacta e rasterizada em CoreText (custo de CPU ~0%).</em>
+  <img src="Resources/screenshots/menubar.png" alt="Métricas e agentes na barra de menus" width="600">
 </p>
 
 <p align="center">
-  <img src="Resources/screenshots/agents-dark.png" alt="Painel de Agentes" width="340">
+  <img src="Resources/screenshots/agents-dark.png" alt="Painel de agentes" width="340">
   &nbsp;&nbsp;
-  <img src="Resources/screenshots/system-dark.png" alt="Painel de Sistema" width="340">
+  <img src="Resources/screenshots/system-dark.png" alt="Painel de métricas do sistema" width="340">
 </p>
 
-## Funcionalidades
-- **Barra de menus:** agentes a trabalhar/total, CPU, RAM, temperatura, GPU, rede e bateria (configurável)
-- **Agentes:** sessões em tempo real do **Claude Code**, **Codex** (CLI e app ChatGPT), **Antigravity** (Google DeepMind), **Aider**, **Goose**, **Gemini CLI**, **Cursor Agent**, **OpenCode** e **Amp** com estado imediato (a executar ferramenta, a pensar, à espera), projeto, modelo, CPU/RAM, subprocessos e subagentes. Notificação quando um agente termina.
-- **Temperaturas:** CPU (média e máx.), chip, SSD e bateria via sensores HID do Apple Silicon — sem precisar do Xcode
-- **Sistema:** CPU (total, por núcleo, carga, estado térmico), memória (apps, wired, comprimida, cache, swap, pressão), GPU, rede, disco e bateria
-- **Teste de velocidade:** teste manual de download, upload e latência no separador Rede (cerca de 32 MB por teste, através do Cloudflare)
-- **Precisa de ti:** deteta quando um agente do Claude Code está bloqueado à espera de aprovação (Bash/Edit/Write) ou tem uma pergunta para ti; destaca a vermelho, ✋ na barra de menus e notificação
-- **Hook do Claude Code:** com `AgentStats --hook` no hook `Notification` de `~/.claude/settings.json`, o "precisa de aprovação" passa a vir do próprio Claude Code (sem hook, usa uma heurística). Exemplo:
-  ```json
-  { "hooks": { "Notification": [ { "hooks": [ { "type": "command", "command": "/Applications/AgentStats.app/Contents/MacOS/AgentStats --hook 2>/dev/null || true", "async": true, "timeout": 10 } ] } ] } }
-  ```
-- **Ir para o agente:** clicar num cartão ou numa notificação traz para a frente a app onde o agente corre (Claude, Terminal, VS Code…; Codex → app ChatGPT)
-- **Histórico de 24 h:** um ponto por minuto (CPU, memória, temperatura, agentes a trabalhar), guardado em `~/Library/Application Support/AgentStats/history.json`; faixa de atividade dos agentes e gráficos de 24 h no Sistema
-- **Atalho global:** ⌥⌘A abre e fecha o painel em qualquer app (configurável nas Definições: ⌃⌥A, ⌥⌘S ou desligado)
-- **Acessibilidade:** estado dos agentes por cor e forma (cheio, anel, losango, traço), descrições para o VoiceOver (cartões, leituras, gráficos, ícone da barra de menus) e respeito pela opção "Reduzir movimento"
-- **Tokens:** total de hoje (Claude + Codex) e por sessão; ao clicar, os últimos 7 dias e os projetos que mais gastaram. Lido incrementalmente dos transcripts
-- **Alertas:** notificação quando a CPU ou a temperatura ficam 20 s acima do limite (configurável), com o processo mais pesado; aviso ⚠ na barra de menus
-- **Processos:** top por CPU
-- Abrir ao iniciar sessão
+## O que podes acompanhar
 
-## Instalar sem clonar
+### Agentes de IA
 
-Com o [GitHub CLI](https://cli.github.com) (`gh`) com sessão iniciada, instala a última versão publicada:
+Vê sessões ativas, projeto, modelo, consumo de CPU e memória, subprocessos e estado — a trabalhar, à espera ou a pedir a tua atenção. O AgentStats reconhece Claude Code, Codex, Antigravity, Aider, Goose, Gemini CLI, Cursor Agent, OpenCode e Amp. Clica numa sessão para voltar à app onde está a correr.
+
+### Saúde do Mac
+
+CPU, memória, GPU, temperaturas, rede, disco e bateria. O painel inclui gráficos e histórico de 24 horas, alertas configuráveis e um teste manual de download, upload e latência.
+
+### Para o teu fluxo de trabalho
+
+- Notificações quando um agente termina ou precisa de ti.
+- Tokens usados hoje, por sessão e por projeto, para Claude Code e Codex.
+- Atalho global configurável para abrir o painel.
+- Indicadores acessíveis por cor, forma e VoiceOver; respeita a opção “Reduzir movimento”.
+- Início de sessão automático opcional.
+
+O teste de velocidade usa os endpoints públicos do Cloudflare e transfere cerca de **32 MB por execução**. As medições podem ser recolhidas de forma agregada.
+
+## Instalar
+
+1. Descarrega **AgentStats.zip** na [página de releases](https://github.com/HamiltonPrado/agentstats/releases/latest).
+2. Descomprime o ficheiro e move `AgentStats.app` para a pasta Aplicações.
+3. Abre a app. Se o macOS bloquear a primeira abertura, vai a **Definições do Sistema → Privacidade e Segurança → Abrir mesmo assim**. A app é assinada localmente e não tem assinatura de programador Apple.
+
+Também podes instalar pela linha de comandos com o [GitHub CLI](https://cli.github.com):
 
 ```bash
-tmp=$(mktemp -d) && gh release download --repo HamiltonPrado/agentstats --pattern AgentStats.zip --dir "$tmp" && ditto -x -k "$tmp/AgentStats.zip" "$tmp" && { pkill -x AgentStats; ditto "$tmp/AgentStats.app" /Applications/AgentStats.app && open /Applications/AgentStats.app; }
+tmp=$(mktemp -d) && gh release download --repo HamiltonPrado/agentstats --pattern AgentStats.zip --dir "$tmp" && ditto -x -k "$tmp/AgentStats.zip" "$tmp" && { pkill -x AgentStats 2>/dev/null || true; ditto "$tmp/AgentStats.app" /Applications/AgentStats.app && open /Applications/AgentStats.app; }
 ```
 
-Descarregada pelo `gh`, a app não fica em quarentena e abre sem aviso. Descarregada pelo browser (Releases → AgentStats.zip), o macOS bloqueia-a da primeira vez: Definições do Sistema → Privacidade e Segurança → **Abrir mesmo assim** (a app é assinada localmente, sem conta de programador Apple).
+## Contribuir
 
-## Publicar uma versão
-
-1. Atualiza o ficheiro `VERSION` (ex.: `1.9`) e faz commit
-2. `git tag v1.9 && git push origin v1.9`
-
-A CI testa, compila e cria a Release com `AgentStats.zip`. Se a tag não corresponder ao `VERSION`, a publicação falha.
-
-## Compilar
-Requer macOS 14+ e as Command Line Tools (`xcode-select --install`).
+Requer macOS 14 ou superior e as Command Line Tools do Xcode.
 
 ```bash
 ./build.sh
 open build/AgentStats.app
 ```
 
-Diagnóstico sem interface: `build/AgentStats.app/Contents/MacOS/AgentStats --dump`
-
-## Testes
-Swift Testing (45 testes: leitura de transcripts do Claude e do Codex, deteção de "precisa de aprovação", contagem de tokens, formatação):
+Para executar os testes:
 
 ```bash
 ./test.sh
 ```
 
-## Integração contínua
-Cada push para `main` compila e testa no GitHub Actions (`.github/workflows/ci.yml`). A app compilada fica em Actions → execução → Artifacts (`AgentStats-<commit>`, 30 dias).
+As contribuições são bem-vindas. Abre uma [issue](https://github.com/HamiltonPrado/agentstats/issues) para reportar um problema ou sugerir uma melhoria.
 
-## Arquitetura
-- `Sampler` (actor) é dono de todos os leitores e devolve uma `Sample` imutável (`Sendable`) por volta
-- `Monitor` (`@Observable`, main actor) aplica cada amostra; as vistas só redesenham o que leem
-- Modo de linguagem Swift 6 (segurança contra data races verificada pelo compilador)
+<details>
+<summary>Detalhes de desenvolvimento</summary>
 
-## Ícone
-Gerado por código em `Scripts/make-icon.swift` → `Resources/AppIcon-1024.png`; o `build.sh` converte-o em `.icns`.
+### Criar uma release
+
+Atualiza `VERSION` e envia uma tag com a mesma versão, por exemplo:
 
 ```bash
-swiftc -O Scripts/make-icon.swift -o /tmp/make-icon && /tmp/make-icon Resources/AppIcon-1024.png
+git tag v1.10
+git push origin v1.10
 ```
 
-## Diagnóstico
-- `AgentStats --dump` — métricas e agentes detetados
-- `AgentStats --bench` — custo (ms) de cada leitor
-- `AgentStats --snapshot <pasta>` — renderiza o painel em PNG (`AGENTSTATS_FAKE_ALERT=1` simula alertas e um pedido de aprovação)
-- `AGENTSTATS_DISABLE=icon,temps,procs,sessions,usage,gpu,disk` — desliga partes para medir o consumo
-- `AGENTSTATS_OPEN_PANEL=1` — abre o painel ao arrancar (para medir o consumo com ele aberto)
+O GitHub Actions valida a versão, executa os testes, compila a app e publica `AgentStats.zip` na release.
+
+### Diagnóstico
+
+- `AgentStats --dump` — métricas e agentes detetados.
+- `AgentStats --bench` — tempo de execução dos leitores.
+- `AgentStats --snapshot <pasta>` — capturas do painel em PNG.
+- `AGENTSTATS_DISABLE=icon,temps,procs,sessions,usage,gpu,disk` — desativa leitores para medir consumo.
+
+### Arquitetura
+
+O `Sampler` (actor) coordena as leituras e devolve uma amostra imutável. O `Monitor` aplica os dados no main actor; as vistas SwiftUI observam apenas o estado que utilizam. O projeto usa Swift 6 com verificação de concorrência.
+
+</details>
