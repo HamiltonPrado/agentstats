@@ -52,6 +52,10 @@ extension AgentState {
 struct AgentsView: View {
     @Environment(Monitor.self) private var m
     @AppStorage("agents.showRecent") private var showRecent = false
+    @AppStorage("panel.showUsage") private var showUsage = true
+    @AppStorage("panel.showActivity") private var showActivity = true
+    @AppStorage("agents.showRecentSection") private var showRecentSection = true
+    @AppStorage("agents.showHistorySection") private var showHistorySection = true
     @StateObject private var isFilterPopoverShown = Box(false)
     @StateObject private var selectedFilter = Box(AgentSessionFilter.all.rawValue)
 
@@ -68,13 +72,14 @@ struct AgentsView: View {
             return matches(agent)
         }
         let history = m.activityHistory.filter(matches)
-        let hasVisibleItems = !attention.isEmpty || !working.isEmpty || !waiting.isEmpty || !recent.isEmpty || !others.isEmpty || !history.isEmpty
+        let hasVisibleItems = !attention.isEmpty || !working.isEmpty || !waiting.isEmpty || !others.isEmpty
+            || (showRecentSection && !recent.isEmpty) || (showHistorySection && !history.isEmpty)
         let hasAnyAgent = !m.sessions.isEmpty || !m.agents.isEmpty || !m.activityHistory.isEmpty
 
         VStack(alignment: .leading, spacing: DS.lg) {
             searchAndFilters
-            if !m.usage.todayTotal.isEmpty { TodayUsage(usage: m.usage) }
-            if !m.day.isEmpty { ActivityStrip(day: m.day) }
+            if showUsage && !m.usage.todayTotal.isEmpty { TodayUsage(usage: m.usage) }
+            if showActivity && !m.day.isEmpty { ActivityStrip(day: m.day) }
             if !hasAnyAgent {
                 EmptyAgents()
             } else if !hasVisibleItems {
@@ -94,7 +99,7 @@ struct AgentsView: View {
             if !others.isEmpty {
                 group("Outros agentes", others.count, nil) { ForEach(others) { OtherAgentRow(agent: $0) } }
             }
-            if !recent.isEmpty {
+            if showRecentSection && !recent.isEmpty {
                 VStack(alignment: .leading, spacing: DS.sm) {
                     Button { withAnimation(Motion.ease(0.2)) { showRecent.toggle() } } label: {
                         HStack(spacing: DS.xs) {
@@ -111,7 +116,7 @@ struct AgentsView: View {
                     }
                 }
             }
-            if !history.isEmpty {
+            if showHistorySection && !history.isEmpty {
                 VStack(alignment: .leading, spacing: DS.sm) {
                     Button { withAnimation(Motion.ease(0.2)) { showHistory.value.toggle() } } label: {
                         HStack(spacing: DS.xs) {

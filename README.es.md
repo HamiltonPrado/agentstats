@@ -25,7 +25,7 @@
 
 ### Agentes de IA
 
-Consulta las sesiones activas, el proyecto, el modelo, el uso de CPU y memoria, los subprocesos y el estado: trabajando, esperando o solicitando tu atención. Busca y filtra por agente, proyecto y estado. AgentStats reconoce Claude Code, Codex, Antigravity, Aider, Goose, Gemini CLI, Cursor Agent, OpenCode y Amp. Haz clic en una sesión para volver a la aplicación donde se está ejecutando.
+Consulta las sesiones activas, el proyecto, el modelo, el uso de CPU y memoria, los subprocesos y el estado: trabajando, esperando o solicitando tu atención. Filtra las sesiones por estado. AgentStats reconoce Claude Code, Codex, Antigravity, Aider, Goose, Gemini CLI, Cursor Agent, OpenCode y Amp. Haz clic en una sesión para volver a la aplicación donde se está ejecutando.
 
 ### Estado del Mac
 
@@ -38,6 +38,7 @@ CPU, memoria, GPU, temperaturas, red, disco y batería. El panel incluye gráfic
 - Historial por sesión con cambios de estado, duración observada y uso de tokens.
 - Uso de tokens de hoy, por sesión y por proyecto, para Claude Code y Codex.
 - Atajo global configurable para abrir el panel.
+- Reordena los indicadores de la barra de menús y elige qué secciones aparecen en el panel.
 - Indicadores accesibles mediante color, forma y VoiceOver; respeta “Reducir movimiento”.
 - Inicio de sesión automático opcional.
 
@@ -84,8 +85,8 @@ AgentStats se distribuye bajo la [licencia MIT](LICENSE). Puedes usar, modificar
 Actualiza `VERSION` y envía una etiqueta con la misma versión, por ejemplo:
 
 ```bash
-git tag v1.13
-git push origin v1.13
+git tag v1.14
+git push origin v1.14
 ```
 
 GitHub Actions comprueba la versión, ejecuta las pruebas, compila la app y publica `AgentStats.zip` en la versión.

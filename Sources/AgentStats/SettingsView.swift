@@ -10,6 +10,11 @@ struct SettingsView: View {
     @AppStorage("bar.gpu") var showGPU = false
     @AppStorage("bar.net") var showNet = true
     @AppStorage("bar.battery") var showBattery = false
+    @AppStorage(MenuBarDrawer.metricOrderKey) private var barOrder = "agents,cpu,ram,gpu,temp,net,battery"
+    @AppStorage("panel.showUsage") private var showUsage = true
+    @AppStorage("panel.showActivity") private var showActivity = true
+    @AppStorage("agents.showRecentSection") private var showRecentSection = true
+    @AppStorage("agents.showHistorySection") private var showHistorySection = true
     @AppStorage(GlobalHotKey.defaultsKey) var hotkey = GlobalHotKey.defaultPreset
     @StateObject private var login = Box(SMAppService.mainApp.status == .enabled)
     @StateObject private var loginErr = Box<String?>(nil)
@@ -24,13 +29,41 @@ struct SettingsView: View {
                         .frame(maxWidth: .infinity, alignment: .trailing)
                         .background(RoundedRectangle(cornerRadius: DS.rSmall, style: .continuous).fill(DS.raised))
                         .help("Pré-visualização")
-                    row("terminal", "Agentes", "A trabalhar e total", $showAgents)
-                    row("cpu", "CPU", nil, $showCPU)
-                    row("memorychip", "Memória", nil, $showRAM)
-                    row("thermometer.medium", "Temperatura", "Máximo da CPU", $showTemp)
-                    row("cube", "GPU", nil, $showGPU)
-                    row("network", "Rede", "Upload e download", $showNet)
-                    row("battery.75percent", "Bateria", nil, $showBattery)
+                    ForEach(Array(orderedMetrics.enumerated()), id: \.element.id) { index, metric in
+                        HStack(spacing: DS.md) {
+                            icon(metric.icon)
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(metric.title).font(DS.body)
+                                if let subtitle = metric.subtitle {
+                                    Text(subtitle).font(DS.meta).foregroundStyle(.tertiary)
+                                }
+                            }
+                            Spacer(minLength: DS.xs)
+                            Button { moveMetric(from: index, by: -1) } label: {
+                                Image(systemName: "arrow.up").font(DS.meta)
+                            }
+                            .buttonStyle(.plain).disabled(index == 0)
+                            .help("Mover \(metric.title) para cima")
+                            .accessibilityLabel("Mover \(metric.title) para cima")
+                            Button { moveMetric(from: index, by: 1) } label: {
+                                Image(systemName: "arrow.down").font(DS.meta)
+                            }
+                            .buttonStyle(.plain).disabled(index == orderedMetrics.count - 1)
+                            .help("Mover \(metric.title) para baixo")
+                            .accessibilityLabel("Mover \(metric.title) para baixo")
+                            Toggle("", isOn: metric.isEnabled)
+                                .toggleStyle(.switch).controlSize(.mini).labelsHidden()
+                        }
+                    }
+                }
+            }
+
+            group("Conteúdo do painel") {
+                VStack(alignment: .leading, spacing: DS.md) {
+                    row("number", "Utilização de tokens", "Resumo diário e semanal", $showUsage)
+                    row("chart.bar", "Atividade nas últimas 24 h", nil, $showActivity)
+                    row("clock.arrow.circlepath", "Sessões recentes", nil, $showRecentSection)
+                    row("clock", "Histórico de agentes", nil, $showHistorySection)
                 }
             }
 
@@ -121,6 +154,36 @@ struct SettingsView: View {
         }
     }
 
+    private var metricSettings: [MenuBarMetricSetting] {
+        [
+            .init(id: "agents", icon: "terminal", title: "Agentes", subtitle: "A trabalhar e total", isEnabled: $showAgents),
+            .init(id: "cpu", icon: "cpu", title: "CPU", isEnabled: $showCPU),
+            .init(id: "ram", icon: "memorychip", title: "Memória", isEnabled: $showRAM),
+            .init(id: "temp", icon: "thermometer.medium", title: "Temperatura", subtitle: "Máximo da CPU", isEnabled: $showTemp),
+            .init(id: "gpu", icon: "cube", title: "GPU", isEnabled: $showGPU),
+            .init(id: "net", icon: "network", title: "Rede", subtitle: "Upload e download", isEnabled: $showNet),
+            .init(id: "battery", icon: "battery.75percent", title: "Bateria", isEnabled: $showBattery),
+        ]
+    }
+
+    private var orderedMetrics: [MenuBarMetricSetting] {
+        let byID = Dictionary(uniqueKeysWithValues: metricSettings.map { ($0.id, $0) })
+        let defaults = metricSettings.map(\.id)
+        var seen = Set<String>()
+        var ids = barOrder.split(separator: ",").map(String.init)
+            .filter { byID[$0] != nil && seen.insert($0).inserted }
+        ids += defaults.filter { seen.insert($0).inserted }
+        return ids.compactMap { byID[$0] }
+    }
+
+    private func moveMetric(from index: Int, by offset: Int) {
+        var ids = orderedMetrics.map(\.id)
+        let destination = index + offset
+        guard ids.indices.contains(index), ids.indices.contains(destination) else { return }
+        ids.swapAt(index, destination)
+        barOrder = ids.joined(separator: ",")
+    }
+
     /// Ícones de linha, todos do mesmo tamanho e na cor do texto secundário.
     private func icon(_ name: String) -> some View {
         Image(systemName: name).font(DS.body).foregroundStyle(.secondary).frame(width: 16)
@@ -137,4 +200,12 @@ struct SettingsView: View {
             Toggle("", isOn: binding).toggleStyle(.switch).controlSize(.mini).labelsHidden()
         }
     }
+}
+
+private struct MenuBarMetricSetting: Identifiable {
+    let id: String
+    let icon: String
+    let title: String
+    var subtitle: String? = nil
+    let isEnabled: Binding<Bool>
 }

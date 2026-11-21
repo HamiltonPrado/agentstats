@@ -253,6 +253,7 @@ final class StatusController: NSObject, NSPopoverDelegate {
         func on(_ k: String, _ def: Bool) -> Bool { d.object(forKey: k) == nil ? def : d.bool(forKey: k) }
         let m = monitor
         return [
+            d.string(forKey: MenuBarDrawer.metricOrderKey) ?? "agents,cpu,ram,gpu,temp,net,battery",
             m.activeAlerts.isEmpty ? "" : "!",
             "\(m.needsAttentionCount)",
             on("bar.agents", true) ? "\(m.workingCount)/\(m.liveAgentCount)" : "",

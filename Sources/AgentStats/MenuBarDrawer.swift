@@ -6,6 +6,9 @@ import AppKit
 enum MenuBarDrawer {
     private static let height: CGFloat = 18
     private static let spacing: CGFloat = 7
+    private static let defaultMetricOrder = ["agents", "cpu", "ram", "gpu", "temp", "net", "battery"]
+
+    static var metricOrderKey: String { "bar.order" }
 
     private enum Segment {
         case symbol(String, CGFloat)
@@ -31,19 +34,34 @@ enum MenuBarDrawer {
 
         if !m.activeAlerts.isEmpty { s.append(.symbol("exclamationmark.triangle.fill", 11)) }
         if m.needsAttentionCount > 0 { s.append(.symbol("hand.raised.fill", 11)) }
-        if agents {
-            s.append(.symbol(m.workingCount > 0 ? "circle.fill" : "circle", 7))   // o ponto de estado
-            s.append(.text("\(m.workingCount)/\(m.liveAgentCount)", agentFont))
+        let storedOrder = UserDefaults.standard.string(forKey: metricOrderKey)?
+            .split(separator: ",").map(String.init) ?? []
+        var seen = Set<String>()
+        let order = storedOrder.filter { defaultMetricOrder.contains($0) && seen.insert($0).inserted }
+            + defaultMetricOrder.filter { seen.insert($0).inserted }
+
+        for metric in order {
+            switch metric {
+            case "agents" where agents:
+                s.append(.symbol(m.workingCount > 0 ? "circle.fill" : "circle", 7))
+                s.append(.text("\(m.workingCount)/\(m.liveAgentCount)", agentFont))
+            case "cpu" where cpu:
+                s.append(.cell(title: "CPU", value: Fmt.pct(m.cpu.total)))
+            case "ram" where ram:
+                s.append(.cell(title: "RAM", value: Fmt.pct(m.memory.usage)))
+            case "gpu" where gpu:
+                if let g = m.gpu { s.append(.cell(title: "GPU", value: Fmt.pct(g))) }
+            case "temp" where temp:
+                if let t = m.temps?.cpuMax { s.append(.cell(title: "TEMP", value: String(format: "%.0f°", t))) }
+            case "net" where net:
+                s.append(.twoLines("↑ " + Fmt.rate(m.network.upPerSec, short: true),
+                                   "↓ " + Fmt.rate(m.network.downPerSec, short: true), minWidth: 40))
+            case "battery" where bat:
+                if let b = m.battery { s.append(.cell(title: b.isCharging ? "CARGA" : "BAT", value: Fmt.pct(b.percent))) }
+            default:
+                break
+            }
         }
-        if cpu { s.append(.cell(title: "CPU", value: Fmt.pct(m.cpu.total))) }
-        if ram { s.append(.cell(title: "RAM", value: Fmt.pct(m.memory.usage))) }
-        if gpu, let g = m.gpu { s.append(.cell(title: "GPU", value: Fmt.pct(g))) }
-        if temp, let t = m.temps?.cpuMax { s.append(.cell(title: "TEMP", value: String(format: "%.0f°", t))) }
-        if net {
-            s.append(.twoLines("↑ " + Fmt.rate(m.network.upPerSec, short: true),
-                               "↓ " + Fmt.rate(m.network.downPerSec, short: true), minWidth: 40))
-        }
-        if bat, let b = m.battery { s.append(.cell(title: b.isCharging ? "CARGA" : "BAT", value: Fmt.pct(b.percent))) }
         if s.isEmpty { s.append(.symbol("gauge.with.dots.needle.33percent", 12)) }
         return s
     }
