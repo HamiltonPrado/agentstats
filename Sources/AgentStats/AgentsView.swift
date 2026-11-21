@@ -52,6 +52,7 @@ extension AgentState {
 struct AgentsView: View {
     @Environment(Monitor.self) private var m
     @AppStorage("agents.showRecent") private var showRecent = false
+    @StateObject private var isFilterPopoverShown = Box(false)
     @StateObject private var selectedFilter = Box(AgentSessionFilter.all.rawValue)
 
     var body: some View {
@@ -134,24 +135,40 @@ struct AgentsView: View {
 
     private var searchAndFilters: some View {
         HStack {
-            Menu {
-                ForEach(AgentSessionFilter.allCases) { filter in
-                    Button {
-                        selectedFilter.value = filter.rawValue
-                        if filter == .recent { showRecent = true }
-                    } label: {
-                        if filter.rawValue == selectedFilter.value {
-                            Label(filter.title, systemImage: "checkmark")
-                        } else { Text(filter.title) }
-                    }
-                }
-            } label: {
+            Button { isFilterPopoverShown.value.toggle() } label: {
                 Image(systemName: selectedFilter.value == AgentSessionFilter.all.rawValue
                       ? "line.3.horizontal.decrease.circle" : "line.3.horizontal.decrease.circle.fill")
                     .font(DS.title).foregroundStyle(.secondary).frame(width: 30, height: 30)
                     .background(RoundedRectangle(cornerRadius: DS.rControl, style: .continuous).fill(DS.surface))
             }
-            .menuStyle(.borderlessButton)
+            .buttonStyle(.plain)
+            .popover(isPresented: Binding(
+                get: { isFilterPopoverShown.value },
+                set: { isFilterPopoverShown.value = $0 }
+            ), arrowEdge: .bottom) {
+                VStack(alignment: .leading, spacing: DS.xs) {
+                    ForEach(AgentSessionFilter.allCases) { filter in
+                        Button {
+                            selectedFilter.value = filter.rawValue
+                            if filter == .recent { showRecent = true }
+                            isFilterPopoverShown.value = false
+                        } label: {
+                            HStack {
+                                Text(filter.title)
+                                Spacer(minLength: DS.md)
+                                if filter.rawValue == selectedFilter.value {
+                                    Image(systemName: "checkmark").foregroundStyle(.secondary)
+                                }
+                            }
+                            .font(DS.body)
+                            .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+                .padding(DS.sm)
+                .frame(width: 150)
+            }
             .help("Filtrar por estado")
             .accessibilityLabel("Filtrar sessões")
         }
