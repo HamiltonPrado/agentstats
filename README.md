@@ -84,8 +84,8 @@ O AgentStats é distribuído sob a [licença MIT](LICENSE). Podes usar, modifica
 Atualiza `VERSION` e envia uma tag com a mesma versão, por exemplo:
 
 ```bash
-git tag v1.12
-git push origin v1.12
+git tag v1.13
+git push origin v1.13
 ```
 
 O GitHub Actions valida a versão, executa os testes, compila a app e publica `AgentStats.zip` na release.

@@ -134,12 +134,21 @@ struct AgentsView: View {
     @StateObject private var showHistory = Box(false)
 
     private var searchAndFilters: some View {
-        HStack {
+        HStack(spacing: DS.sm) {
+            Text("Sessões")
+                .font(DS.title)
+                .foregroundStyle(.secondary)
+            Spacer(minLength: DS.sm)
             Button { isFilterPopoverShown.value.toggle() } label: {
-                Image(systemName: selectedFilter.value == AgentSessionFilter.all.rawValue
-                      ? "line.3.horizontal.decrease.circle" : "line.3.horizontal.decrease.circle.fill")
-                    .font(DS.title).foregroundStyle(.secondary).frame(width: 30, height: 30)
-                    .background(RoundedRectangle(cornerRadius: DS.rControl, style: .continuous).fill(DS.surface))
+                HStack(spacing: DS.xs) {
+                    Image(systemName: "line.3.horizontal.decrease")
+                    Text((AgentSessionFilter(rawValue: selectedFilter.value) ?? .all).title)
+                }
+                .font(DS.body)
+                .foregroundStyle(selectedFilter.value == AgentSessionFilter.all.rawValue ? .secondary : .primary)
+                .padding(.horizontal, DS.md)
+                .frame(height: 30)
+                .background(RoundedRectangle(cornerRadius: DS.rControl, style: .continuous).fill(DS.surface))
             }
             .buttonStyle(.plain)
             .popover(isPresented: Binding(
