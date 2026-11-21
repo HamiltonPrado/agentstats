@@ -15,6 +15,9 @@ private struct Readout {
 struct SystemView: View {
     @Environment(Monitor.self) private var m
     @AppStorage("system.detail") private var selected: Metric = .cpu
+    @StateObject private var speedTestRunning = Box(false)
+    @StateObject private var speedTestResult = Box<SpeedTestResult?>(nil)
+    @StateObject private var speedTestError = Box<String?>(nil)
 
     var body: some View {
         VStack(spacing: DS.md) {
@@ -243,6 +246,47 @@ struct SystemView: View {
             StatRow(label: "Recebido desde que a app abriu", value: Fmt.bytes(m.network.totalDown))
             StatRow(label: "Enviado desde que a app abriu", value: Fmt.bytes(m.network.totalUp))
             StatRow(label: "IP local", value: m.network.localIP)
+            Divider().opacity(0.5)
+            if let result = speedTestResult.value {
+                StatRow(label: "Velocidade de download", value: "\(Fmt.num(result.downloadMbps, 1)) Mbps", swatch: .accentColor)
+                StatRow(label: "Velocidade de upload", value: "\(Fmt.num(result.uploadMbps, 1)) Mbps", swatch: .secondary)
+                StatRow(label: "Latência", value: "\(Fmt.num(result.latencyMs, 0)) ms")
+            }
+            if let error = speedTestError.value {
+                Text(error).font(DS.meta).foregroundStyle(.secondary)
+            }
+            Button {
+                Task { await runSpeedTest() }
+            } label: {
+                HStack(spacing: DS.xs) {
+                    if speedTestRunning.value { ProgressView().controlSize(.small) }
+                    Text(speedTestRunning.value ? "A testar…" : speedTestResult.value == nil ? "Testar velocidade" : "Repetir teste")
+                    Spacer()
+                    if let result = speedTestResult.value, !speedTestRunning.value {
+                        Text(result.measuredAt.formatted(date: .omitted, time: .shortened))
+                            .foregroundStyle(.tertiary)
+                    }
+                }
+                .font(DS.body)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .disabled(speedTestRunning.value)
+            .accessibilityHint("Envia aproximadamente 32 MB para medir a ligação através do Cloudflare")
+            Text("Cloudflare · cerca de 32 MB por teste; medições podem ser recolhidas de forma agregada")
+                .font(DS.meta).foregroundStyle(.tertiary)
+        }
+    }
+
+    @MainActor private func runSpeedTest() async {
+        speedTestRunning.value = true
+        speedTestError.value = nil
+        defer { speedTestRunning.value = false }
+        do {
+            speedTestResult.value = try await SpeedTest.run()
+        } catch {
+            speedTestError.value = "Não foi possível concluir o teste. Verifica a ligação e tenta novamente."
         }
     }
 

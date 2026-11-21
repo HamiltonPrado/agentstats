@@ -1,12 +1,32 @@
 # AgentStats
 
-App de barra de menus para macOS (estilo Stats) que mostra as métricas do sistema e os agentes de IA a trabalhar.
+[![CI](https://github.com/HamiltonPrado/agentstats/actions/workflows/ci.yml/badge.svg)](https://github.com/HamiltonPrado/agentstats/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/HamiltonPrado/agentstats?color=blue)](https://github.com/HamiltonPrado/agentstats/releases)
+![macOS](https://img.shields.io/badge/macOS-14%2B%20%7C%20Apple%20Silicon-black)
+![Swift 6](https://img.shields.io/badge/Swift-6.0-F05138?logo=swift&logoColor=white)
+![Licença](https://img.shields.io/badge/licen%C3%A7a-MIT-green)
+
+App de barra de menus para macOS (estilo Stats) que mostra as métricas do sistema e os agentes de IA a trabalhar em tempo real.
+
+🌐 **Website oficial:** [hamiltonprado.github.io/agentstats](https://hamiltonprado.github.io/agentstats)
+
+<p align="center">
+  <img src="Resources/screenshots/menubar.png" alt="Barra de menus do AgentStats" width="600"><br>
+  <em>Barra de menus compacta e rasterizada em CoreText (custo de CPU ~0%).</em>
+</p>
+
+<p align="center">
+  <img src="Resources/screenshots/agents-dark.png" alt="Painel de Agentes" width="340">
+  &nbsp;&nbsp;
+  <img src="Resources/screenshots/system-dark.png" alt="Painel de Sistema" width="340">
+</p>
 
 ## Funcionalidades
 - **Barra de menus:** agentes a trabalhar/total, CPU, RAM, temperatura, GPU, rede e bateria (configurável)
-- **Agentes:** sessões do Claude Code e do Codex (CLI e app ChatGPT, via `~/.codex`) com estado em tempo real (a executar ferramenta, a pensar, à espera), projeto, modelo, CPU/RAM, subprocessos e subagentes. Deteta também Codex, Gemini CLI, Aider, Cursor Agent, OpenCode, Goose e Amp. Notificação quando um agente termina.
+- **Agentes:** sessões em tempo real do **Claude Code**, **Codex** (CLI e app ChatGPT), **Antigravity** (Google DeepMind), **Aider**, **Goose**, **Gemini CLI**, **Cursor Agent**, **OpenCode** e **Amp** com estado imediato (a executar ferramenta, a pensar, à espera), projeto, modelo, CPU/RAM, subprocessos e subagentes. Notificação quando um agente termina.
 - **Temperaturas:** CPU (média e máx.), chip, SSD e bateria via sensores HID do Apple Silicon — sem precisar do Xcode
 - **Sistema:** CPU (total, por núcleo, carga, estado térmico), memória (apps, wired, comprimida, cache, swap, pressão), GPU, rede, disco e bateria
+- **Teste de velocidade:** teste manual de download, upload e latência no separador Rede (cerca de 32 MB por teste, através do Cloudflare)
 - **Precisa de ti:** deteta quando um agente do Claude Code está bloqueado à espera de aprovação (Bash/Edit/Write) ou tem uma pergunta para ti; destaca a vermelho, ✋ na barra de menus e notificação
 - **Hook do Claude Code:** com `AgentStats --hook` no hook `Notification` de `~/.claude/settings.json`, o "precisa de aprovação" passa a vir do próprio Claude Code (sem hook, usa uma heurística). Exemplo:
   ```json
