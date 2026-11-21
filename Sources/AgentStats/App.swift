@@ -146,7 +146,9 @@ enum AgentStatsApp {
             print("  [\(a.kind)] pid \(a.pid) app \(host) sub=\(a.isSubagent) cwd \(a.cwd ?? "-")")
         }
         print("Hook ativo: \(HookEvents.isActive)")
-        for s in agentR.sessions(processes: agents) + CodexReader().sessions(recentWindow: 7 * 86400) {
+        let base = agentR.sessions(processes: agents) + CodexReader().sessions(recentWindow: 7 * 86400) + AntigravityReader().sessions(processes: agents, recentWindow: 7 * 86400)
+        let all = base + OtherAIsReader().sessions(processes: agents, existingSessions: base)
+        for s in all {
             print("  • [\(s.kind)] \(s.title) | \(s.state.label) | \(s.detail ?? "") | \(s.project) | \(s.model ?? "-") | pid \(s.process?.pid ?? 0)")
         }
     }

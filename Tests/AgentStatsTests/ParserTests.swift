@@ -431,3 +431,138 @@ struct ProjectUsageTests {
         #expect(keys.contains(GlobalHotKey.defaultPreset))
     }
 }
+
+// MARK: - Deteção de processos de agentes
+
+@Suite("Deteção de processos de agentes")
+struct AgentProcessDetectionTests {
+    private func proc(name: String, args: String) -> ProcSample {
+        ProcSample(pid: 1234, ppid: 1, cpu: 5.0, rssKB: 50_000, elapsed: "01:23", name: name, args: args)
+    }
+
+    @Test func directGeminiBinary() {
+        #expect(AgentReader.agentKind(proc(name: "gemini", args: "gemini")) == "Gemini CLI")
+        #expect(AgentReader.agentKind(proc(name: "gemini-cli", args: "gemini-cli")) == "Gemini CLI")
+    }
+
+    @Test func nodeRunningGlobalGemini() {
+        #expect(AgentReader.agentKind(proc(name: "node", args: "node /opt/homebrew/bin/gemini")) == "Gemini CLI")
+        #expect(AgentReader.agentKind(proc(name: "node", args: "node /usr/local/bin/gemini-cli")) == "Gemini CLI")
+        #expect(AgentReader.agentKind(proc(name: "node", args: "node /Users/demo/.nvm/versions/node/v20.0.0/bin/gemini --prompt hello")) == "Gemini CLI")
+        #expect(AgentReader.agentKind(proc(name: "node", args: "node /path/to/gemini.js")) == "Gemini CLI")
+    }
+
+    @Test func nodeRunningNpmScopedPackage() {
+        #expect(AgentReader.agentKind(proc(name: "node", args: "node /Users/demo/.npm/_npx/abc/node_modules/@google/gemini-cli/dist/index.js")) == "Gemini CLI")
+    }
+
+    @Test func pythonRunningGemini() {
+        #expect(AgentReader.agentKind(proc(name: "python3", args: "python3 /usr/local/bin/gemini")) == "Gemini CLI")
+        #expect(AgentReader.agentKind(proc(name: "python", args: "python -u /usr/local/bin/gemini-cli")) == "Gemini CLI")
+    }
+
+    @Test func antigravityAgent() {
+        #expect(AgentReader.agentKind(proc(name: "agy", args: "agy")) == "Antigravity")
+        #expect(AgentReader.agentKind(proc(name: "antigravity", args: "antigravity")) == "Antigravity")
+        #expect(AgentReader.agentKind(proc(name: "node", args: "node /opt/homebrew/bin/agy")) == "Antigravity")
+    }
+
+    @Test func arbitraryNodeScriptDoesNotFalsePositive() {
+        #expect(AgentReader.agentKind(proc(name: "node", args: "node server.js --model gemini")) == nil)
+        #expect(AgentReader.agentKind(proc(name: "node", args: "node index.js")) == nil)
+        #expect(AgentReader.agentKind(proc(name: "python3", args: "python3 train.py --api gemini")) == nil)
+    }
+}
+
+// MARK: - Antigravity
+
+@Suite("Transcripts do Antigravity")
+struct AntigravityTranscriptTests {
+    let reader = AntigravityReader()
+
+    @Test func toolCallStepIsRunningTool() {
+        let line = #"{"step_index":10,"source":"MODEL","type":"PLANNER_RESPONSE","status":"DONE","created_at":"\#(isoNow)","tool_calls":[{"name":"run_command","args":{"toolSummary":"Inspect project files","CommandLine":"ls -la"}}]}"#
+        let info = reader.parseTail(lines([line]))
+        #expect(info.state == .runningTool("Bash"))
+        #expect(info.detail == "Inspect project files")
+    }
+
+    @Test func genericOutputMeansThinking() {
+        let line = #"{"step_index":11,"source":"MODEL","type":"GENERIC","status":"DONE","created_at":"\#(isoNow)","content":"Command exited with code 0"}"#
+        let info = reader.parseTail(lines([line]))
+        #expect(info.state == .thinking)
+        #expect(info.detail == "A analisar o resultado")
+    }
+
+    @Test func userContentWithoutToolCallsWaitsForUser() {
+        let line = #"{"step_index":12,"source":"MODEL","type":"PLANNER_RESPONSE","status":"DONE","created_at":"\#(isoNow)","content":"Pronto, tudo configurado."}"#
+        let info = reader.parseTail(lines([line]))
+        #expect(info.state == .waitingUser)
+        #expect(info.detail == "Pronto, tudo configurado.")
+    }
+
+    @Test func extractsModelSelection() {
+        let line = #"{"step_index":0,"source":"USER_EXPLICIT","type":"USER_INPUT","status":"DONE","created_at":"\#(isoNow)","content":"<USER_SETTINGS_CHANGE>\nThe user changed setting `Model Selection` from None to Gemini 3.8 Flash (High).\n</USER_SETTINGS_CHANGE>"}"#
+        let info = reader.parseTail(lines([line]))
+        #expect(info.model == "Gemini 3.8 Flash (High)")
+    }
+
+    @Test func parseCwdFromJsonArray() {
+        let raw = #"["file:///Users/demo/Documents/AgentStats"]"#
+        #expect(reader.parseCwd(raw) == "/Users/demo/Documents/AgentStats")
+    }
+}
+
+// MARK: - Outras IAs
+
+@Suite("Leitura de outras IAs")
+struct OtherAIsTests {
+    let reader = OtherAIsReader()
+
+    @Test func parseAiderHistory() {
+        let lines = [
+            "# aider chat started at 2026-11-20 12:00:00",
+            "",
+            "#### Corrigir bug no parser de markdown",
+            "",
+            "> O ficheiro Parser.swift foi atualizado com a correção pedida.",
+        ]
+        let info = reader.parseAiderLines(lines)
+        #expect(info.title == "Corrigir bug no parser de markdown")
+        #expect(info.detail == "O ficheiro Parser.swift foi atualizado com a correção pedida.")
+    }
+
+    @Test func activeAgentProcessWithChildrenBecomesRunningToolSession() {
+        let p = AgentProcess(pid: 999, kind: "Aider", cpu: 12.5, memKB: 80_000, elapsed: "02:10",
+                             cwd: "/Users/demo/app", children: ["pytest", "git"], isSubagent: false)
+        let sessions = reader.sessions(processes: [p], existingSessions: [])
+        #expect(sessions.count == 1)
+        let s = sessions[0]
+        #expect(s.kind == "Aider")
+        #expect(s.state == .runningTool("pytest"))
+        #expect(s.detail == "pytest, git")
+        #expect(s.project == "app")
+        #expect(s.process?.pid == 999)
+    }
+
+    @Test func idleAgentProcessBecomesWaitingUserSession() {
+        let p = AgentProcess(pid: 888, kind: "Cursor Agent", cpu: 0.1, memKB: 100_000, elapsed: "10:00",
+                             cwd: "/Users/demo/frontend", children: [], isSubagent: false)
+        let sessions = reader.sessions(processes: [p], existingSessions: [])
+        #expect(sessions.count == 1)
+        let s = sessions[0]
+        #expect(s.kind == "Cursor Agent")
+        #expect(s.state == .waitingUser)
+        #expect(s.project == "frontend")
+    }
+
+    @Test func alreadyLinkedProcessIsSkipped() {
+        let p = AgentProcess(pid: 777, kind: "Claude Code", cpu: 5.0, memKB: 50_000, elapsed: "01:00",
+                             cwd: "/x", children: [], isSubagent: false)
+        let existing = AgentSession(id: "s1", kind: "Claude Code", title: "Existente", cwd: "/x",
+                                    model: nil, state: .thinking, detail: nil, lastActivity: Date(),
+                                    subagents: 0, process: p)
+        let sessions = reader.sessions(processes: [p], existingSessions: [existing])
+        #expect(sessions.isEmpty)
+    }
+}

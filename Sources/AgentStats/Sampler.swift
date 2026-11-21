@@ -41,6 +41,8 @@ actor Sampler {
     private let procSampler = ProcessSampler()
     private let agentReader = AgentReader()
     private let codexReader = CodexReader()
+    private let antigravityReader = AntigravityReader()
+    private let otherAIsReader = OtherAIsReader()
     private let usageTracker = UsageTracker()
 
     func sample(_ r: SampleRequest) -> Sample {
@@ -57,9 +59,12 @@ actor Sampler {
         if r.agents && !off.contains("procs") {
             let procs = procSampler.read()
             let agents = agentReader.agentProcesses(from: procs)
+            let baseSessions = agentReader.sessions(processes: agents) +
+                               codexReader.sessions() +
+                               antigravityReader.sessions(processes: agents)
+            let otherSessions = otherAIsReader.sessions(processes: agents, existingSessions: baseSessions)
             let sessions = off.contains("sessions") ? [] :
-                (agentReader.sessions(processes: agents) + codexReader.sessions())
-                    .sorted { $0.lastActivity > $1.lastActivity }
+                (baseSessions + otherSessions).sorted { $0.lastActivity > $1.lastActivity }
             s.agents = AgentsSample(
                 topCPU: Array(procs.sorted { $0.cpu > $1.cpu }.prefix(12)),
                 topMemory: Array(procs.sorted { $0.rssKB > $1.rssKB }.prefix(12)),

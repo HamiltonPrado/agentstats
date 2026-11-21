@@ -99,6 +99,9 @@ final class AgentReader {
         "claude": "Claude Code",
         "codex": "Codex",
         "gemini": "Gemini CLI",
+        "gemini-cli": "Gemini CLI",
+        "agy": "Antigravity",
+        "antigravity": "Antigravity",
         "aider": "Aider",
         "cursor-agent": "Cursor Agent",
         "opencode": "OpenCode",
@@ -114,10 +117,16 @@ final class AgentReader {
     ]
     private static let runtimes: Set<String> = ["node", "bun", "deno", "python", "python3", "Python"]
 
-    private func agentKind(_ p: ProcSample) -> String? {
-        if let k = Self.directNames[p.name] { return k }
-        if Self.runtimes.contains(p.name) || p.name.hasPrefix("python") {
-            for (marker, kind) in Self.scriptMarkers where p.args.contains(marker) { return kind }
+    static func agentKind(_ p: ProcSample) -> String? {
+        if let k = directNames[p.name] { return k }
+        if runtimes.contains(p.name) || p.name.hasPrefix("python") {
+            for (marker, kind) in scriptMarkers where p.args.contains(marker) { return kind }
+            // Deteta scripts cujo executável é o agente (ex.: node /opt/homebrew/bin/gemini)
+            let argsList = p.args.split(separator: " ")
+            if let script = argsList.dropFirst().first(where: { !$0.hasPrefix("-") }) {
+                let base = ((script as NSString).lastPathComponent as NSString).deletingPathExtension
+                if let k = directNames[base] { return k }
+            }
         }
         return nil
     }
@@ -127,7 +136,7 @@ final class AgentReader {
         for p in procs { children[p.ppid, default: []].append(p) }
         let byPid = Dictionary(procs.map { ($0.pid, $0) }, uniquingKeysWith: { a, _ in a })
 
-        let agentPids = Set(procs.filter { agentKind($0) != nil }.map(\.pid))
+        let agentPids = Set(procs.filter { Self.agentKind($0) != nil }.map(\.pid))
 
         func descendants(_ pid: Int) -> [ProcSample] {
             var out: [ProcSample] = []
@@ -161,7 +170,7 @@ final class AgentReader {
         }
 
         return procs.compactMap { p -> AgentProcess? in
-            guard let kind = agentKind(p) else { return nil }
+            guard let kind = Self.agentKind(p) else { return nil }
             let desc = descendants(p.pid)
             // A app ChatGPT/Codex arranca um app-server e um exec-server auxiliar
             let role: String? = p.args.contains("app-server") ? "app" : p.args.contains("exec-server") ? "executor" : nil

@@ -1,0 +1,24 @@
+{
+    "configurations": [
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:AgentStats}",
+            "name": "Debug AgentStats",
+            "target": "AgentStats",
+            "configuration": "debug",
+            "preLaunchTask": "swift: Build Debug AgentStats"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:AgentStats}",
+            "name": "Release AgentStats",
+            "target": "AgentStats",
+            "configuration": "release",
+            "preLaunchTask": "swift: Build Release AgentStats"
+        }
+    ]
+}

@@ -379,7 +379,7 @@ enum BatteryReader {
 
 enum ProcessReader {
     /// Nomes cujos argumentos interessam (para identificar agentes que correm em node/python, e o papel do Codex).
-    static let argsWanted: Set<String> = ["node", "bun", "deno", "codex", "python", "python3", "Python"]
+    static let argsWanted: Set<String> = ["node", "bun", "deno", "codex", "claude", "gemini", "gemini-cli", "agy", "antigravity", "python", "python3", "Python"]
 
     /// Lista de processos (pid, ppid, %cpu, rss, tempo, nome). Uma única chamada ao `ps` (que tem privilégios
     /// para ler processos de sistema); os argumentos só são lidos via sysctl para os poucos processos que importam.
