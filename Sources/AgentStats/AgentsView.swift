@@ -52,7 +52,6 @@ extension AgentState {
 struct AgentsView: View {
     @Environment(Monitor.self) private var m
     @AppStorage("agents.showRecent") private var showRecent = false
-    @StateObject private var searchText = Box("")
     @StateObject private var selectedFilter = Box(AgentSessionFilter.all.rawValue)
 
     var body: some View {
@@ -78,7 +77,7 @@ struct AgentsView: View {
             if !hasAnyAgent {
                 EmptyAgents()
             } else if !hasVisibleItems {
-                Text(searchText.value.isEmpty ? "Nenhuma sessão neste filtro" : "Nenhum resultado para “\(searchText.value)”")
+                Text("Nenhuma sessão neste filtro")
                     .font(DS.body).foregroundStyle(.secondary)
                     .frame(maxWidth: .infinity).padding(.vertical, DS.md)
             }
@@ -106,7 +105,7 @@ struct AgentsView: View {
                         .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
-                    if showRecent || selectedFilter.value == AgentSessionFilter.recent.rawValue || !searchText.value.isEmpty {
+                    if showRecent || selectedFilter.value == AgentSessionFilter.recent.rawValue {
                         ForEach(recent) { SessionCard(session: $0) }
                     }
                 }
@@ -134,21 +133,7 @@ struct AgentsView: View {
     @StateObject private var showHistory = Box(false)
 
     private var searchAndFilters: some View {
-        HStack(spacing: DS.sm) {
-            HStack(spacing: DS.xs) {
-                Image(systemName: "magnifyingglass").font(DS.meta).foregroundStyle(.tertiary)
-                TextField("Pesquisar sessões…", text: Binding(get: { searchText.value }, set: { searchText.value = $0 }))
-                    .textFieldStyle(.plain).font(DS.body)
-                if !searchText.value.isEmpty {
-                    Button { searchText.value = "" } label: {
-                        Image(systemName: "xmark.circle.fill").font(DS.meta).foregroundStyle(.tertiary)
-                    }
-                    .buttonStyle(.plain).help("Limpar pesquisa")
-                }
-            }
-            .padding(.horizontal, DS.sm).frame(height: 30)
-            .background(RoundedRectangle(cornerRadius: DS.rControl, style: .continuous).fill(DS.surface))
-
+        HStack {
             Menu {
                 ForEach(AgentSessionFilter.allCases) { filter in
                     Button {
@@ -174,28 +159,17 @@ struct AgentsView: View {
 
     private func matches(_ session: AgentSession) -> Bool {
         let filter = AgentSessionFilter(rawValue: selectedFilter.value) ?? .all
-        guard filter.accepts(session.state) else { return false }
-        return searchText.value.isEmpty || searchableText(for: session).localizedStandardContains(searchText.value)
+        return filter.accepts(session.state)
     }
 
     private func matches(_ agent: AgentProcess) -> Bool {
         let filter = AgentSessionFilter(rawValue: selectedFilter.value) ?? .all
-        guard filter == .all || filter == .working else { return false }
-        let text = [agent.kind, agent.cwd ?? "", agent.children.joined(separator: " ")].joined(separator: " ")
-        return searchText.value.isEmpty || text.localizedStandardContains(searchText.value)
+        return filter == .all || filter == .working
     }
 
     private func matches(_ record: AgentActivityRecord) -> Bool {
         let filter = AgentSessionFilter(rawValue: selectedFilter.value) ?? .all
-        guard filter.accepts(record.phase) else { return false }
-        let text = [record.title, record.kind, record.project, record.cwd ?? "", record.events.compactMap(\.detail).joined(separator: " ")]
-            .joined(separator: " ")
-        return searchText.value.isEmpty || text.localizedStandardContains(searchText.value)
-    }
-
-    private func searchableText(for session: AgentSession) -> String {
-        [session.title, session.kind, session.project, session.model ?? "", session.cwd ?? "", session.detail ?? "", session.state.label]
-            .joined(separator: " ")
+        return filter.accepts(record.phase)
     }
 
     private func group<C: View>(_ title: String, _ count: Int, _ kind: StatusKind?, @ViewBuilder _ content: () -> C) -> some View {
