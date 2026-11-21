@@ -2,13 +2,14 @@ import SwiftUI
 import AppKit
 
 enum Tab: String, CaseIterable, Identifiable {
-    case agents, system, processes, settings
+    case agents, system, processes, audio, settings
     var id: String { rawValue }
     var title: String {
         switch self {
         case .agents: return "Agentes"
         case .system: return "Sistema"
         case .processes: return "Processos"
+        case .audio: return "Áudio"
         case .settings: return "Definições"
         }
     }
@@ -17,10 +18,11 @@ enum Tab: String, CaseIterable, Identifiable {
         case .agents: return "terminal"
         case .system: return "gauge.with.needle"
         case .processes: return "list.bullet"
+        case .audio: return "speaker.wave.2"
         case .settings: return "gearshape"
         }
     }
-    static let main: [Tab] = [.agents, .system, .processes]
+    static let main: [Tab] = [.agents, .system, .processes, .audio]
 }
 
 struct PanelView: View {
@@ -29,11 +31,13 @@ struct PanelView: View {
     @AppStorage("panel.tab2") private var storedTab: Tab = .agents
     @AppStorage("appearance.theme") private var themeRawValue = PanelTheme.system.rawValue
     @AppStorage("appearance.accentHex") private var accentHex = "#0A84FF"
+    @AppStorage(TextSize.defaultsKey) private var textSizeRaw = TextSize.normal.rawValue
+    @AppStorage(PanelWidth.defaultsKey) private var panelWidthRaw = PanelWidth.normal.rawValue
     var forcedTab: Tab? = nil
     var scrollable = true
     @StateObject private var contentHeight = Box<CGFloat>(300)
+    static var width: CGFloat { PanelWidth.current.points }
     static let maxContentHeight: CGFloat = 480
-    static let width: CGFloat = 340
 
     private var tab: Tab { forcedTab ?? storedTab }
     private var selectedTheme: PanelTheme { PanelTheme(rawValue: themeRawValue) ?? .system }
@@ -47,17 +51,18 @@ struct PanelView: View {
             if tab != .settings { tabBar.padding(.horizontal, DS.md).padding(.bottom, DS.md) }
             Divider().opacity(0.6)
             if scrollable {
-                // Altura ajusta-se ao conteúdo; só faz scroll acima do máximo.
                 ScrollView {
                     content.padding(DS.md)
                         .background(GeometryReader { g in
                             Color.clear.preference(key: ContentHeightKey.self, value: g.size.height)
                         })
                 }
+                // Sem barra de scroll visível: com "Mostrar barras de deslocamento: Sempre" (ou um rato
+                // ligado) a barra ocupava ~14 pt à direita e o conteúdo ficava encostado à esquerda.
+                // O scroll continua a funcionar com trackpad e roda do rato.
+                .scrollIndicators(.never)
                 .frame(height: min(max(contentHeight.value, 80), Self.maxContentHeight))
                 .onPreferenceChange(ContentHeightKey.self) { h in
-                    // Altura em passos de 8 pt: variações pequenas do texto a cada amostra não
-                    // obrigam o popover a redimensionar (e o macOS a refazer o layout da janela).
                     let snapped = (h / 8).rounded(.up) * 8
                     if snapped != contentHeight.value { contentHeight.value = snapped }
                 }
@@ -67,7 +72,10 @@ struct PanelView: View {
             Divider().opacity(0.6)
             footer
         }
-        .frame(width: Self.width)
+        // As fontes da escala DS são lidas quando cada vista se desenha: ao mudar o tamanho do texto,
+        // reconstrói-se o painel para todas as vistas as voltarem a ler.
+        .id(textSizeRaw)
+        .frame(width: (PanelWidth(rawValue: panelWidthRaw) ?? .normal).points)
         .environment(\.agentAccentColor, accentColor)
         .tint(accentColor)
         .preferredColorScheme(selectedTheme.colorScheme)
@@ -78,6 +86,7 @@ struct PanelView: View {
         case .agents: AgentsView()
         case .system: SystemView()
         case .processes: ProcessesView()
+        case .audio: AudioView()
         case .settings: SettingsView()
         }
     }
@@ -125,15 +134,19 @@ struct PanelView: View {
         HStack(spacing: 0) {
             ForEach(Tab.main) { t in
                 Button { withAnimation(Motion.ease(0.16)) { storedTab = t } } label: {
-                    HStack(spacing: DS.xs + 2) {
-                        Image(systemName: t.icon).font(DS.meta)
-                        Text(t.title).font(DS.body.weight(.medium))
-                        if t == .agents, m.workingCount + m.needsAttentionCount > 0 {
-                            StatusDot(m.needsAttentionCount > 0 ? .attention : .working)
+                    // Só texto e centrado: com 4 separadores, ícone + texto + ponto não cabiam e
+                    // desalinhavam. O ponto de estado fica sobreposto, sem mexer na centragem.
+                    Text(t.title)
+                        .font(DS.body.weight(.medium)).lineLimit(1)
+                        .overlay(alignment: .topTrailing) {
+                            if t == .agents, m.workingCount + m.needsAttentionCount > 0 {
+                                StatusDot(m.needsAttentionCount > 0 ? .attention : .working, size: 5)
+                                    .offset(x: 7, y: -1)
+                            }
                         }
-                    }
                     .foregroundStyle(tab == t ? Color.primary : Color.secondary)
-                    .frame(maxWidth: .infinity).frame(height: 24)
+                    .frame(maxWidth: .infinity).frame(height: 26)
+                    .help(t.title)
                     .background(
                         RoundedRectangle(cornerRadius: DS.rSmall, style: .continuous)
                             .fill(tab == t ? (effectiveScheme == .dark ? Color.white.opacity(0.12) : Color.white) : .clear)
@@ -175,9 +188,9 @@ struct AlertBanner: View {
         VStack(alignment: .leading, spacing: DS.xs) {
             ForEach(alerts) { a in
                 HStack(alignment: .firstTextBaseline, spacing: DS.sm) {
-                    Image(systemName: a.kind == .cpu ? "cpu" : "thermometer.high")
+                    Image(systemName: a.kind == .cpu ? "cpu" : a.kind == .temp ? "thermometer.high" : a.kind == .memory ? "memorychip" : a.kind == .disk ? "internaldrive" : "battery.25")
                         .font(DS.body).foregroundStyle(Palette.attention).frame(width: 16)
-                    Text(a.kind == .cpu ? "CPU alta · \(a.value)" : "Temperatura alta · \(a.value)")
+                    Text("\(a.kind.label) · \(a.value)")
                         .font(DS.body.weight(.medium))
                         .fixedSize().layoutPriority(1)   // o valor nunca quebra; o processo é que encolhe
                     if let d = a.detail {

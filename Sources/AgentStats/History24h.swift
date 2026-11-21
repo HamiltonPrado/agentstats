@@ -8,6 +8,7 @@ struct MinuteSample: Codable, Sendable, Equatable {
     var temp: Double?          // máximo da CPU, °C
     var working: Int           // máximo de agentes a trabalhar ao mesmo tempo
     var attention: Bool        // algum agente precisou de ti neste minuto
+    var battery: Double? = nil // carga média da bateria, 0…1
 }
 
 /// Junta as amostras (a cada 2 s) em minutos. Quando o minuto muda, devolve o minuto completo.
@@ -15,20 +16,23 @@ struct MinuteAccumulator: Sendable {
     private var minute: TimeInterval?
     private var cpuSum = 0.0, memSum = 0.0, count = 0
     private var tempMax: Double?
+    private var batterySum = 0.0, batteryCount = 0
     private var workingMax = 0
     private var attention = false
 
-    mutating func add(cpu: Double, mem: Double, temp: Double?, working: Int, attention needs: Bool, at date: Date) -> MinuteSample? {
+    mutating func add(cpu: Double, mem: Double, temp: Double?, battery: Double? = nil, working: Int, attention needs: Bool, at date: Date) -> MinuteSample? {
         let m = (date.timeIntervalSince1970 / 60).rounded(.down) * 60
         var finished: MinuteSample?
         if let current = minute, current != m, count > 0 {
             finished = MinuteSample(t: current, cpu: cpuSum / Double(count), mem: memSum / Double(count),
-                                    temp: tempMax, working: workingMax, attention: attention)
+                                    temp: tempMax, working: workingMax, attention: attention,
+                                    battery: batteryCount > 0 ? batterySum / Double(batteryCount) : nil)
             self = MinuteAccumulator()
         }
         minute = m
         cpuSum += cpu; memSum += mem; count += 1
         if let temp { tempMax = max(tempMax ?? temp, temp) }
+        if let battery { batterySum += battery; batteryCount += 1 }
         workingMax = max(workingMax, working)
         attention = attention || needs
         return finished
@@ -37,16 +41,17 @@ struct MinuteAccumulator: Sendable {
 
 /// Histórico das últimas 24 horas, guardado em disco para sobreviver a reinícios.
 enum History24h {
-    static let window: TimeInterval = 24 * 3600
+    static let retentionWindow: TimeInterval = 7 * 24 * 3600
+    static let activityWindow: TimeInterval = 24 * 3600
 
     static var file: URL {
         FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
             .appendingPathComponent("AgentStats/history.json")
     }
 
-    /// Remove o que tem mais de 24 h.
+    /// Remove o que tem mais de 7 dias.
     static func pruned(_ samples: [MinuteSample], now: Date = Date()) -> [MinuteSample] {
-        let cutoff = now.timeIntervalSince1970 - window
+        let cutoff = now.timeIntervalSince1970 - retentionWindow
         return samples.filter { $0.t >= cutoff }
     }
 
@@ -65,11 +70,11 @@ enum History24h {
         }
     }
 
-    /// Agrupa em blocos (por omissão de 10 min) para desenhar: 144 barras para 24 h.
+    /// Agrupa em blocos para desenhar o histórico sem carregar a interface.
     static func buckets(_ samples: [MinuteSample], minutes: Int = 10, now: Date = Date()) -> [(start: TimeInterval, working: Double, attention: Bool)] {
         let size = TimeInterval(minutes * 60)
         let end = (now.timeIntervalSince1970 / size).rounded(.down) * size
-        let start = end - window + size
+        let start = end - activityWindow + size
         var out: [(TimeInterval, Double, Bool)] = []
         var i = samples.startIndex
         let sorted = samples.sorted { $0.t < $1.t }
@@ -91,5 +96,8 @@ enum History24h {
     }
 
     /// Minutos com pelo menos um agente a trabalhar.
-    static func activeMinutes(_ samples: [MinuteSample]) -> Int { samples.filter { $0.working > 0 }.count }
+    static func activeMinutes(_ samples: [MinuteSample], now: Date = Date()) -> Int {
+        let cutoff = now.timeIntervalSince1970 - activityWindow
+        return samples.filter { $0.t >= cutoff && $0.working > 0 }.count
+    }
 }

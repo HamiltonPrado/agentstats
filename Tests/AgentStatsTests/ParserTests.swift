@@ -361,12 +361,21 @@ struct HistoryTests {
         #expect(done.t == at(0).timeIntervalSince1970)
     }
 
-    @Test func pruneKeepsOnlyTheLast24Hours() {
-        let now = at(3000)
-        let samples = [2000.0, 1500, 1441, 1439].map {
+    @Test func pruneKeepsOnlyTheLast7Days() {
+        // o histórico guarda 7 dias (10 080 minutos); a faixa de atividade continua a mostrar 24 h
+        let now = at(20_000)
+        let samples = [12_000.0, 10_081, 10_079, 1439].map {
             MinuteSample(t: now.timeIntervalSince1970 - $0 * 60, cpu: 0, mem: 0, temp: nil, working: 0, attention: false)
         }
-        #expect(History24h.pruned(samples, now: now).count == 1)
+        #expect(History24h.pruned(samples, now: now).count == 2)
+    }
+
+    @Test func activeMinutesOnlyCountTheLast24Hours() {
+        let now = at(20_000)
+        let samples = [3000.0, 100, 10].map {
+            MinuteSample(t: now.timeIntervalSince1970 - $0 * 60, cpu: 0, mem: 0, temp: nil, working: 1, attention: false)
+        }
+        #expect(History24h.activeMinutes(samples, now: now) == 2)
     }
 
     @Test func savesAndLoadsFromDisk() {
@@ -564,5 +573,33 @@ struct OtherAIsTests {
                                     subagents: 0, process: p)
         let sessions = reader.sessions(processes: [p], existingSessions: [existing])
         #expect(sessions.isEmpty)
+    }
+}
+
+// MARK: - Correções da revisão
+
+@Suite("Histórico de 7 dias")
+struct SevenDayHistoryTests {
+    private func at(_ minute: Double, _ second: Double = 0) -> Date { Date(timeIntervalSince1970: 1_800_000_000 + minute * 60 + second) }
+
+    @Test func batteryIsAveragedPerMinuteAndOptional() throws {
+        var acc = MinuteAccumulator()
+        _ = acc.add(cpu: 0.1, mem: 0.5, temp: nil, battery: 0.8, working: 0, attention: false, at: at(0, 1))
+        _ = acc.add(cpu: 0.1, mem: 0.5, temp: nil, battery: 0.6, working: 0, attention: false, at: at(0, 20))
+        let closed = acc.add(cpu: 0.1, mem: 0.5, temp: nil, working: 0, attention: false, at: at(1, 1))
+        let done = try #require(closed)
+        #expect(abs((done.battery ?? -1) - 0.7) < 1e-9)
+    }
+
+    @Test func weekOfMinutesIsDrawnAsHourlyAverages() {
+        let week = (0..<10_080).map { Double($0 / 60) }   // valor constante dentro de cada hora
+        let drawn = DayChart.downsampled(week)
+        #expect(drawn.count == 168)
+        #expect(drawn.first == 0 && drawn.last == 167)
+    }
+
+    @Test func shortHistoryIsDrawnAsIs() {
+        let day = (0..<1440).map(Double.init)
+        #expect(DayChart.downsampled(day) == day)
     }
 }

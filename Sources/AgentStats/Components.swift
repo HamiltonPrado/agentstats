@@ -20,12 +20,12 @@ enum DS {
     static let md: CGFloat = 12
     static let lg: CGFloat = 16
 
-    // Tipo: quatro tamanhos, pesos 400 e 500
-    static let meta = Font.system(size: 11)
-    static let body = Font.system(size: 12)
-    static let title = Font.system(size: 13, weight: .medium)
-    static let figure = Font.system(size: 20, weight: .medium).monospacedDigit()
-    static let mono = Font.system(size: 11, design: .monospaced)
+    // Tipo: quatro tamanhos, pesos 400 e 500, multiplicados pelo tamanho de texto escolhido
+    static var meta: Font { .system(size: 11 * TextSize.current.scale) }
+    static var body: Font { .system(size: 12 * TextSize.current.scale) }
+    static var title: Font { .system(size: 13 * TextSize.current.scale, weight: .medium) }
+    static var figure: Font { .system(size: 20 * TextSize.current.scale, weight: .medium).monospacedDigit() }
+    static var mono: Font { .system(size: 11 * TextSize.current.scale, design: .monospaced) }
 
     // Raios (aninhados: interior = exterior − padding)
     static let rSmall: CGFloat = 6
@@ -36,6 +36,38 @@ enum DS {
     static let surface = Color.primary.opacity(0.04)
     static let raised = Color.primary.opacity(0.08)
     static let hairline = Color.primary.opacity(0.08)
+}
+
+/// Tamanho do texto do painel (Definições → Painel).
+enum TextSize: String, CaseIterable, Identifiable {
+    case small, normal, large
+    static let defaultsKey = "ui.textSize"
+    var id: String { rawValue }
+    var title: String {
+        switch self { case .small: "Pequeno"; case .normal: "Normal"; case .large: "Grande" }
+    }
+    var scale: CGFloat {
+        switch self { case .small: 0.92; case .normal: 1; case .large: 1.12 }
+    }
+    static var current: TextSize {
+        TextSize(rawValue: UserDefaults.standard.string(forKey: defaultsKey) ?? "") ?? .normal
+    }
+}
+
+/// Largura do painel (Definições → Painel).
+enum PanelWidth: String, CaseIterable, Identifiable {
+    case compact, normal, wide
+    static let defaultsKey = "ui.panelWidth"
+    var id: String { rawValue }
+    var title: String {
+        switch self { case .compact: "Compacta"; case .normal: "Normal"; case .wide: "Larga" }
+    }
+    var points: CGFloat {
+        switch self { case .compact: 320; case .normal: 340; case .wide: 400 }
+    }
+    static var current: PanelWidth {
+        PanelWidth(rawValue: UserDefaults.standard.string(forKey: defaultsKey) ?? "") ?? .normal
+    }
 }
 
 enum Palette {
@@ -308,7 +340,7 @@ struct IconButton: View {
     }
 }
 
-/// Gráfico das últimas 24 h (um ponto por minuto), com as horas de início e fim.
+/// Gráfico do histórico guardado (até 7 dias), com o intervalo visível.
 struct DayChart: View {
     let samples: [MinuteSample]
     let value: (MinuteSample) -> Double?
@@ -316,11 +348,21 @@ struct DayChart: View {
     let title: String
     let format: (Double) -> String
 
+    /// Acima de 2 dias de minutos, desenha médias por hora: a forma é a mesma e o gráfico
+    /// passa de até 10 080 pontos para 168 (é redesenhado a cada amostra com o painel aberto).
+    nonisolated static func downsampled(_ values: [Double], maxPoints: Int = 2880, bucket: Int = 60) -> [Double] {
+        guard values.count > maxPoints else { return values }
+        return stride(from: 0, to: values.count, by: bucket).map { i in
+            let chunk = values[i..<min(i + bucket, values.count)]
+            return chunk.reduce(0, +) / Double(chunk.count)
+        }
+    }
+
     var body: some View {
-        let vals = samples.compactMap(value)
+        let vals = Self.downsampled(samples.compactMap(value))
         VStack(alignment: .leading, spacing: DS.xs) {
             HStack {
-                Text("Últimas 24 h").font(DS.meta).foregroundStyle(.secondary)
+                Text(samples.count > 1440 ? "Últimos 7 dias" : "Histórico · até 7 dias").font(DS.meta).foregroundStyle(.secondary)
                 Spacer()
                 if let mx = vals.max() {
                     Text("máximo " + format(mx)).font(DS.meta.monospacedDigit()).foregroundStyle(.tertiary)
@@ -328,7 +370,7 @@ struct DayChart: View {
             }
             if vals.count > 1 {
                 Sparkline(values: vals, maxValue: maxValue, color: .secondary).frame(height: 32)
-                    .accessibilityLabel("\(title) nas últimas 24 horas")
+                    .accessibilityLabel("\(title) no histórico de até sete dias")
                     .accessibilityValue(vals.max().map { "máximo " + format($0) } ?? "")
                 HStack {
                     Text(samples.first.map { Self.hour($0.t) } ?? "").font(DS.meta.monospacedDigit()).foregroundStyle(.tertiary)

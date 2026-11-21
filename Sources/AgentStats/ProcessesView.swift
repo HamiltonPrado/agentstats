@@ -57,6 +57,7 @@ struct ProcRow: View {
     var body: some View {
         let running = AppInfo.lookup(p.pid)
         let fraction = sortByMem ? Double(p.rssKB) / maxValue : p.cpu / maxValue
+        let metricWidth: CGFloat = 104   // CPU 44 + memória 56 + espaço; o resto fica para o nome
         HStack(spacing: DS.md) {
             Group {
                 if let icon = running.icon {
@@ -69,21 +70,26 @@ struct ProcRow: View {
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(running.name ?? p.name).font(DS.body).lineLimit(1)
-                Text("PID \(String(p.pid)) · \(Fmt.etime(p.elapsed))").font(DS.meta.monospacedDigit()).foregroundStyle(.tertiary)
+                Text("PID \(String(p.pid)) · \(Fmt.etime(p.elapsed))")
+                    .font(DS.meta.monospacedDigit()).foregroundStyle(.tertiary)
+                    .lineLimit(1).minimumScaleFactor(0.8)
             }
             Spacer(minLength: DS.sm)
             VStack(alignment: .trailing, spacing: DS.xs) {
-                HStack(spacing: DS.sm) {
+                HStack(spacing: DS.xs) {
                     Text(Fmt.num(p.cpu, 1) + "%")
                         .foregroundStyle(sortByMem ? Color.secondary : (p.cpu > 80 ? Color.red : Color.primary))
-                    Text(Fmt.bytes(p.rssKB * 1024))
+                        .frame(width: 44, alignment: .trailing)
+                        .lineLimit(1).minimumScaleFactor(0.75)
+                    Text(Fmt.bytesShort(p.rssKB * 1024))
                         .foregroundStyle(sortByMem ? Color.primary : Color.secondary)
-                        .frame(width: 64, alignment: .trailing)
+                        .frame(width: 56, alignment: .trailing)
+                        .lineLimit(1).minimumScaleFactor(0.75)
                 }
                 .font(DS.body.monospacedDigit())
-                // A barra mostra só a coluna pela qual a lista está ordenada, com a cor de destaque
-                Bar(value: fraction, color: .accentColor, height: 2).frame(width: 100)
+                Bar(value: fraction, color: .accentColor, height: 2).frame(width: metricWidth)
             }
+            .frame(width: metricWidth, alignment: .trailing)
         }
         .padding(.horizontal, DS.sm).padding(.vertical, DS.sm)
         .background(RoundedRectangle(cornerRadius: DS.rControl).fill(hover.value ? DS.surface : .clear))

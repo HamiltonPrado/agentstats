@@ -13,12 +13,24 @@ struct History {
 }
 
 struct SystemAlert: Identifiable, Sendable {
-    enum Kind: String { case cpu, temp }
+    enum Kind: String { case cpu, temp, memory, disk, battery }
     var id: String { kind.rawValue }
     let kind: Kind
     let value: String
     let since: Date
     let detail: String?
+}
+
+extension SystemAlert.Kind {
+    var label: String {
+        switch self {
+        case .cpu: "CPU alta"
+        case .temp: "Temperatura alta"
+        case .memory: "Memória alta"
+        case .disk: "Pouco espaço em disco"
+        case .battery: "Bateria fraca"
+        }
+    }
 }
 
 /// Estado observado pela interface. Com `@Observable`, cada vista só é redesenhada quando muda
@@ -67,8 +79,23 @@ final class Monitor {
     var cpuThreshold: Double = Pref.double("alert.cpu.threshold", 0.85) { didSet { Pref.set(cpuThreshold, "alert.cpu.threshold") } }
     var tempAlertEnabled: Bool = Pref.bool("alert.temp.enabled", true) { didSet { Pref.set(tempAlertEnabled, "alert.temp.enabled") } }
     var tempThreshold: Double = Pref.double("alert.temp.threshold", 85) { didSet { Pref.set(tempThreshold, "alert.temp.threshold") } }
+    var memoryAlertEnabled: Bool = Pref.bool("alert.memory.enabled", true) { didSet { Pref.set(memoryAlertEnabled, "alert.memory.enabled") } }
+    var memoryThreshold: Double = Pref.double("alert.memory.threshold", 0.9) { didSet { Pref.set(memoryThreshold, "alert.memory.threshold") } }
+    var diskAlertEnabled: Bool = Pref.bool("alert.disk.enabled", true) { didSet { Pref.set(diskAlertEnabled, "alert.disk.enabled") } }
+    var diskThreshold: Double = Pref.double("alert.disk.threshold", 0.9) { didSet { Pref.set(diskThreshold, "alert.disk.threshold") } }
+    var batteryAlertEnabled: Bool = Pref.bool("alert.battery.enabled", true) { didSet { Pref.set(batteryAlertEnabled, "alert.battery.enabled") } }
+    var batteryThreshold: Double = Pref.double("alert.battery.threshold", 0.2) { didSet { Pref.set(batteryThreshold, "alert.battery.threshold") } }
     var waitingAlertEnabled: Bool = Pref.bool("alert.waiting.enabled", true) { didSet { Pref.set(waitingAlertEnabled, "alert.waiting.enabled") } }
     var waitingAlertMinutes: Double = Pref.double("alert.waiting.minutes", 10) { didSet { Pref.set(waitingAlertMinutes, "alert.waiting.minutes") } }
+    var keepAwake = false {
+        didSet { keepAwakeController.setEnabled(keepAwake, minutes: keepAwakeMinutes) }
+    }
+    var keepAwakeMinutes: Double = Pref.double("power.keepAwake.minutes", 60) {
+        didSet {
+            Pref.set(keepAwakeMinutes, "power.keepAwake.minutes")
+            if keepAwake { keepAwakeController.setEnabled(true, minutes: keepAwakeMinutes) }
+        }
+    }
 
     /// Com o painel aberto tudo é atualizado a cada amostra; fechado, as partes caras abrandam.
     @ObservationIgnored var panelOpen = false
@@ -82,6 +109,7 @@ final class Monitor {
     static let disabled = Set((ProcessInfo.processInfo.environment["AGENTSTATS_DISABLE"] ?? "").split(separator: ",").map(String.init))
 
     @ObservationIgnored private let sampler = Sampler()
+    @ObservationIgnored let keepAwakeController = KeepAwakeController()
     @ObservationIgnored private var timer: Timer?
     @ObservationIgnored private var tick = 0
     @ObservationIgnored private var sampling = false
@@ -97,6 +125,7 @@ final class Monitor {
     var liveAgentCount: Int { agents.filter { !$0.isSubagent }.count }
 
     init() {
+        keepAwakeController.onTimeout = { [weak self] in self?.keepAwake = false }
         sample()
         restart()
         UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { _, _ in }
@@ -162,7 +191,7 @@ final class Monitor {
     // MARK: Histórico de 24 h
 
     private func recordMinute(now: Date = Date()) {
-        if let done = minuteAcc.add(cpu: cpu.total, mem: memory.usage, temp: temps?.cpuMax,
+        if let done = minuteAcc.add(cpu: cpu.total, mem: memory.usage, temp: temps?.cpuMax, battery: battery.map(\.percent),
                                     working: workingCount, attention: needsAttentionCount > 0, at: now) {
             day = History24h.pruned(day + [done], now: now)
         }
@@ -273,6 +302,25 @@ final class Monitor {
                             on: tempThreshold, off: tempThreshold - 5, now: now) {
             alerts.append(SystemAlert(kind: .temp, value: String(format: "%.0f °C", t), since: a, detail: culprit))
         }
+        // Memória: no macOS a "memória usada" passa muitas vezes dos 90% sem problema nenhum.
+        // Só alerta quando, além do limite, o sistema indica pressão de memória (elevada ou crítica).
+        if let a = evaluate(.memory, enabled: memoryAlertEnabled && memory.pressure >= 2, value: memory.usage,
+                            on: memoryThreshold, off: memoryThreshold - 0.05, now: now) {
+            alerts.append(SystemAlert(kind: .memory, value: Fmt.pct(memory.usage), since: a,
+                                      detail: memory.pressure >= 4 ? "pressão crítica" : "pressão elevada"))
+        }
+        if let a = evaluate(.disk, enabled: diskAlertEnabled, value: disk.usage,
+                            on: diskThreshold, off: diskThreshold - 0.02, now: now) {
+            alerts.append(SystemAlert(kind: .disk, value: Fmt.bytesShort(disk.free) + " livres", since: a, detail: nil))
+        }
+        // Bateria: só conta na bateria. Ligado à corrente, a contagem recomeça. (Enquanto se espera
+        // pelos 20 s, `evaluate` devolve nil e não se pode apagar a contagem, senão nunca chega lá.)
+        if let b = battery, !b.isCharging, !b.externalPower {
+            if let a = evaluate(.battery, enabled: batteryAlertEnabled, value: 1 - b.percent,
+                                on: 1 - batteryThreshold, off: 1 - batteryThreshold - 0.05, now: now) {
+                alerts.append(SystemAlert(kind: .battery, value: Fmt.pct(b.percent), since: a, detail: nil))
+            }
+        } else { highSince[.battery] = nil }
         if alerts.map(\.kind) != activeAlerts.map(\.kind) || alerts.map(\.value) != activeAlerts.map(\.value) {
             activeAlerts = alerts
         }
@@ -280,7 +328,13 @@ final class Monitor {
         for alert in alerts where now.timeIntervalSince(lastNotified[alert.kind] ?? .distantPast) > Self.alertCooldown {
             lastNotified[alert.kind] = now
             let content = UNMutableNotificationContent()
-            content.title = alert.kind == .cpu ? "CPU alta: \(alert.value)" : "Temperatura alta: \(alert.value)"
+            content.title = switch alert.kind {
+            case .cpu: "CPU alta: \(alert.value)"
+            case .temp: "Temperatura alta: \(alert.value)"
+            case .memory: "Memória alta: \(alert.value)"
+            case .disk: "Pouco espaço em disco: \(alert.value)"
+            case .battery: "Bateria fraca: \(alert.value)"
+            }
             content.body = alert.detail.map { "Processo mais pesado: \($0)" } ?? "Há mais de \(Int(Self.alertSustain)) s acima do limite."
             content.sound = .default
             UNUserNotificationCenter.current().add(

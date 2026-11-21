@@ -29,7 +29,7 @@ Vê sessões ativas, projeto, modelo, consumo de CPU e memória, subprocessos e 
 
 ### Saúde do Mac
 
-CPU, memória, GPU, temperaturas, rede, disco e bateria. O painel inclui gráficos e histórico de 24 horas, alertas configuráveis e um teste manual de download, upload e latência.
+CPU, memória, GPU, temperaturas, rede, disco e bateria. O painel inclui gráficos e histórico de até 7 dias, incluindo bateria, alertas configuráveis e um teste manual de download, upload e latência. Também podes ver as pastas principais que ocupam mais espaço, mediante análise manual.
 
 ### Para o teu fluxo de trabalho
 
@@ -40,6 +40,9 @@ CPU, memória, GPU, temperaturas, rede, disco e bateria. O painel inclui gráfic
 - Atalho global configurável para abrir o painel.
 - Reordena os indicadores da barra de menus e escolhe que secções aparecem no painel.
 - Ajusta a densidade, o tema e a cor de destaque; aplica e guarda configurações nos perfis Trabalho e Monitorização.
+- Escolhe a largura do painel e o tamanho do texto, e o estilo da barra de menus: com rótulos, compacto ou mini-gráficos, com o ponto dos agentes a cores opcional.
+- Configura alertas para CPU, temperatura, memória, espaço em disco e bateria fraca.
+- Mantém o Mac acordado por um período escolhido e permite selecionar dispositivos de áudio do sistema, ajustar volume e mute quando suportados pelo dispositivo.
 - Indicadores acessíveis por cor, forma e VoiceOver; respeita a opção “Reduzir movimento”.
 - Início de sessão automático opcional.
 

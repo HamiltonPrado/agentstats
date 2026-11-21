@@ -19,6 +19,7 @@ struct SystemView: View {
     @StateObject private var speedTestRunning = Box(false)
     @StateObject private var speedTestResult = Box<SpeedTestResult?>(nil)
     @StateObject private var speedTestError = Box<String?>(nil)
+    @StateObject private var folderScan = Box<FolderScanState>(.idle)
 
     var body: some View {
         VStack(spacing: DS.md) {
@@ -220,6 +221,25 @@ struct SystemView: View {
             Divider().opacity(0.5)
             StatRow(label: "Leitura", value: Fmt.rate(m.disk.readPerSec))
             StatRow(label: "Escrita", value: Fmt.rate(m.disk.writePerSec))
+            Divider().opacity(0.5)
+            HStack {
+                Text("Pastas maiores").font(DS.body.weight(.medium))
+                Spacer()
+                Button(folderScan.value.isScanning ? "A analisar…" : folderScan.value.results == nil ? "Analisar" : "Atualizar") {
+                    folderScan.value = .scanning
+                    Task.detached(priority: .utility) {
+                        let results = FolderScanner.scanHome()
+                        await MainActor.run { folderScan.value = .loaded(results) }
+                    }
+                }.disabled(folderScan.value.isScanning).buttonStyle(.plain).foregroundStyle(.tint).font(DS.meta)
+            }
+            if let results = folderScan.value.results {
+                ForEach(results) { item in StatRow(label: item.name, value: Fmt.bytes(item.bytes)) }
+                Text("Tamanho das pastas principais da tua pasta pessoal; a leitura pode demorar.")
+                    .font(DS.meta).foregroundStyle(.tertiary)
+            } else {
+                Text("A análise começa só quando pedires.").font(DS.meta).foregroundStyle(.tertiary)
+            }
         }
     }
 
@@ -235,6 +255,8 @@ struct SystemView: View {
                 if let h = b.health { StatRow(label: "Saúde", value: Fmt.pct(h)) }
                 StatRow(label: "Ciclos", value: "\(b.cycles)")
                 if let t = m.temps?.battery ?? b.temperature { StatRow(label: "Temperatura", value: Fmt.temp(t)) }
+                Divider().opacity(0.5)
+                DayChart(samples: m.day, value: { $0.battery }, maxValue: 1, title: "Bateria", format: Fmt.pct)
             }
         } else { unavailable("Energia", "powerplug", "Este Mac não tem bateria") }
     }

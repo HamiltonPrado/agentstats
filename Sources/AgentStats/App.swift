@@ -61,6 +61,7 @@ enum AgentStatsApp {
         }
         for scheme in [ColorScheme.light, .dark] {
             for tab in Tab.allCases {
+                // Sem ScrollView: o ImageRenderer não desenha o conteúdo de uma ScrollView (a imagem saía vazia)
                 let view = PanelView(forcedTab: tab, scrollable: false)
                     .environment(m)
                     .environment(\.colorScheme, scheme)
@@ -206,6 +207,7 @@ final class StatusController: NSObject, NSPopoverDelegate {
         self.monitor = monitor
         super.init()
 
+        // A altura acompanha o conteúdo (até ao máximo do PanelView), em passos de 8 pt.
         host.sizingOptions = [.preferredContentSize]
         popover.contentViewController = host
         popover.behavior = .transient
@@ -240,7 +242,7 @@ final class StatusController: NSObject, NSPopoverDelegate {
         var parts = ["AgentStats"]
         if m.needsAttentionCount > 0 { parts.append("\(m.needsAttentionCount) agente\(m.needsAttentionCount == 1 ? "" : "s") precisa\(m.needsAttentionCount == 1 ? "" : "m") de ti") }
         parts.append("\(m.workingCount) de \(m.liveAgentCount) agentes a trabalhar")
-        if !m.activeAlerts.isEmpty { parts.append(m.activeAlerts.map { $0.kind == .cpu ? "CPU alta" : "temperatura alta" }.joined(separator: " e ")) }
+        if !m.activeAlerts.isEmpty { parts.append(m.activeAlerts.map(\.kind.label).joined(separator: " e ")) }
         parts.append("CPU \(Fmt.pct(m.cpu.total))")
         parts.append("memória \(Fmt.pct(m.memory.usage))")
         if let t = m.temps?.cpuMax { parts.append("temperatura \(Fmt.num(t, 0)) graus") }
@@ -252,11 +254,17 @@ final class StatusController: NSObject, NSPopoverDelegate {
         let d = UserDefaults.standard
         func on(_ k: String, _ def: Bool) -> Bool { d.object(forKey: k) == nil ? def : d.bool(forKey: k) }
         let m = monitor
+        // Os 3 primeiros campos são "urgentes" (redesenham logo); os restantes no máximo de 4 em 4 s.
         return [
-            d.string(forKey: MenuBarDrawer.metricOrderKey) ?? "agents,cpu,ram,gpu,temp,net,battery",
             m.activeAlerts.isEmpty ? "" : "!",
             "\(m.needsAttentionCount)",
             on("bar.agents", true) ? "\(m.workingCount)/\(m.liveAgentCount)" : "",
+            // configuração e aparência da barra: mudar qualquer uma redesenha o ícone
+            d.string(forKey: MenuBarDrawer.metricOrderKey) ?? "",
+            MenuBarStyle.current.rawValue,
+            on(MenuBarDrawer.colorDotKey, false) ? "cor" : "",
+            item.button?.effectiveAppearance.name.rawValue ?? "",
+            MenuBarStyle.current == .graphs ? "\(m.cpuHistory.values.count)-\(m.cpu.total)" : "",
             on("bar.cpu", true) ? Fmt.pct(m.cpu.total) : "",
             on("bar.ram", true) ? Fmt.pct(m.memory.usage) : "",
             on("bar.gpu", false) ? (m.gpu.map(Fmt.pct) ?? "") : "",
@@ -276,7 +284,7 @@ final class StatusController: NSObject, NSPopoverDelegate {
         guard urgent || Date().timeIntervalSince(lastIconUpdate) >= 3.9 else { return }
         lastIconSignature = sig
         lastIconUpdate = Date()
-        item.button?.image = MenuBarDrawer.image(monitor)
+        item.button?.image = MenuBarDrawer.image(monitor, appearance: item.button?.effectiveAppearance)
     }
 
     func saveHistory() { monitor.saveHistory() }

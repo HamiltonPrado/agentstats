@@ -134,6 +134,7 @@ struct AgentsView: View {
                 }
             }
         }
+        .frame(maxWidth: .infinity, alignment: .topLeading)
     }
 
     @StateObject private var showHistory = Box(false)
@@ -141,7 +142,7 @@ struct AgentsView: View {
     private var searchAndFilters: some View {
         HStack(spacing: DS.sm) {
             Text("Sessões")
-                .font(DS.title)
+                .font(DS.meta.weight(.medium))
                 .foregroundStyle(.secondary)
             Spacer(minLength: DS.sm)
             Button { isFilterPopoverShown.value.toggle() } label: {
@@ -149,11 +150,11 @@ struct AgentsView: View {
                     Image(systemName: "line.3.horizontal.decrease")
                     Text((AgentSessionFilter(rawValue: selectedFilter.value) ?? .all).title)
                 }
-                .font(DS.body)
+                .font(DS.meta)
                 .foregroundStyle(selectedFilter.value == AgentSessionFilter.all.rawValue ? .secondary : .primary)
-                .padding(.horizontal, DS.md)
-                .frame(height: 30)
-                .background(RoundedRectangle(cornerRadius: DS.rControl, style: .continuous).fill(DS.surface))
+                .padding(.horizontal, DS.sm)
+                .frame(height: 22)
+                .background(RoundedRectangle(cornerRadius: DS.rSmall, style: .continuous).fill(DS.raised))
             }
             .buttonStyle(.plain)
             .popover(isPresented: Binding(
@@ -618,8 +619,11 @@ struct ActivityStrip: View {
     let day: [MinuteSample]
 
     var body: some View {
-        let buckets = History24h.buckets(day)
-        let active = History24h.activeMinutes(day)
+        let now = Date()
+        let cutoff = now.timeIntervalSince1970 - History24h.activityWindow
+        let recent = day.filter { $0.t >= cutoff }
+        let buckets = History24h.buckets(recent, now: now)
+        let active = History24h.activeMinutes(recent, now: now)
         VStack(alignment: .leading, spacing: DS.sm) {
             HStack(alignment: .firstTextBaseline) {
                 Text("Últimas 24 h").font(DS.body).foregroundStyle(.secondary)
