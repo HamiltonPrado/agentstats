@@ -50,6 +50,19 @@ struct SettingsView: View {
                         }
                         .pickerStyle(.segmented).labelsHidden().padding(.leading, 28)
                     }
+                    row("hourglass", "Lembretes de espera", "Avisa se um agente continuar à espera", $m.waitingAlertEnabled)
+                    if m.waitingAlertEnabled {
+                        HStack(spacing: DS.md) {
+                            icon("bell.badge")
+                            Text("Lembrar após").font(DS.body)
+                            Spacer()
+                            Picker("", selection: $m.waitingAlertMinutes) {
+                                Text("3 min").tag(3.0); Text("5 min").tag(5.0); Text("10 min").tag(10.0)
+                            }
+                            .pickerStyle(.segmented).labelsHidden().frame(width: 150)
+                        }
+                        .padding(.leading, 28)
+                    }
                 }
             }
 

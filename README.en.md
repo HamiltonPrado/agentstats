@@ -25,7 +25,7 @@
 
 ### AI agents
 
-See active sessions, project, model, CPU and memory use, subprocesses, and status: working, waiting, or asking for your attention. AgentStats recognizes Claude Code, Codex, Antigravity, Aider, Goose, Gemini CLI, Cursor Agent, OpenCode, and Amp. Click a session to return to the app where it is running.
+See active sessions, project, model, CPU and memory use, subprocesses, and status: working, waiting, or asking for your attention. Search and filter by agent, project, and status. AgentStats recognizes Claude Code, Codex, Antigravity, Aider, Goose, Gemini CLI, Cursor Agent, OpenCode, and Amp. Click a session to return to the app where it is running.
 
 ### Mac health
 
@@ -34,6 +34,8 @@ CPU, memory, GPU, temperatures, network, disk, and battery. The panel includes c
 ### Built for your workflow
 
 - Notifications when an agent finishes or needs your attention.
+- Configurable reminders when an agent is still waiting for your answer or approval.
+- Per-session history with status changes, observed duration, and token usage.
 - Token usage today, by session, and by project for Claude Code and Codex.
 - A configurable global shortcut to open the panel.
 - Accessible status indicators using color, shape, and VoiceOver; respects Reduce Motion.

@@ -41,6 +41,7 @@ final class Monitor {
     var uptime: TimeInterval = 0
     var activeAlerts: [SystemAlert] = []
     var usage = UsageSnapshot()
+    var activityHistory: [AgentActivityRecord] = AgentActivityHistoryStore.load()
 
     var cpuHistory = History()
     var memHistory = History()
@@ -66,6 +67,8 @@ final class Monitor {
     var cpuThreshold: Double = Pref.double("alert.cpu.threshold", 0.85) { didSet { Pref.set(cpuThreshold, "alert.cpu.threshold") } }
     var tempAlertEnabled: Bool = Pref.bool("alert.temp.enabled", true) { didSet { Pref.set(tempAlertEnabled, "alert.temp.enabled") } }
     var tempThreshold: Double = Pref.double("alert.temp.threshold", 85) { didSet { Pref.set(tempThreshold, "alert.temp.threshold") } }
+    var waitingAlertEnabled: Bool = Pref.bool("alert.waiting.enabled", true) { didSet { Pref.set(waitingAlertEnabled, "alert.waiting.enabled") } }
+    var waitingAlertMinutes: Double = Pref.double("alert.waiting.minutes", 10) { didSet { Pref.set(waitingAlertMinutes, "alert.waiting.minutes") } }
 
     /// Com o painel aberto tudo é atualizado a cada amostra; fechado, as partes caras abrandam.
     @ObservationIgnored var panelOpen = false
@@ -87,6 +90,7 @@ final class Monitor {
     @ObservationIgnored private var lastNotified: [SystemAlert.Kind: Date] = [:]
     @ObservationIgnored private var minuteAcc = MinuteAccumulator()
     @ObservationIgnored private var lastHistorySave = Date()
+    @ObservationIgnored private var lastAgentHistorySave = Date.distantPast
 
     var workingCount: Int { sessions.filter { $0.state.isWorking }.count }
     var needsAttentionCount: Int { sessions.filter { $0.state.needsAttention }.count }
@@ -139,6 +143,8 @@ final class Monitor {
             topMemory = a.topMemory
             agents = a.agents
             handleTransitions(a.sessions)
+            updateAgentHistory(a.sessions)
+            checkWaitingReminders(a.sessions)
             sessions = a.sessions
         }
         thermal = ProcessInfo.processInfo.thermalState
@@ -166,6 +172,17 @@ final class Monitor {
     func saveHistory() {
         lastHistorySave = Date()
         History24h.save(day)
+        AgentActivityHistoryStore.save(activityHistory)
+        lastAgentHistorySave = lastHistorySave
+    }
+
+    private func updateAgentHistory(_ newSessions: [AgentSession], now: Date = Date()) {
+        let update = AgentActivityHistoryStore.updating(activityHistory, sessions: newSessions, usage: usage, now: now)
+        activityHistory = update.records
+        if update.changed && now.timeIntervalSince(lastAgentHistorySave) >= 30 {
+            AgentActivityHistoryStore.save(activityHistory)
+            lastAgentHistorySave = now
+        }
     }
 
     // MARK: Abrir o agente
@@ -215,6 +232,32 @@ final class Monitor {
     }
 
     // MARK: Alertas
+
+    /// Envia um único lembrete por episódio de espera, depois do intervalo escolhido.
+    private func checkWaitingReminders(_ currentSessions: [AgentSession], now: Date = Date()) {
+        guard waitingAlertEnabled else { return }
+        let delay = waitingAlertMinutes * 60
+        for session in currentSessions where AgentActivityPhase(session.state).shouldRemind {
+            guard let index = activityHistory.firstIndex(where: { $0.id == session.id }),
+                  !activityHistory[index].reminderSent,
+                  now.timeIntervalSince(activityHistory[index].phaseSince) >= delay else { continue }
+
+            let content = UNMutableNotificationContent()
+            content.title = session.state.needsAttention
+                ? "Agente continua a precisar de ti · \(session.project)"
+                : "Agente continua à tua espera · \(session.project)"
+            content.body = session.state.needsAttention
+                ? (session.detail ?? "O pedido continua pendente há \(Int(waitingAlertMinutes)) min.")
+                : "Sem nova atividade há \(Int(waitingAlertMinutes)) min. \(session.detail ?? session.title)"
+            content.userInfo = ["session": session.id]
+            content.sound = .default
+            UNUserNotificationCenter.current().add(
+                UNNotificationRequest(identifier: "waiting-\(UUID().uuidString)", content: content, trigger: nil))
+            activityHistory[index].reminderSent = true
+            AgentActivityHistoryStore.save(activityHistory)
+            lastAgentHistorySave = now
+        }
+    }
 
     private func checkAlerts(now: Date = Date()) {
         let culprit = topProcesses.first.map { "\(AppInfo.lookup($0.pid).name ?? $0.name) (\(String(format: "%.0f%%", $0.cpu)))" }

@@ -52,21 +52,35 @@ extension AgentState {
 struct AgentsView: View {
     @Environment(Monitor.self) private var m
     @AppStorage("agents.showRecent") private var showRecent = false
+    @StateObject private var searchText = Box("")
+    @StateObject private var selectedFilter = Box(AgentSessionFilter.all.rawValue)
 
     var body: some View {
-        let attention = m.sessions.filter { $0.state.needsAttention }
-        let working = m.sessions.filter { $0.state.isWorking }
-        let waiting = m.sessions.filter { $0.state == .waitingUser }
-        let recent = m.sessions.filter { !$0.state.isWorking && !$0.state.needsAttention && $0.state != .waitingUser }
-        let linked = Set(m.sessions.compactMap { $0.process?.pid })
+        let sessions = m.sessions.filter(matches)
+        let attention = sessions.filter { $0.state.needsAttention }
+        let working = sessions.filter { $0.state.isWorking }
+        let waiting = sessions.filter { $0.state == .waitingUser }
+        let recent = sessions.filter { !$0.state.isWorking && !$0.state.needsAttention && $0.state != .waitingUser }
+        let linked = Set(sessions.compactMap { $0.process?.pid })
         // o executor do Codex é um auxiliar interno da app: não aparece em separado
-        let others = m.agents.filter { !linked.contains($0.pid) && $0.role != "executor" }
+        let others = m.agents.filter { agent in
+            guard !linked.contains(agent.pid), agent.role != "executor" else { return false }
+            return matches(agent)
+        }
+        let history = m.activityHistory.filter(matches)
+        let hasVisibleItems = !attention.isEmpty || !working.isEmpty || !waiting.isEmpty || !recent.isEmpty || !others.isEmpty || !history.isEmpty
+        let hasAnyAgent = !m.sessions.isEmpty || !m.agents.isEmpty || !m.activityHistory.isEmpty
 
         VStack(alignment: .leading, spacing: DS.lg) {
+            searchAndFilters
             if !m.usage.todayTotal.isEmpty { TodayUsage(usage: m.usage) }
             if !m.day.isEmpty { ActivityStrip(day: m.day) }
-            if attention.isEmpty && working.isEmpty && waiting.isEmpty && others.isEmpty {
+            if !hasAnyAgent {
                 EmptyAgents()
+            } else if !hasVisibleItems {
+                Text(searchText.value.isEmpty ? "Nenhuma sessão neste filtro" : "Nenhum resultado para “\(searchText.value)”")
+                    .font(DS.body).foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity).padding(.vertical, DS.md)
             }
             if !attention.isEmpty {
                 group("Precisa de ti", attention.count, .attention) { ForEach(attention) { SessionCard(session: $0) } }
@@ -92,16 +106,137 @@ struct AgentsView: View {
                         .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
-                    if showRecent { ForEach(recent) { SessionCard(session: $0) } }
+                    if showRecent || selectedFilter.value == AgentSessionFilter.recent.rawValue || !searchText.value.isEmpty {
+                        ForEach(recent) { SessionCard(session: $0) }
+                    }
+                }
+            }
+            if !history.isEmpty {
+                VStack(alignment: .leading, spacing: DS.sm) {
+                    Button { withAnimation(Motion.ease(0.2)) { showHistory.value.toggle() } } label: {
+                        HStack(spacing: DS.xs) {
+                            SectionHeader(title: "Histórico de agentes", count: history.count)
+                            Image(systemName: "chevron.right")
+                                .font(DS.meta).foregroundStyle(.tertiary)
+                                .rotationEffect(.degrees(showHistory.value ? 90 : 0))
+                        }
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    if showHistory.value {
+                        ForEach(history.prefix(8)) { ActivityHistoryRow(record: $0) }
+                    }
                 }
             }
         }
+    }
+
+    @StateObject private var showHistory = Box(false)
+
+    private var searchAndFilters: some View {
+        HStack(spacing: DS.sm) {
+            HStack(spacing: DS.xs) {
+                Image(systemName: "magnifyingglass").font(DS.meta).foregroundStyle(.tertiary)
+                TextField("Pesquisar sessões…", text: Binding(get: { searchText.value }, set: { searchText.value = $0 }))
+                    .textFieldStyle(.plain).font(DS.body)
+                if !searchText.value.isEmpty {
+                    Button { searchText.value = "" } label: {
+                        Image(systemName: "xmark.circle.fill").font(DS.meta).foregroundStyle(.tertiary)
+                    }
+                    .buttonStyle(.plain).help("Limpar pesquisa")
+                }
+            }
+            .padding(.horizontal, DS.sm).frame(height: 30)
+            .background(RoundedRectangle(cornerRadius: DS.rControl, style: .continuous).fill(DS.surface))
+
+            Menu {
+                ForEach(AgentSessionFilter.allCases) { filter in
+                    Button {
+                        selectedFilter.value = filter.rawValue
+                        if filter == .recent { showRecent = true }
+                    } label: {
+                        if filter.rawValue == selectedFilter.value {
+                            Label(filter.title, systemImage: "checkmark")
+                        } else { Text(filter.title) }
+                    }
+                }
+            } label: {
+                Image(systemName: selectedFilter.value == AgentSessionFilter.all.rawValue
+                      ? "line.3.horizontal.decrease.circle" : "line.3.horizontal.decrease.circle.fill")
+                    .font(DS.title).foregroundStyle(.secondary).frame(width: 30, height: 30)
+                    .background(RoundedRectangle(cornerRadius: DS.rControl, style: .continuous).fill(DS.surface))
+            }
+            .menuStyle(.borderlessButton)
+            .help("Filtrar por estado")
+            .accessibilityLabel("Filtrar sessões")
+        }
+    }
+
+    private func matches(_ session: AgentSession) -> Bool {
+        let filter = AgentSessionFilter(rawValue: selectedFilter.value) ?? .all
+        guard filter.accepts(session.state) else { return false }
+        return searchText.value.isEmpty || searchableText(for: session).localizedStandardContains(searchText.value)
+    }
+
+    private func matches(_ agent: AgentProcess) -> Bool {
+        let filter = AgentSessionFilter(rawValue: selectedFilter.value) ?? .all
+        guard filter == .all || filter == .working else { return false }
+        let text = [agent.kind, agent.cwd ?? "", agent.children.joined(separator: " ")].joined(separator: " ")
+        return searchText.value.isEmpty || text.localizedStandardContains(searchText.value)
+    }
+
+    private func matches(_ record: AgentActivityRecord) -> Bool {
+        let filter = AgentSessionFilter(rawValue: selectedFilter.value) ?? .all
+        guard filter.accepts(record.phase) else { return false }
+        let text = [record.title, record.kind, record.project, record.cwd ?? "", record.events.compactMap(\.detail).joined(separator: " ")]
+            .joined(separator: " ")
+        return searchText.value.isEmpty || text.localizedStandardContains(searchText.value)
+    }
+
+    private func searchableText(for session: AgentSession) -> String {
+        [session.title, session.kind, session.project, session.model ?? "", session.cwd ?? "", session.detail ?? "", session.state.label]
+            .joined(separator: " ")
     }
 
     private func group<C: View>(_ title: String, _ count: Int, _ kind: StatusKind?, @ViewBuilder _ content: () -> C) -> some View {
         VStack(alignment: .leading, spacing: DS.sm) {
             SectionHeader(title: title, count: count, kind: kind)
             content()
+        }
+    }
+}
+
+private enum AgentSessionFilter: String, CaseIterable, Identifiable {
+    case all, working, attention, waiting, recent
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .all: "Todos"
+        case .working: "A trabalhar"
+        case .attention: "Precisa de ti"
+        case .waiting: "À tua espera"
+        case .recent: "Recentes"
+        }
+    }
+
+    func accepts(_ state: AgentState) -> Bool {
+        switch self {
+        case .all: true
+        case .working: state.isWorking
+        case .attention: state.needsAttention
+        case .waiting: state == .waitingUser
+        case .recent: !state.isWorking && !state.needsAttention && state != .waitingUser
+        }
+    }
+
+    func accepts(_ phase: AgentActivityPhase) -> Bool {
+        switch self {
+        case .all: true
+        case .working: phase == .working
+        case .attention: phase == .attention
+        case .waiting: phase == .waiting
+        case .recent: phase == .finished || phase == .active
         }
     }
 }
@@ -143,6 +278,57 @@ struct StateIcon: View {
                     .background(Circle().fill(Color(nsColor: .windowBackgroundColor)))
                     .offset(x: 3, y: 3)
             }
+    }
+}
+
+private struct ActivityHistoryRow: View {
+    @Environment(Monitor.self) private var m
+    let record: AgentActivityRecord
+
+    private var eventSummary: String {
+        record.events.suffix(3).map { $0.phase.title }.joined(separator: " → ")
+    }
+
+    private var timeRange: String {
+        let start = "Início \(Fmt.ago(record.firstSeen))"
+        return start + (record.endedAt.map { " · fim \(Fmt.ago($0))" } ?? " · em curso")
+    }
+
+    var body: some View {
+        HStack(alignment: .top, spacing: DS.sm) {
+            Image(systemName: record.phase == .finished ? "checkmark.circle" : record.phase.shouldRemind ? "hourglass" : "clock")
+                .font(DS.body).foregroundStyle(record.phase.shouldRemind ? Palette.attention : .secondary)
+                .frame(width: 20, height: 20)
+            VStack(alignment: .leading, spacing: 3) {
+                Text(record.title).font(DS.body.weight(.medium)).lineLimit(1)
+                Text("\(record.kind) · \(record.project) · \(record.phase.title)")
+                    .font(DS.meta).foregroundStyle(.secondary).lineLimit(1)
+                Text(timeRange).font(DS.meta).foregroundStyle(.tertiary).lineLimit(1)
+                if record.events.count > 1 {
+                    Text(eventSummary).font(DS.meta).foregroundStyle(.tertiary).lineLimit(1)
+                }
+            }
+            Spacer(minLength: DS.xs)
+            VStack(alignment: .trailing, spacing: 3) {
+                Text(Fmt.duration(record.duration())).font(DS.meta.monospacedDigit())
+                Text(record.tokens > 0 ? Fmt.tokens(record.tokens) + " tokens" : "sem tokens")
+                    .font(DS.meta.monospacedDigit()).foregroundStyle(.tertiary)
+            }
+        }
+        .padding(.horizontal, DS.md).padding(.vertical, DS.sm)
+        .background(RoundedRectangle(cornerRadius: DS.rControl, style: .continuous).fill(DS.surface))
+        .contentShape(Rectangle())
+        .onTapGesture {
+            if let session = m.sessions.first(where: { $0.id == record.id }) {
+                AppState.controller?.open(session)
+            } else if let cwd = record.cwd {
+                NSWorkspace.shared.open(URL(fileURLWithPath: cwd))
+            } else if record.id.hasPrefix("/") {
+                NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: record.id)])
+            }
+        }
+        .help("Observada pela primeira vez \(Fmt.ago(record.firstSeen)); duração medida pela app")
+        .accessibilityElement(children: .combine)
     }
 }
 
