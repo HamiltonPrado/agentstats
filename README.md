@@ -1,5 +1,7 @@
 # AgentStats
 
+[Português](README.md) · [English](README.en.md) · [Español](README.es.md) · [Français](README.fr.md)
+
 ![CI](https://github.com/HamiltonPrado/agentstats/actions/workflows/ci.yml/badge.svg)
 ![Última versão](https://img.shields.io/github/v/release/HamiltonPrado/agentstats?color=blue)
 ![macOS 14+](https://img.shields.io/badge/macOS-14%2B-black)
@@ -67,6 +69,10 @@ Para executar os testes:
 ```
 
 As contribuições são bem-vindas. Abre uma [issue](https://github.com/HamiltonPrado/agentstats/issues) para reportar um problema ou sugerir uma melhoria.
+
+## Licença
+
+O AgentStats é distribuído sob a [licença MIT](LICENSE). Podes usar, modificar e redistribuir o código nos termos dessa licença.
 
 <details>
 <summary>Detalhes de desenvolvimento</summary>
