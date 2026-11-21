@@ -255,23 +255,29 @@ final class StatusController: NSObject, NSPopoverDelegate {
         func on(_ k: String, _ def: Bool) -> Bool { d.object(forKey: k) == nil ? def : d.bool(forKey: k) }
         let m = monitor
         // Os 3 primeiros campos são "urgentes" (redesenham logo); os restantes no máximo de 4 em 4 s.
-        return [
-            m.activeAlerts.isEmpty ? "" : "!",
-            "\(m.needsAttentionCount)",
-            on("bar.agents", true) ? "\(m.workingCount)/\(m.liveAgentCount)" : "",
-            // configuração e aparência da barra: mudar qualquer uma redesenha o ícone
-            d.string(forKey: MenuBarDrawer.metricOrderKey) ?? "",
-            MenuBarStyle.current.rawValue,
-            on(MenuBarDrawer.colorDotKey, false) ? "cor" : "",
-            item.button?.effectiveAppearance.name.rawValue ?? "",
-            MenuBarStyle.current == .graphs ? "\(m.cpuHistory.values.count)-\(m.cpu.total)" : "",
-            on("bar.cpu", true) ? Fmt.pct(m.cpu.total) : "",
-            on("bar.ram", true) ? Fmt.pct(m.memory.usage) : "",
-            on("bar.gpu", false) ? (m.gpu.map(Fmt.pct) ?? "") : "",
-            on("bar.temp", true) ? (m.temps?.cpuMax.map { String(format: "%.0f", $0) } ?? "") : "",
-            on("bar.net", true) ? Fmt.rate(m.network.upPerSec, short: true) + Fmt.rate(m.network.downPerSec, short: true) : "",
-            on("bar.battery", false) ? (m.battery.map { Fmt.pct($0.percent) + ($0.isCharging ? "c" : "") } ?? "") : "",
-        ].joined(separator: "|")
+        // Construída passo a passo, com tipos explícitos: um único array literal com tantas expressões
+        // condicionais fazia o compilador do Xcode 16 desistir da verificação de tipos.
+        var parts: [String] = []
+        parts.append(m.activeAlerts.isEmpty ? "" : "!")
+        parts.append(String(m.needsAttentionCount))
+        parts.append(on("bar.agents", true) ? "\(m.workingCount)/\(m.liveAgentCount)" : "")
+        // configuração e aparência da barra: mudar qualquer uma redesenha o ícone
+        parts.append(d.string(forKey: MenuBarDrawer.metricOrderKey) ?? "")
+        parts.append(MenuBarStyle.current.rawValue)
+        parts.append(on(MenuBarDrawer.colorDotKey, false) ? "cor" : "")
+        parts.append(item.button?.effectiveAppearance.name.rawValue ?? "")
+        if MenuBarStyle.current == .graphs { parts.append("\(m.cpuHistory.values.count)-\(m.cpu.total)") }
+        if on("bar.cpu", true) { parts.append(Fmt.pct(m.cpu.total)) }
+        if on("bar.ram", true) { parts.append(Fmt.pct(m.memory.usage)) }
+        if on("bar.gpu", false), let g = m.gpu { parts.append(Fmt.pct(g)) }
+        if on("bar.temp", true), let t = m.temps?.cpuMax { parts.append(String(format: "%.0f", t)) }
+        if on("bar.net", true) {
+            let up: String = Fmt.rate(m.network.upPerSec, short: true)
+            let down: String = Fmt.rate(m.network.downPerSec, short: true)
+            parts.append(up + down)
+        }
+        if on("bar.battery", false), let b = m.battery { parts.append(Fmt.pct(b.percent) + (b.isCharging ? "c" : "")) }
+        return parts.joined(separator: "|")
     }
 
     private func updateIcon() {
