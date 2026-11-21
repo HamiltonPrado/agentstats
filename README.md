@@ -39,6 +39,7 @@ CPU, memória, GPU, temperaturas, rede, disco e bateria. O painel inclui gráfic
 - Tokens usados hoje, por sessão e por projeto, para Claude Code e Codex.
 - Atalho global configurável para abrir o painel.
 - Reordena os indicadores da barra de menus e escolhe que secções aparecem no painel.
+- Ajusta a densidade, o tema e a cor de destaque; aplica e guarda configurações nos perfis Trabalho e Monitorização.
 - Indicadores acessíveis por cor, forma e VoiceOver; respeita a opção “Reduzir movimento”.
 - Início de sessão automático opcional.
 
@@ -85,8 +86,8 @@ O AgentStats é distribuído sob a [licença MIT](LICENSE). Podes usar, modifica
 Atualiza `VERSION` e envia uma tag com a mesma versão, por exemplo:
 
 ```bash
-git tag v1.14
-git push origin v1.14
+git tag v1.15
+git push origin v1.15
 ```
 
 O GitHub Actions valida a versão, executa os testes, compila a app e publica `AgentStats.zip` na release.

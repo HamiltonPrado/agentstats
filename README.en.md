@@ -39,6 +39,7 @@ CPU, memory, GPU, temperatures, network, disk, and battery. The panel includes c
 - Token usage today, by session, and by project for Claude Code and Codex.
 - A configurable global shortcut to open the panel.
 - Reorder menu bar indicators and choose which sections appear in the panel.
+- Adjust density, theme, and accent color; apply and save settings in the Work and Monitoring profiles.
 - Accessible status indicators using color, shape, and VoiceOver; respects Reduce Motion.
 - Optional launch at login.
 
@@ -85,8 +86,8 @@ AgentStats is distributed under the [MIT License](LICENSE). You may use, modify,
 Update `VERSION`, then push a tag with the same version, for example:
 
 ```bash
-git tag v1.14
-git push origin v1.14
+git tag v1.15
+git push origin v1.15
 ```
 
 GitHub Actions checks the version, runs the tests, builds the app, and publishes `AgentStats.zip` to the release.

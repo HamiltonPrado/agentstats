@@ -47,6 +47,72 @@ enum Palette {
     static let attention = Color.red
 }
 
+enum PanelDensity: String, CaseIterable, Identifiable {
+    case compact, normal, detailed
+    var id: String { rawValue }
+    var title: String {
+        switch self {
+        case .compact: "Compacto"
+        case .normal: "Normal"
+        case .detailed: "Detalhado"
+        }
+    }
+}
+
+enum PanelTheme: String, CaseIterable, Identifiable {
+    case system, light, dark
+    var id: String { rawValue }
+    var title: String {
+        switch self {
+        case .system: "Sistema"
+        case .light: "Claro"
+        case .dark: "Escuro"
+        }
+    }
+    var colorScheme: ColorScheme? {
+        switch self {
+        case .system: nil
+        case .light: .light
+        case .dark: .dark
+        }
+    }
+}
+
+private struct AgentAccentColorKey: EnvironmentKey {
+    static let defaultValue = Color.accentColor
+}
+
+extension EnvironmentValues {
+    var agentAccentColor: Color {
+        get { self[AgentAccentColorKey.self] }
+        set { self[AgentAccentColorKey.self] = newValue }
+    }
+}
+
+extension Color {
+    init(hexRGB: String) {
+        let cleaned = hexRGB.trimmingCharacters(in: CharacterSet(charactersIn: "#"))
+        guard cleaned.count == 6, let value = UInt32(cleaned, radix: 16) else {
+            self = .blue
+            return
+        }
+        self.init(.sRGB,
+                  red: Double((value >> 16) & 0xFF) / 255,
+                  green: Double((value >> 8) & 0xFF) / 255,
+                  blue: Double(value & 0xFF) / 255,
+                  opacity: 1)
+    }
+
+    var hexRGB: String {
+        let rgb = NSColor(self).usingColorSpace(.deviceRGB) ?? .systemBlue
+        func channel(_ value: CGFloat) -> Int {
+            Int((min(max(value, 0), 1) * 255).rounded())
+        }
+        return String(format: "#%02X%02X%02X",
+                      channel(rgb.redComponent), channel(rgb.greenComponent), channel(rgb.blueComponent))
+    }
+}
+
 extension View {
     /// Cartão: superfície neutra com linha fina; `highlight` só para o que precisa de atenção.
     func cardStyle(padding: CGFloat = DS.md, highlight: Color? = nil) -> some View {
@@ -149,13 +215,15 @@ struct SectionHeader: View {
 }
 
 struct Sparkline: View {
+    @Environment(\.agentAccentColor) private var agentAccentColor
     let values: [Double]
     var maxValue: Double? = nil
-    var color: Color = .accentColor
+    var color: Color? = nil
     var fill = true
 
     var body: some View {
         GeometryReader { g in
+            let lineColor = color ?? agentAccentColor
             let mx = max(maxValue ?? (values.max() ?? 1), 0.0001)
             let pts = values.enumerated().map { i, v in
                 CGPoint(x: g.size.width * CGFloat(i) / CGFloat(max(values.count - 1, 1)),
@@ -169,14 +237,14 @@ struct Sparkline: View {
                         pts.forEach { p.addLine(to: $0) }
                         p.addLine(to: CGPoint(x: l.x, y: g.size.height))
                     }
-                    .fill(color.opacity(0.10))
+                    .fill(lineColor.opacity(0.10))
                 }
                 Path { p in
                     guard let f = pts.first else { return }
                     p.move(to: f)
                     pts.dropFirst().forEach { p.addLine(to: $0) }
                 }
-                .stroke(color, style: StrokeStyle(lineWidth: 1.5, lineCap: .round, lineJoin: .round))
+                .stroke(lineColor, style: StrokeStyle(lineWidth: 1.5, lineCap: .round, lineJoin: .round))
             }
         }
         .accessibilityElement(children: .ignore)

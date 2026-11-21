@@ -340,9 +340,11 @@ private struct ActivityHistoryRow: View {
 struct SessionCard: View {
     @Environment(Monitor.self) private var m
     let session: AgentSession
+    @AppStorage("panel.density") private var densityRawValue = PanelDensity.normal.rawValue
     @StateObject private var hover = Box(false)
 
     private var isCommand: Bool { session.state.toolName == "Bash" }
+    private var density: PanelDensity { PanelDensity(rawValue: densityRawValue) ?? .normal }
 
     /// Pasta · modelo · subagentes · CPU · tokens, numa só linha discreta.
     private var meta: String {
@@ -357,7 +359,7 @@ struct SessionCard: View {
     var body: some View {
         HStack(alignment: .top, spacing: DS.md) {
             StateIcon(state: session.state)
-            VStack(alignment: .leading, spacing: DS.xs) {
+            VStack(alignment: .leading, spacing: density == .detailed ? DS.sm : DS.xs) {
                 HStack(alignment: .firstTextBaseline, spacing: DS.sm) {
                     Text(session.title).font(DS.title).lineLimit(1)
                     Spacer(minLength: DS.xs)
@@ -366,41 +368,50 @@ struct SessionCard: View {
                     }
                 }
 
-                HStack(spacing: DS.xs) {
-                    Text(session.state.label)
+                if density == .compact {
+                    Text("\(session.state.label) · \(session.kind == "Claude Code" ? "Claude" : session.kind) · \(session.project)")
+                        .font(DS.meta)
                         .foregroundStyle(session.state.needsAttention ? AnyShapeStyle(Palette.attention) : AnyShapeStyle(.secondary))
-                    Text("· " + (session.kind == "Claude Code" ? "Claude" : session.kind)).foregroundStyle(.tertiary)
-                }
-                .font(DS.body)
-
-                if let d = session.detail {
-                    if isCommand {
-                        // O momento da app: o comando em curso, como uma linha de terminal
-                        Text("$ " + d)
-                            .font(DS.mono).foregroundStyle(.primary)
-                            .lineLimit(2)
-                            .padding(.horizontal, DS.sm).padding(.vertical, DS.xs)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .background(RoundedRectangle(cornerRadius: DS.rSmall, style: .continuous).fill(DS.raised))
-                    } else {
-                        Text(d).font(DS.body).foregroundStyle(.secondary).lineLimit(2)
+                        .lineLimit(1).truncationMode(.middle)
+                } else {
+                    HStack(spacing: DS.xs) {
+                        Text(session.state.label)
+                            .foregroundStyle(session.state.needsAttention ? AnyShapeStyle(Palette.attention) : AnyShapeStyle(.secondary))
+                        Text("· " + (session.kind == "Claude Code" ? "Claude" : session.kind)).foregroundStyle(.tertiary)
                     }
-                }
+                    .font(DS.body)
 
-                Text(meta)
-                    .font(DS.meta.monospacedDigit()).foregroundStyle(.tertiary)
-                    .lineLimit(1).truncationMode(.middle)
-                    .help(m.usage.perSession[session.id].map { u in
-                        "Tokens nesta sessão: \(Fmt.tokens(u.total)) · saída \(Fmt.tokens(u.output)) · entrada \(Fmt.tokens(u.input)) · cache lida \(Fmt.tokens(u.cacheRead)) · cache escrita \(Fmt.tokens(u.cacheWrite))"
-                    } ?? "")
+                    if let d = session.detail {
+                        if isCommand {
+                            // O momento da app: o comando em curso, como uma linha de terminal.
+                            Text("$ " + d)
+                                .font(DS.mono).foregroundStyle(.primary)
+                                .lineLimit(density == .detailed ? 5 : 2)
+                                .padding(.horizontal, DS.sm).padding(.vertical, DS.xs)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .background(RoundedRectangle(cornerRadius: DS.rSmall, style: .continuous).fill(DS.raised))
+                        } else {
+                            Text(d).font(DS.body).foregroundStyle(.secondary)
+                                .lineLimit(density == .detailed ? 5 : 2)
+                        }
+                    }
 
-                if let p = session.process, !p.children.isEmpty, session.state.isWorking {
-                    Text("↳ " + p.children.joined(separator: " · "))
-                        .font(DS.mono).foregroundStyle(.tertiary).lineLimit(1)
+                    Text(meta)
+                        .font(DS.meta.monospacedDigit()).foregroundStyle(.tertiary)
+                        .lineLimit(density == .detailed ? 3 : 1).truncationMode(.middle)
+                        .help(m.usage.perSession[session.id].map { u in
+                            "Tokens nesta sessão: \(Fmt.tokens(u.total)) · saída \(Fmt.tokens(u.output)) · entrada \(Fmt.tokens(u.input)) · cache lida \(Fmt.tokens(u.cacheRead)) · cache escrita \(Fmt.tokens(u.cacheWrite))"
+                        } ?? "")
+
+                    if let p = session.process, !p.children.isEmpty, session.state.isWorking {
+                        Text("↳ " + p.children.joined(separator: " · "))
+                            .font(DS.mono).foregroundStyle(.tertiary).lineLimit(density == .detailed ? 3 : 1)
+                    }
                 }
             }
         }
-        .cardStyle(highlight: session.state.needsAttention ? Palette.attention.opacity(0.5) : nil)
+        .cardStyle(padding: density == .compact ? DS.sm : DS.md,
+                   highlight: session.state.needsAttention ? Palette.attention.opacity(0.5) : nil)
         .background(RoundedRectangle(cornerRadius: DS.rCard, style: .continuous).fill(hover.value ? DS.surface : .clear))
         .opacity(session.state == .finished ? 0.6 : 1)
         .contentShape(Rectangle())
@@ -603,6 +614,7 @@ struct TodayUsage: View {
 
 /// Atividade dos agentes nas últimas 24 h, em blocos de 10 minutos.
 struct ActivityStrip: View {
+    @Environment(\.agentAccentColor) private var agentAccentColor
     let day: [MinuteSample]
 
     var body: some View {
@@ -620,7 +632,7 @@ struct ActivityStrip: View {
                     VStack(spacing: 0) {
                         Spacer(minLength: 0)
                         RoundedRectangle(cornerRadius: 1)
-                            .fill(b.attention ? Palette.attention.opacity(0.8) : (b.working > 0 ? Color.accentColor : DS.raised))
+                            .fill(b.attention ? Palette.attention.opacity(0.8) : (b.working > 0 ? agentAccentColor : DS.raised))
                             .frame(height: b.working > 0 ? max(3, 20 * b.working) : 2)
                     }
                 }

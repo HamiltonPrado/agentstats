@@ -27,6 +27,8 @@ struct PanelView: View {
     @Environment(Monitor.self) private var m
     @Environment(\.colorScheme) private var scheme
     @AppStorage("panel.tab2") private var storedTab: Tab = .agents
+    @AppStorage("appearance.theme") private var themeRawValue = PanelTheme.system.rawValue
+    @AppStorage("appearance.accentHex") private var accentHex = "#0A84FF"
     var forcedTab: Tab? = nil
     var scrollable = true
     @StateObject private var contentHeight = Box<CGFloat>(300)
@@ -34,6 +36,9 @@ struct PanelView: View {
     static let width: CGFloat = 340
 
     private var tab: Tab { forcedTab ?? storedTab }
+    private var selectedTheme: PanelTheme { PanelTheme(rawValue: themeRawValue) ?? .system }
+    private var effectiveScheme: ColorScheme { selectedTheme.colorScheme ?? scheme }
+    private var accentColor: Color { Color(hexRGB: accentHex) }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -63,6 +68,9 @@ struct PanelView: View {
             footer
         }
         .frame(width: Self.width)
+        .environment(\.agentAccentColor, accentColor)
+        .tint(accentColor)
+        .preferredColorScheme(selectedTheme.colorScheme)
     }
 
     @ViewBuilder private var content: some View {
@@ -128,7 +136,7 @@ struct PanelView: View {
                     .frame(maxWidth: .infinity).frame(height: 24)
                     .background(
                         RoundedRectangle(cornerRadius: DS.rSmall, style: .continuous)
-                            .fill(tab == t ? (scheme == .dark ? Color.white.opacity(0.12) : Color.white) : .clear)
+                            .fill(tab == t ? (effectiveScheme == .dark ? Color.white.opacity(0.12) : Color.white) : .clear)
                             .shadow(color: .black.opacity(tab == t ? 0.06 : 0), radius: 1, y: 1)
                     )
                     .contentShape(Rectangle())

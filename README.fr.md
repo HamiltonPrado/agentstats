@@ -39,6 +39,7 @@ Processeur, mémoire, GPU, températures, réseau, disque et batterie. Le pannea
 - Utilisation des tokens du jour, par session et par projet, pour Claude Code et Codex.
 - Raccourci global configurable pour ouvrir le panneau.
 - Réorganisez les indicateurs de la barre des menus et choisissez les sections visibles du panneau.
+- Ajustez la densité, le thème et la couleur d’accentuation ; appliquez et enregistrez les réglages dans les profils Travail et Surveillance.
 - Indicateurs accessibles par la couleur, la forme et VoiceOver ; respect de l’option « Réduire les animations ».
 - Lancement automatique à l’ouverture de session, en option.
 
@@ -85,8 +86,8 @@ AgentStats est distribué sous la [licence MIT](LICENSE). Vous pouvez utiliser, 
 Mettez à jour `VERSION`, puis envoyez un tag portant le même numéro, par exemple :
 
 ```bash
-git tag v1.14
-git push origin v1.14
+git tag v1.15
+git push origin v1.15
 ```
 
 GitHub Actions vérifie la version, exécute les tests, compile l’app et publie `AgentStats.zip` dans la release.

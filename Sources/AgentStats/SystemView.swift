@@ -14,6 +14,7 @@ private struct Readout {
 
 struct SystemView: View {
     @Environment(Monitor.self) private var m
+    @Environment(\.agentAccentColor) private var agentAccentColor
     @AppStorage("system.detail") private var selected: Metric = .cpu
     @StateObject private var speedTestRunning = Box(false)
     @StateObject private var speedTestResult = Box<SpeedTestResult?>(nil)
@@ -76,7 +77,7 @@ struct SystemView: View {
             .padding(.horizontal, DS.md).padding(.vertical, DS.sm)
             .background(RoundedRectangle(cornerRadius: DS.rControl + 2, style: .continuous).fill(isSel ? DS.raised : DS.surface))
             .overlay(RoundedRectangle(cornerRadius: DS.rControl + 2, style: .continuous)
-                .strokeBorder(isSel ? Color.accentColor.opacity(0.6) : DS.hairline, lineWidth: 1))
+                .strokeBorder(isSel ? agentAccentColor.opacity(0.6) : DS.hairline, lineWidth: 1))
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -98,14 +99,14 @@ struct SystemView: View {
                 .frame(width: 96, alignment: .leading)
                 ZStack {
                     Sparkline(values: m.upHistory.values, maxValue: mx, color: .secondary, fill: false)
-                    Sparkline(values: m.downHistory.values, maxValue: mx, color: .accentColor)
+                    Sparkline(values: m.downHistory.values, maxValue: mx)
                 }
                 .frame(height: 28)
             }
             .padding(.horizontal, DS.md).padding(.vertical, DS.sm)
             .background(RoundedRectangle(cornerRadius: DS.rCard, style: .continuous).fill(isSel ? DS.raised : DS.surface))
             .overlay(RoundedRectangle(cornerRadius: DS.rCard, style: .continuous)
-                .strokeBorder(isSel ? Color.accentColor.opacity(0.6) : DS.hairline, lineWidth: 1))
+                .strokeBorder(isSel ? agentAccentColor.opacity(0.6) : DS.hairline, lineWidth: 1))
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -321,6 +322,7 @@ struct SystemView: View {
 }
 
 struct TemperatureCard: View {
+    @Environment(\.agentAccentColor) private var agentAccentColor
     let t: TemperatureSample
     let history: [Double]
     let thermal: String
@@ -350,7 +352,7 @@ struct TemperatureCard: View {
                     Text(expanded.value ? "Esconder sensores" : "Ver os \(t.sensors.count) sensores")
                     Image(systemName: "chevron.down").rotationEffect(.degrees(expanded.value ? 180 : 0))
                 }
-                .font(DS.meta).foregroundStyle(Color.accentColor)
+                .font(DS.meta).foregroundStyle(agentAccentColor)
             }
             .buttonStyle(.plain)
             if expanded.value {
