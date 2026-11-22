@@ -16,34 +16,77 @@
 </p>
 
 <p align="center">
-  <img src="Resources/screenshots/agents-dark.png" alt="Agent dashboard" width="340">
-  &nbsp;&nbsp;
-  <img src="Resources/screenshots/system-dark.png" alt="System metrics dashboard" width="340">
+  <img src="Resources/screenshots/agents-dark.png" alt="Agents, limits and costs" width="260">
+  <img src="Resources/screenshots/system-dark.png" alt="System metrics" width="260">
+  <img src="Resources/screenshots/audio-dark.png" alt="Volume mixer" width="260">
 </p>
+
+<p align="center">
+  <img src="Resources/screenshots/clipboard-dark.png" alt="Clipboard and snippets" width="260">
+  <img src="Resources/screenshots/capture-dark.png" alt="Capture and recording" width="260">
+  <img src="Resources/screenshots/tools-dark.png" alt="Tools" width="260">
+</p>
+
+<p align="center"><sub>Screenshots use demo data. The interface is in Portuguese.</sub></p>
 
 ## What you can monitor
 
 ### AI agents
 
-See active sessions, project, model, CPU and memory use, subprocesses, and status: working, waiting, or asking for your attention. Filter sessions by status. AgentStats recognizes Claude Code, Codex, Antigravity, Aider, Goose, Gemini CLI, Cursor Agent, OpenCode, and Amp. Click a session to return to the app where it is running.
+- Sessions with project, model, subagents, and status: working, waiting, or needing approval. Click one to return to the app where it runs.
+- Recognizes Claude Code, Codex, Copilot, Cursor Agent, OpenCode, Antigravity, Aider, Goose, Gemini CLI, and Amp. Detail depends on what each one logs on your Mac.
+- **Plan limits** for Claude and Codex, with reset times.
+- **Tokens and estimated API cost** by session, day, and project for Claude Code, Codex, Copilot, and OpenCode. Cost appears only for models with known prices and is not what you pay on a subscription.
+- Notifications when a long task finishes or an agent needs you, with reminders while it keeps waiting.
 
-### Mac health
+### System and processes
 
-CPU, memory, GPU, temperatures, network, disk, and battery. The panel includes charts and 24-hour history, configurable alerts, and a manual download, upload, and latency test.
+- CPU, memory, GPU, temperatures, network, disk, and battery, with up to 7 days of history and alerts.
+- Apps using the most energy, heaviest processes, and largest folders.
+- Manual speed test through Cloudflare: about **32 MB per test**; measurements may be collected in aggregate.
+- Does not control fans.
 
-### Built for your workflow
+### Audio
 
-- Notifications when an agent finishes or needs your attention.
-- Configurable reminders when an agent is still waiting for your answer or approval.
-- Per-session history with status changes, observed duration, and token usage.
-- Token usage today, by session, and by project for Claude Code and Codex.
-- A configurable global shortcut to open the panel.
-- Reorder menu bar indicators and choose which sections appear in the panel.
-- Adjust density, theme, and accent color; apply and save settings in the Work and Monitoring profiles.
-- Accessible status indicators using color, shape, and VoiceOver; respects Reduce Motion.
-- Optional launch at login.
+- Choose output and microphone and adjust their volume.
+- **Per-app mixer**, 0 to 150% (macOS 14.2+). It only touches apps you adjust and returns to 100% when AgentStats quits.
 
-The speed test uses Cloudflare's public endpoints and transfers about **32 MB per run**. Measurements may be collected in aggregate.
+### Clipboard
+
+- Text history, **off until you turn it on**: 100 items, 7 days, with pins and snippets.
+- Skips what password managers mark as secret and known API key formats. History stays on this Mac, **unencrypted**.
+
+### Capture
+
+- Capture an area, a window, or the screen, and record the full screen with optional microphone and clicks. Area recording opens the macOS tool.
+
+### Tools
+
+- **Ports:** see what is listening and stop your own processes, with confirmation.
+- **Homebrew:** upgrade and remove packages.
+- **Uninstall:** move apps to the Trash, with the leftovers you select.
+
+### Make it yours
+
+Configurable menu bar, global shortcut, profiles, theme, color, width, text size, keep awake, launch at login, and support for VoiceOver and Reduce Motion.
+
+## Permissions and privacy
+
+| Feature | Permission macOS may request |
+| --- | --- |
+| Notifications and alerts | Notifications |
+| Per-app mixer | System audio recording |
+| Capture and recording | Screen recording |
+| Recording with microphone | Microphone |
+| Clipboard history | Paste from other apps (macOS 15.4+) |
+
+There is no account and no telemetry. AgentStats reads agent logs on your Mac and does not send them. The network is used only by the speed test, by Homebrew when you use it, and by the periodic limits check made through your Claude Code.
+
+The app has no Developer ID, so **macOS may ask for these permissions again after each update**.
+
+## Requirements
+
+Apple Silicon Mac with macOS 14 or later. Tested on macOS 27.2.
 
 ## Install
 
@@ -98,8 +141,8 @@ AgentStats is distributed under the [MIT License](LICENSE). You may use, modify,
 Update `VERSION`, then push a tag with the same version, for example:
 
 ```bash
-git tag v1.15
-git push origin v1.15
+git tag v1.17
+git push origin v1.17
 ```
 
 GitHub Actions checks the version, runs the tests, builds the app, and publishes `AgentStats.zip` to the release.
@@ -108,8 +151,9 @@ GitHub Actions checks the version, runs the tests, builds the app, and publishes
 
 - `AgentStats --dump` — system metrics and detected agents.
 - `AgentStats --bench` — reader execution times.
-- `AgentStats --snapshot <folder>` — renders panel screenshots as PNG files.
-- `AGENTSTATS_DISABLE=icon,temps,procs,sessions,usage,gpu,disk` — disables readers for performance measurements.
+- `AgentStats --snapshot <folder>` — renders panel screenshots as PNG files, using demo data only.
+- `AgentStats --smoke` — launch test with the real readers.
+- `AGENTSTATS_DISABLE=icon,temps,procs,sessions,usage,energy,limits,gpu,disk` — disables readers for performance measurements.
 
 ### Architecture
 

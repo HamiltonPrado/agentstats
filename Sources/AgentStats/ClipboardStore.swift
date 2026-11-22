@@ -36,6 +36,7 @@ final class ClipboardStore: ObservableObject {
     private var directory: URL?
     private let defaults: UserDefaults?
     private let accessOverride: ClipboardAccess?
+    private var demo = false
     private let frontApp: () -> String?
 
     private var requested: Bool
@@ -67,6 +68,7 @@ final class ClipboardStore: ObservableObject {
     // MARK: Vigiar
 
     func start() {
+        guard !demo else { return }
         watching = true
         prune()
         updateTimer()
@@ -124,6 +126,7 @@ final class ClipboardStore: ObservableObject {
     // MARK: Permissão
 
     func refreshAccess() {
+        guard !demo else { return }
         let new = accessOverride ?? systemAccess()
         if new != access { access = new }
     }
@@ -240,6 +243,7 @@ final class ClipboardStore: ObservableObject {
 
     /// Para as capturas, que acabam no README e no site: nunca mostram o clipboard real, e nada é gravado.
     func loadDemo(now: Date = Date()) {
+        demo = true
         directory = nil
         enabled = true
         access = .allowed

@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>AgentStats — Monitor de Sistema e Agentes de IA para macOS</title>
-  <meta name="description" content="App de barra de menus para macOS (Apple Silicon) que mostra métricas de hardware e o estado em tempo real dos teus agentes de IA: Claude Code, Codex e Antigravity.">
+  <meta name="description" content="App de barra de menus para Macs com Apple Silicon: agentes de IA, limites e custos, métricas do sistema, mixer por app, clipboard, captura de ecrã e ferramentas.">
   <link rel="icon" type="image/png" href="app-icon.png">
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
@@ -51,7 +51,7 @@
       <div class="flex items-center gap-3">
         <img src="app-icon.png" alt="AgentStats Logo" class="w-8 h-8 rounded-lg shadow-md">
         <span class="font-semibold text-white tracking-tight text-lg">AgentStats</span>
-        <span class="text-xs px-2 py-0.5 rounded-full bg-white/10 text-neutral-300 font-mono">v1.16.1</span>
+        <span class="text-xs px-2 py-0.5 rounded-full bg-white/10 text-neutral-300 font-mono">v1.17</span>
       </div>
       <div class="flex items-center gap-4">
         <a href="#funcionalidades" class="text-sm text-neutral-400 hover:text-white transition hidden sm:inline">Funcionalidades</a>
@@ -69,13 +69,13 @@
     <section class="pt-16 pb-20 px-4 sm:px-6 max-w-5xl mx-auto text-center">
       <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-medium mb-6">
         <span class="w-2 h-2 rounded-full bg-emerald-400 status-pulse"></span>
-        Suporte alargado a IAs: Claude, Codex, Antigravity, Aider, Goose, Cursor &amp; Gemini
+        Claude, Codex, Copilot, Cursor, OpenCode, Antigravity e mais
       </div>
       <h1 class="text-4xl sm:text-6xl font-bold tracking-tight text-white max-w-3xl mx-auto leading-tight sm:leading-none">
         Monitor de sistema e agentes de IA para macOS.
       </h1>
       <p class="mt-6 text-lg sm:text-xl text-neutral-400 max-w-2xl mx-auto leading-relaxed">
-        App de barra de menus nativa e discreta. Acompanha CPU, RAM e temperaturas do Apple Silicon, enquanto monitoriza em tempo real o que o <span class="text-neutral-200 font-medium">Claude Code</span>, <span class="text-neutral-200 font-medium">Codex</span>, <span class="text-neutral-200 font-medium">Antigravity</span>, <span class="text-neutral-200 font-medium">Aider</span>, <span class="text-neutral-200 font-medium">Goose</span> e <span class="text-neutral-200 font-medium">Gemini</span> estão a fazer.
+        Uma app nativa na barra de menus: vê o que os teus agentes fazem, quanto resta do plano e como está o Mac. Com mixer por app, clipboard, captura de ecrã e ferramentas à mão.
       </p>
 
       <!-- CTA Buttons -->
@@ -85,30 +85,28 @@
           <span>Descarregar AgentStats.zip</span>
         </a>
         <a href="#instalacao" class="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-neutral-300 font-medium transition">
-          <span class="font-mono text-sm">gh release download</span>
+          <span class="font-mono text-sm">brew install --cask agentstats</span>
         </a>
       </div>
 
       <!-- Quick Install Box -->
       <div class="mt-8 max-w-xl mx-auto" id="instalacao">
         <div class="glass rounded-xl p-3 text-left font-mono text-xs flex items-center justify-between gap-2 overflow-x-auto border border-white/10">
-          <span class="text-neutral-400 select-all truncate">
-            tmp=$(mktemp -d) &amp;&amp; gh release download --repo HamiltonPrado/agentstats --pattern AgentStats.zip --dir "$tmp" &amp;&amp; ditto -x -k "$tmp/AgentStats.zip" "$tmp" &amp;&amp; { pkill -x AgentStats; ditto "$tmp/AgentStats.app" /Applications/AgentStats.app &amp;&amp; open /Applications/AgentStats.app; }
-          </span>
-          <button onclick="navigator.clipboard.writeText('tmp=$(mktemp -d) && gh release download --repo HamiltonPrado/agentstats --pattern AgentStats.zip --dir &quot;$tmp&quot; && ditto -x -k &quot;$tmp/AgentStats.zip&quot; &quot;$tmp&quot; && { pkill -x AgentStats; ditto &quot;$tmp/AgentStats.app&quot; /Applications/AgentStats.app && open /Applications/AgentStats.app; }'); alert('Comando copiado!')" class="shrink-0 p-2 rounded-lg bg-white/5 hover:bg-white/10 text-neutral-300 transition" title="Copiar comando">
+          <span id="install-command" class="text-neutral-400 select-all min-w-0 break-all">brew tap hamiltonprado/agentstats https://github.com/HamiltonPrado/agentstats &amp;&amp; brew trust hamiltonprado/agentstats &amp;&amp; brew install --cask agentstats</span>
+          <button onclick="navigator.clipboard.writeText(document.getElementById('install-command').textContent); alert('Comando copiado!')" class="shrink-0 p-2 rounded-lg bg-white/5 hover:bg-white/10 text-neutral-300 transition" title="Copiar comando" aria-label="Copiar comando">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
           </button>
         </div>
-        <p class="text-xs text-neutral-500 mt-2">Instalado via GitHub CLI (<code class="text-neutral-400">gh</code>), abre de imediato sem avisos de quarentena do Gatekeeper.</p>
+        <p class="text-xs text-neutral-500 mt-2">Com Homebrew, num Mac com Apple Silicon e macOS 14+. A app não é notarizada: o cask tira a quarentena ao instalar.</p>
       </div>
 
       <!-- Menu Bar Preview -->
       <div class="mt-14 max-w-2xl mx-auto">
         <p class="text-xs font-semibold tracking-wider text-neutral-500 uppercase mb-3">Na tua barra de menus</p>
         <div class="inline-block p-2 bg-neutral-900 border border-white/10 rounded-xl shadow-2xl">
-          <img src="screenshots/menubar.png" alt="Barra de menus do AgentStats" class="h-9 w-auto mx-auto brightness-95 contrast-125">
+          <img src="screenshots/menubar.png" alt="Barra de menus do AgentStats" class="max-h-9 max-w-full w-auto mx-auto">
         </div>
-        <p class="text-xs text-neutral-500 mt-2">Agentes ativos/total · CPU · RAM · Temperatura máx · Rede upload/download. Rasterizado em CoreText, custo de CPU ~0%.</p>
+        <p class="text-xs text-neutral-500 mt-2">Agentes a trabalhar/total · CPU · RAM · Temperatura · Rede. Tudo configurável.</p>
       </div>
     </section>
 
@@ -116,15 +114,19 @@
     <section class="py-12 border-t border-b border-white/5 bg-graphite-900/40">
       <div class="max-w-6xl mx-auto px-4 sm:px-6">
         <div class="text-center mb-10">
-          <h2 class="text-2xl sm:text-3xl font-bold text-white tracking-tight">Instrumentação atenta, exata e discreta.</h2>
-          <p class="text-neutral-400 mt-2">Criado em Swift 6 puro para macOS 14+ (Sonoma &amp; Sequoia). Inspirado no design dos instrumentos de aviação.</p>
+          <h2 class="text-2xl sm:text-3xl font-bold text-white tracking-tight">Sete separadores, um só painel.</h2>
+          <p class="text-neutral-400 mt-2">Swift 6, macOS 14+ e Apple Silicon. Capturas com dados de demonstração.</p>
         </div>
 
         <!-- Tab Selector -->
-        <div class="flex justify-center gap-2 mb-8" id="tab-buttons">
+        <div class="flex flex-wrap justify-center gap-2 mb-8" id="tab-buttons">
           <button onclick="setTab('agents')" id="btn-agents" class="tab-btn px-4 py-2 rounded-lg text-sm font-medium bg-white/10 text-white transition">Agentes</button>
           <button onclick="setTab('system')" id="btn-system" class="tab-btn px-4 py-2 rounded-lg text-sm font-medium text-neutral-400 hover:text-white transition">Sistema</button>
           <button onclick="setTab('processes')" id="btn-processes" class="tab-btn px-4 py-2 rounded-lg text-sm font-medium text-neutral-400 hover:text-white transition">Processos</button>
+          <button onclick="setTab('audio')" id="btn-audio" class="tab-btn px-4 py-2 rounded-lg text-sm font-medium text-neutral-400 hover:text-white transition">Áudio</button>
+          <button onclick="setTab('clipboard')" id="btn-clipboard" class="tab-btn px-4 py-2 rounded-lg text-sm font-medium text-neutral-400 hover:text-white transition">Clipboard</button>
+          <button onclick="setTab('capture')" id="btn-capture" class="tab-btn px-4 py-2 rounded-lg text-sm font-medium text-neutral-400 hover:text-white transition">Captura</button>
+          <button onclick="setTab('tools')" id="btn-tools" class="tab-btn px-4 py-2 rounded-lg text-sm font-medium text-neutral-400 hover:text-white transition">Ferramentas</button>
           <button onclick="setTab('settings')" id="btn-settings" class="tab-btn px-4 py-2 rounded-lg text-sm font-medium text-neutral-400 hover:text-white transition">Definições</button>
         </div>
 
@@ -138,105 +140,52 @@
     <!-- Key Features Grid -->
     <section class="py-20 max-w-6xl mx-auto px-4 sm:px-6" id="funcionalidades">
       <div class="text-center mb-16">
-        <h2 class="text-3xl font-bold text-white tracking-tight">O que torna o AgentStats único</h2>
-        <p class="text-neutral-400 mt-2">A primeira ferramenta pensada para programadores que trabalham diariamente com agentes de IA autónomos.</p>
+        <h2 class="text-3xl font-bold text-white tracking-tight">O que faz</h2>
+        <p class="text-neutral-400 mt-2">Sem conta e sem telemetria. Como não tem Developer ID, o macOS pode voltar a pedir permissões depois de cada atualização.</p>
       </div>
 
       <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <!-- Feature 1 -->
         <div class="glass p-6 rounded-2xl flex flex-col justify-between">
           <div>
-            <div class="w-10 h-10 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-400 flex items-center justify-center mb-4">
-              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"></path></svg>
-            </div>
-            <h3 class="text-lg font-semibold text-white mb-2">Agentes com Estado Real</h3>
-            <p class="text-sm text-neutral-400 leading-relaxed">
-              Lê diretamente os transcripts do <strong class="text-neutral-200">Claude Code</strong>, bases SQLite do <strong class="text-neutral-200">Codex</strong>, logs do <strong class="text-neutral-200">Antigravity</strong>, histórico do <strong class="text-neutral-200">Aider</strong>, <strong class="text-neutral-200">Goose</strong>, <strong class="text-neutral-200">Cursor Agent</strong> e <strong class="text-neutral-200">Gemini CLI</strong>. Mostra a ferramenta a correr, pensamentos, modelo e subprocessos em tempo real. Filtra sessões por estado e personaliza as métricas e secções visíveis.
-            </p>
+            <h3 class="text-lg font-semibold text-white mb-2">Agentes com estado</h3>
+            <p class="text-sm text-neutral-400 leading-relaxed">Vê quem trabalha, quem espera e quem precisa de aprovação em Claude Code, Codex, Copilot, Cursor, OpenCode, Antigravity, Aider, Goose, Gemini CLI e Amp. O detalhe varia com o agente.</p>
           </div>
-          <div class="mt-4 pt-4 border-t border-white/5 flex items-center gap-2 text-xs text-neutral-500">
-            <span class="w-2 h-2 rounded-full bg-emerald-400"></span> A trabalhar · <span class="w-2 h-2 rounded-full border border-amber-400"></span> À espera
-          </div>
+          <div class="mt-4 pt-4 border-t border-white/5 text-xs text-neutral-500">Clica para voltar à app do agente</div>
         </div>
-
-        <!-- Feature 2 -->
         <div class="glass p-6 rounded-2xl flex flex-col justify-between">
           <div>
-            <div class="w-10 h-10 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 flex items-center justify-center mb-4">
-              <span class="text-lg">✋</span>
-            </div>
-            <h3 class="text-lg font-semibold text-white mb-2">Precisa da tua Atenção</h3>
-            <p class="text-sm text-neutral-400 leading-relaxed">
-              Deteta quando um agente bloqueia à espera de aprovação (comandos Bash, edição de ficheiros ou perguntas). Envia também lembretes configuráveis se continuar à espera da tua resposta ou aprovação.
-            </p>
+            <h3 class="text-lg font-semibold text-white mb-2">Limites e custos</h3>
+            <p class="text-sm text-neutral-400 leading-relaxed">Limites do plano do Claude e do Codex com a hora de renovação, e tokens com custo estimado em API por sessão, dia e projeto, quando o modelo tem preço conhecido.</p>
           </div>
-          <div class="mt-4 pt-4 border-t border-white/5 text-xs text-neutral-500">
-            Compatível com hook nativo de Notificação
-          </div>
+          <div class="mt-4 pt-4 border-t border-white/5 text-xs text-neutral-500">Aviso quando uma tarefa longa termina</div>
         </div>
-
-        <!-- Feature 3 -->
         <div class="glass p-6 rounded-2xl flex flex-col justify-between">
           <div>
-            <div class="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-400 flex items-center justify-center mb-4">
-              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
-            </div>
-            <h3 class="text-lg font-semibold text-white mb-2">Sensores Apple Silicon</h3>
-            <p class="text-sm text-neutral-400 leading-relaxed">
-              Lê diretamente até 42 sensores térmicos HID do SoC (CPU média/máxima, chip tdev, SSD NAND e bateria) sem depender de ferramentas pesadas ou do Xcode.
-            </p>
+            <h3 class="text-lg font-semibold text-white mb-2">Sistema</h3>
+            <p class="text-sm text-neutral-400 leading-relaxed">CPU, memória, GPU, temperaturas, rede, disco e bateria, com histórico até 7 dias, alertas, energia por app e teste de velocidade manual.</p>
           </div>
-          <div class="mt-4 pt-4 border-t border-white/5 text-xs text-neutral-500">
-            IOKit privado via carregamento dinâmico
-          </div>
+          <div class="mt-4 pt-4 border-t border-white/5 text-xs text-neutral-500">O teste usa o Cloudflare, cerca de 32 MB</div>
         </div>
-
-        <!-- Feature 4 -->
         <div class="glass p-6 rounded-2xl flex flex-col justify-between">
           <div>
-            <div class="w-10 h-10 rounded-xl bg-purple-500/10 border border-purple-500/20 text-purple-400 flex items-center justify-center mb-4">
-              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path></svg>
-            </div>
-            <h3 class="text-lg font-semibold text-white mb-2">Histórico de 24 Horas</h3>
-            <p class="text-sm text-neutral-400 leading-relaxed">
-              Regista médias de 1 em 1 minuto de CPU, RAM, temperatura e atividade dos agentes, além do histórico de estados, duração observada e tokens por sessão.
-            </p>
+            <h3 class="text-lg font-semibold text-white mb-2">Áudio por app</h3>
+            <p class="text-sm text-neutral-400 leading-relaxed">Escolhe os aparelhos e ajusta cada app de 0 a 150%. Só mexe nas apps que ajustares e tudo volta a 100% ao fechar.</p>
           </div>
-          <div class="mt-4 pt-4 border-t border-white/5 text-xs text-neutral-500">
-            Persistência resiliente a reinícios
-          </div>
+          <div class="mt-4 pt-4 border-t border-white/5 text-xs text-neutral-500">macOS 14.2+, pede gravação de áudio do sistema</div>
         </div>
-
-        <!-- Feature 5 -->
         <div class="glass p-6 rounded-2xl flex flex-col justify-between">
           <div>
-            <div class="w-10 h-10 rounded-xl bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 flex items-center justify-center mb-4">
-              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"></path></svg>
-            </div>
-            <h3 class="text-lg font-semibold text-white mb-2">Teste de Velocidade Cloudflare</h3>
-            <p class="text-sm text-neutral-400 leading-relaxed">
-              Teste manual sob demanda de download, upload e latência integrado no separador de Rede. Medições rigorosas em ~32 MB sem scripts pesados.
-            </p>
+            <h3 class="text-lg font-semibold text-white mb-2">Clipboard e captura</h3>
+            <p class="text-sm text-neutral-400 leading-relaxed">Histórico de texto opcional com snippets, capturas de área, janela ou ecrã e gravação do ecrã com microfone opcional.</p>
           </div>
-          <div class="mt-4 pt-4 border-t border-white/5 text-xs text-neutral-500">
-            Endpoints oficiais Cloudflare Speed Test
-          </div>
+          <div class="mt-4 pt-4 border-t border-white/5 text-xs text-neutral-500">O histórico fica no Mac, sem cifra</div>
         </div>
-
-        <!-- Feature 6 -->
         <div class="glass p-6 rounded-2xl flex flex-col justify-between">
           <div>
-            <div class="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 flex items-center justify-center mb-4">
-              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122"></path></svg>
-            </div>
-            <h3 class="text-lg font-semibold text-white mb-2">Ir para o Agente (Foco Rápido)</h3>
-            <p class="text-sm text-neutral-400 leading-relaxed">
-              Clica num cartão ou numa notificação de conclusão para trazer instantaneamente para a frente a janela onde o agente está a trabalhar (Terminal, VS Code, app ChatGPT, etc.).
-            </p>
+            <h3 class="text-lg font-semibold text-white mb-2">Ferramentas</h3>
+            <p class="text-sm text-neutral-400 leading-relaxed">Vê e termina o que está à escuta nas portas, gere o Homebrew e move apps para o Lixo com os restos que escolheres.</p>
           </div>
-          <div class="mt-4 pt-4 border-t border-white/5 text-xs text-neutral-500">
-            Atalho global ⌥⌘A configurável
-          </div>
+          <div class="mt-4 pt-4 border-t border-white/5 text-xs text-neutral-500">Ações destrutivas só com confirmação</div>
         </div>
       </div>
     </section>

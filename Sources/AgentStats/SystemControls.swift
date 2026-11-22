@@ -61,9 +61,13 @@ final class AudioControlStore: ObservableObject {
     @Published var canMuteOutput = false
     @Published var canMuteInput = false
 
+    /// Os nomes dos aparelhos trazem muitas vezes o nome do dono: nas capturas são inventados.
+    static var demo = false
+
     init() { refresh() }
 
     func refresh() {
+        guard !Self.demo else { return loadDemo() }
         outputs = Self.devices(scope: kAudioDevicePropertyScopeOutput)
         inputs = Self.devices(scope: kAudioDevicePropertyScopeInput)
         outputID = Self.defaultDevice(kAudioHardwarePropertyDefaultOutputDevice)
@@ -86,7 +90,21 @@ final class AudioControlStore: ObservableObject {
     func setOutputMuted(_ value: Bool) { setMute(outputID, scope: kAudioDevicePropertyScopeOutput, value: value); readControls() }
     func setInputMuted(_ value: Bool) { setMute(inputID, scope: kAudioDevicePropertyScopeInput, value: value); readControls() }
 
+    private func loadDemo() {
+        outputs = [SystemAudioDevice(id: 1, name: "Colunas do MacBook")]
+        inputs = [SystemAudioDevice(id: 2, name: "Microfone do MacBook")]
+        outputID = 1
+        inputID = 2
+        outputVolume = 0.65
+        inputVolume = 0.8
+        canSetOutputVolume = true
+        canSetInputVolume = true
+        canMuteOutput = true
+        canMuteInput = true
+    }
+
     private func readControls() {
+        guard !Self.demo else { return }
         outputVolume = scalar(outputID, scope: kAudioDevicePropertyScopeOutput) ?? 0.5
         inputVolume = scalar(inputID, scope: kAudioDevicePropertyScopeInput) ?? 0.5
         outputMuted = mute(outputID, scope: kAudioDevicePropertyScopeOutput) ?? false

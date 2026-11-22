@@ -12,8 +12,13 @@ enum Log {
 enum AppInfo {
     struct Entry { let name: String?; let icon: NSImage? }
     private static var cache: [Int: Entry] = [:]
+    private static var demo: [Int: Entry]?
+
+    static func loadDemo(_ entries: [Int: Entry]) { demo = entries }
 
     static func lookup(_ pid: Int) -> Entry {
+        // Os PIDs inventados podem existir neste Mac: nunca se perguntam ao sistema.
+        if let demo { return demo[pid] ?? Entry(name: nil, icon: nil) }
         if let e = cache[pid] { return e }
         if cache.count > 300 { cache.removeAll(keepingCapacity: true) }   // PIDs antigos não ficam para sempre
         let app = NSRunningApplication(processIdentifier: pid_t(pid))

@@ -10,6 +10,7 @@ final class SpeedTestStore: ObservableObject {
     @Published private(set) var result: SpeedTestResult?
     @Published private(set) var error: String?
 
+    private var demo = false
     private let test: @Sendable () async throws -> SpeedTestResult
 
     init(test: @escaping @Sendable () async throws -> SpeedTestResult = { try await SpeedTest.run() }) {
@@ -18,7 +19,7 @@ final class SpeedTestStore: ObservableObject {
 
     @discardableResult
     func start() -> Task<Void, Never>? {
-        guard !running else { return nil }
+        guard !running, !demo else { return nil }
         running = true
         error = nil
         return Task {
@@ -29,5 +30,10 @@ final class SpeedTestStore: ObservableObject {
             }
             running = false
         }
+    }
+
+    func loadDemo(now: Date) {
+        demo = true
+        result = SpeedTestResult(downloadMbps: 284.6, uploadMbps: 92.3, latencyMs: 14, measuredAt: now)
     }
 }

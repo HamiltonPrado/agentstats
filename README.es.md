@@ -16,34 +16,77 @@
 </p>
 
 <p align="center">
-  <img src="Resources/screenshots/agents-dark.png" alt="Panel de agentes" width="340">
-  &nbsp;&nbsp;
-  <img src="Resources/screenshots/system-dark.png" alt="Panel de métricas del sistema" width="340">
+  <img src="Resources/screenshots/agents-dark.png" alt="Agentes, límites y costes" width="260">
+  <img src="Resources/screenshots/system-dark.png" alt="Métricas del sistema" width="260">
+  <img src="Resources/screenshots/audio-dark.png" alt="Mezclador de volumen" width="260">
 </p>
+
+<p align="center">
+  <img src="Resources/screenshots/clipboard-dark.png" alt="Portapapeles y fragmentos" width="260">
+  <img src="Resources/screenshots/capture-dark.png" alt="Captura y grabación" width="260">
+  <img src="Resources/screenshots/tools-dark.png" alt="Herramientas" width="260">
+</p>
+
+<p align="center"><sub>Capturas con datos de demostración. La interfaz está en portugués.</sub></p>
 
 ## Qué puedes supervisar
 
 ### Agentes de IA
 
-Consulta las sesiones activas, el proyecto, el modelo, el uso de CPU y memoria, los subprocesos y el estado: trabajando, esperando o solicitando tu atención. Filtra las sesiones por estado. AgentStats reconoce Claude Code, Codex, Antigravity, Aider, Goose, Gemini CLI, Cursor Agent, OpenCode y Amp. Haz clic en una sesión para volver a la aplicación donde se está ejecutando.
+- Sesiones con proyecto, modelo, subagentes y estado: trabajando, esperando o pendiente de aprobación. Haz clic en una para volver a la app donde se ejecuta.
+- Reconoce Claude Code, Codex, Copilot, Cursor Agent, OpenCode, Antigravity, Aider, Goose, Gemini CLI y Amp. El detalle depende de lo que registre cada uno en el Mac.
+- **Límites del plan** de Claude y Codex, con la hora de renovación.
+- **Tokens y coste estimado de API** por sesión, día y proyecto para Claude Code, Codex, Copilot y OpenCode. El coste solo aparece con modelos de precio conocido y no es lo que pagas con una suscripción.
+- Avisos cuando termina una tarea larga o un agente te necesita, con recordatorios si sigue esperando.
 
-### Estado del Mac
+### Sistema y procesos
 
-CPU, memoria, GPU, temperaturas, red, disco y batería. El panel incluye gráficos e historial de 24 horas, alertas configurables y una prueba manual de descarga, subida y latencia.
+- CPU, memoria, GPU, temperaturas, red, disco y batería, con historial de hasta 7 días y alertas.
+- Apps que más energía gastan, procesos más pesados y carpetas más grandes.
+- Prueba de velocidad manual con Cloudflare: unos **32 MB por prueba**; las mediciones pueden recopilarse de forma agregada.
+- No controla los ventiladores.
 
-### Para tu flujo de trabajo
+### Audio
 
-- Notificaciones cuando un agente termina o necesita tu atención.
-- Recordatorios configurables si un agente sigue esperando tu respuesta o aprobación.
-- Historial por sesión con cambios de estado, duración observada y uso de tokens.
-- Uso de tokens de hoy, por sesión y por proyecto, para Claude Code y Codex.
-- Atajo global configurable para abrir el panel.
-- Reordena los indicadores de la barra de menús y elige qué secciones aparecen en el panel.
-- Ajusta la densidad, el tema y el color de énfasis; aplica y guarda los ajustes en los perfiles Trabajo y Monitorización.
-- Indicadores accesibles mediante color, forma y VoiceOver; respeta “Reducir movimiento”.
-- Inicio de sesión automático opcional.
+- Elige la salida y el micrófono y ajusta su volumen.
+- **Mezclador por app**, de 0 a 150% (macOS 14.2+). Solo modifica las apps que ajustes y vuelve al 100% al cerrar AgentStats.
 
-La prueba de velocidad usa los endpoints públicos de Cloudflare y transfiere unos **32 MB por ejecución**. Las mediciones pueden recopilarse de forma agregada.
+### Portapapeles
+
+- Historial de texto, **desactivado hasta que lo actives**: 100 elementos, 7 días, con fijados y fragmentos.
+- Ignora lo que los gestores de contraseñas marcan como secreto y los formatos conocidos de claves de API. El historial se queda en este Mac, **sin cifrar**.
+
+### Captura
+
+- Captura un área, una ventana o la pantalla, y graba la pantalla completa con micrófono y clics opcionales. Para grabar un área se abre la herramienta de macOS.
+
+### Herramientas
+
+- **Puertos:** muestra lo que está a la escucha y termina procesos tuyos, con confirmación.
+- **Homebrew:** actualiza y elimina paquetes.
+- **Desinstalar:** mueve apps a la Papelera, con los restos que elijas.
+
+### A tu medida
+
+Barra de menús configurable, atajo global, perfiles, tema, color, ancho, tamaño del texto, mantener el Mac activo, inicio automático y compatibilidad con VoiceOver y “Reducir movimiento”.
+
+## Permisos y privacidad
+
+| Función | Permiso que puede pedir macOS |
+| --- | --- |
+| Avisos y alertas | Notificaciones |
+| Mezclador por app | Grabación del audio del sistema |
+| Captura y grabación | Grabación de pantalla |
+| Grabar con micrófono | Micrófono |
+| Historial del portapapeles | Pegar desde otras apps (macOS 15.4+) |
+
+No hay cuenta ni telemetría. AgentStats lee los registros de los agentes en el Mac y no los envía. Solo usan la red la prueba de velocidad, Homebrew cuando lo utilizas y la consulta periódica de límites mediante tu Claude Code.
+
+La app no tiene Developer ID, por lo que **macOS puede volver a pedir estos permisos tras cada actualización**.
+
+## Requisitos
+
+Mac con Apple Silicon y macOS 14 o posterior. Probada en macOS 27.2.
 
 ## Instalación
 
@@ -98,8 +141,8 @@ AgentStats se distribuye bajo la [licencia MIT](LICENSE). Puedes usar, modificar
 Actualiza `VERSION` y envía una etiqueta con la misma versión, por ejemplo:
 
 ```bash
-git tag v1.15
-git push origin v1.15
+git tag v1.17
+git push origin v1.17
 ```
 
 GitHub Actions comprueba la versión, ejecuta las pruebas, compila la app y publica `AgentStats.zip` en la versión.
@@ -108,8 +151,9 @@ GitHub Actions comprueba la versión, ejecuta las pruebas, compila la app y publ
 
 - `AgentStats --dump` — métricas del sistema y agentes detectados.
 - `AgentStats --bench` — tiempos de ejecución de los lectores.
-- `AgentStats --snapshot <carpeta>` — genera capturas del panel en PNG.
-- `AGENTSTATS_DISABLE=icon,temps,procs,sessions,usage,gpu,disk` — desactiva lectores para medir el rendimiento.
+- `AgentStats --snapshot <carpeta>` — genera capturas del panel en PNG, solo con datos de demostración.
+- `AgentStats --smoke` — prueba de arranque con los lectores reales.
+- `AGENTSTATS_DISABLE=icon,temps,procs,sessions,usage,energy,limits,gpu,disk` — desactiva lectores para medir el rendimiento.
 
 ### Arquitectura
 

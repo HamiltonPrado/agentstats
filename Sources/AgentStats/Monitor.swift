@@ -58,7 +58,7 @@ final class Monitor {
     /// Limites do plano do Claude (pelo Claude Code ou, em alternativa, pela app Claude).
     var claudeLimits: PlanLimits?
     var claudeLimitsStatus: ClaudeLimitsFetcher.Outcome?
-    var activityHistory: [AgentActivityRecord] = AgentActivityHistoryStore.load()
+    var activityHistory: [AgentActivityRecord] = []
 
     var cpuHistory = History()
     var memHistory = History()
@@ -67,12 +67,12 @@ final class Monitor {
     var upHistory = History()
     var tempHistory = History()
     /// Últimas 24 h, um ponto por minuto (guardado em disco).
-    var day: [MinuteSample] = History24h.load()
+    var day: [MinuteSample] = []
 
-    @ObservationIgnored let machine: String = Sys.sysctlString("machdep.cpu.brand_string") ?? "Mac"
-    @ObservationIgnored let model: String = Sys.sysctlString("hw.model") ?? ""
-    @ObservationIgnored let pCores = Sys.sysctlInt("hw.perflevel0.logicalcpu", Int32.self).map(Int.init)
-    @ObservationIgnored let eCores = Sys.sysctlInt("hw.perflevel1.logicalcpu", Int32.self).map(Int.init)
+    @ObservationIgnored var machine: String = Sys.sysctlString("machdep.cpu.brand_string") ?? "Mac"
+    @ObservationIgnored var model: String = Sys.sysctlString("hw.model") ?? ""
+    @ObservationIgnored var pCores = Sys.sysctlInt("hw.perflevel0.logicalcpu", Int32.self).map(Int.init)
+    @ObservationIgnored var eCores = Sys.sysctlInt("hw.perflevel1.logicalcpu", Int32.self).map(Int.init)
 
     // MARK: Definições (guardadas em UserDefaults, mas observáveis: a interface atualiza logo)
 
@@ -136,7 +136,11 @@ final class Monitor {
         return [claudeLimits, usage.codexLimits].compactMap { $0?.current(now: now) }
     }
 
-    init() {
+    /// `demo`: não lê o Mac, não carrega nem grava históricos e não pede permissões (ver `DemoData`).
+    init(demo: Bool = false) {
+        guard !demo else { return }
+        day = History24h.load()
+        activityHistory = AgentActivityHistoryStore.load()
         keepAwakeController.onTimeout = { [weak self] in self?.keepAwake = false }
         sample()
         restart()

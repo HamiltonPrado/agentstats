@@ -27,6 +27,7 @@ final class AppMixer: ObservableObject {
     private var known: [String: MixerSource] = [:]
     /// O motor só existe no macOS 14.2+, e uma propriedade guardada não pode ter `@available`.
     private var engineStorage: AnyObject?
+    private var demo = false
 
     private init() {
         if #available(macOS 14.2, *) {
@@ -40,6 +41,7 @@ final class AppMixer: ObservableObject {
     }
 
     func refresh() {
+        guard !demo else { return }
         if #available(macOS 14.2, *) { (engineStorage as? MixerEngine)?.refresh() }
     }
 
@@ -63,12 +65,23 @@ final class AppMixer: ObservableObject {
     }
 
     private func send(_ id: String) {
+        guard !demo else { return }
         let gain: Float = muted.contains(id) ? 0 : Float(levels[id] ?? 1)
         if #available(macOS 14.2, *) { (engineStorage as? MixerEngine)?.set(id, gain: gain) }
         rebuild()
     }
 
+    /// Para as capturas: sem as apps que estão mesmo a tocar.
+    func loadDemo(safari: String, music: String) {
+        demo = true
+        rows = [
+            MixerRow(id: "music", name: "Music", appPath: music, level: 0.7, muted: false, status: .active),
+            MixerRow(id: "safari", name: "Safari", appPath: safari, level: 1, muted: false, status: .normal),
+        ]
+    }
+
     private func apply(_ new: MixerSnapshot) {
+        guard !demo else { return }
         snapshot = new
         for source in new.sources { known[source.key] = source }
         rebuild()

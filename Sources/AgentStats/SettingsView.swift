@@ -102,17 +102,19 @@ struct SettingsView: View {
                     }
                     row("bell", "Notificações", "Ao terminar e quando precisa de ti", bm.notifyOnFinish)
                     if m.notifyOnFinish {
-                        HStack(spacing: DS.md) {
-                            icon("timer")
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text("Avisar ao terminar").font(DS.body)
-                                Text("Só tarefas com pelo menos").font(DS.meta).foregroundStyle(.tertiary)
+                        // O seletor vai por baixo: ao lado, o texto ficava com a largura de uma letra.
+                        VStack(alignment: .leading, spacing: DS.sm) {
+                            HStack(spacing: DS.md) {
+                                icon("timer")
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text("Avisar ao terminar").font(DS.body)
+                                    Text("Só tarefas com pelo menos").font(DS.meta).foregroundStyle(.tertiary)
+                                }
                             }
-                            Spacer()
                             Picker("", selection: bm.finishMinMinutes) {
                                 Text("Todas").tag(0.0); Text("1 min").tag(1.0); Text("2 min").tag(2.0); Text("5 min").tag(5.0)
                             }
-                            .pickerStyle(.segmented).labelsHidden().frame(width: 180)
+                            .pickerStyle(.segmented).labelsHidden()
                         }
                         .padding(.leading, 28)
                     }
@@ -293,14 +295,14 @@ struct SettingsView: View {
                 VStack(alignment: .leading, spacing: DS.md) {
                     HStack(spacing: DS.md) {
                         icon("circle.lefthalf.filled")
-                        Text("Tema").font(DS.body)
-                        Spacer()
+                        Text("Tema").font(DS.body).fixedSize().layoutPriority(1)
+                        Spacer(minLength: 0)
                         Picker("Tema", selection: $appearanceThemeRaw) {
                             ForEach(PanelTheme.allCases) { theme in
                                 Text(theme.title).tag(theme.rawValue)
                             }
                         }
-                        .pickerStyle(.segmented).labelsHidden().frame(width: 186)
+                        .pickerStyle(.segmented).labelsHidden().frame(maxWidth: 186)
                     }
                     HStack(spacing: DS.md) {
                         icon("paintpalette")
@@ -352,14 +354,15 @@ struct SettingsView: View {
                     }
                     row("hourglass", "Lembretes de espera", "Avisa se um agente continuar à espera", bm.waitingAlertEnabled)
                     if m.waitingAlertEnabled {
-                        HStack(spacing: DS.md) {
-                            icon("bell.badge")
-                            Text("Lembrar após").font(DS.body)
-                            Spacer()
+                        VStack(alignment: .leading, spacing: DS.sm) {
+                            HStack(spacing: DS.md) {
+                                icon("bell.badge")
+                                Text("Lembrar após").font(DS.body)
+                            }
                             Picker("", selection: bm.waitingAlertMinutes) {
                                 Text("3 min").tag(3.0); Text("5 min").tag(5.0); Text("10 min").tag(10.0)
                             }
-                            .pickerStyle(.segmented).labelsHidden().frame(width: 150)
+                            .pickerStyle(.segmented).labelsHidden()
                         }
                         .padding(.leading, 28)
                     }

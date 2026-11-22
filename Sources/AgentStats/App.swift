@@ -29,65 +29,25 @@ enum AgentStatsApp {
             catch { print("erro: \(error)") }
             exit(0)
         }
+        if CommandLine.arguments.contains("--smoke") {
+            MainActor.assumeIsolated { Self.smoke() }
+            exit(0)
+        }
         let args = CommandLine.arguments
         if let i = args.firstIndex(of: "--snapshot"), i + 1 < args.count {
-            MainActor.assumeIsolated { Self.snapshot(to: args[i + 1]) }
+            MainActor.assumeIsolated { Snapshot.write(to: args[i + 1]) }
             exit(0)
         }
     }
 
-    /// Renderiza cada separador do painel em PNG (claro e escuro) para rever a interface.
-    @MainActor static func snapshot(to dir: String) {
+    /// Teste de arranque do CI: a app a sério durante 7 s, para apanhar os crashes que os testes não veem
+    /// (a v1.16 rebentava na resposta ao pedido de notificações). O `--snapshot` não serve: usa dados inventados.
+    @MainActor static func smoke() {
         let m = Monitor()
-        CaptureStore.shared.loadDemo()
-        PortsStore.shared.loadDemo()
-        BrewStore.shared.loadDemo()
-        UninstallStore.shared.loadDemo()
-        ClipboardStore.shared.loadDemo()   // as capturas nunca mostram o clipboard real
         AppMixer.shared.refresh()   // só lê a lista de apps com som; não capta nada
         RunLoop.main.run(until: Date().addingTimeInterval(7))
-        if ProcessInfo.processInfo.environment["AGENTSTATS_FAKE_ALERT"] != nil {
-            m.activeAlerts = [
-                SystemAlert(kind: .cpu, value: "92%", since: Date().addingTimeInterval(-45), detail: "WindowServer (74%)"),
-                SystemAlert(kind: .temp, value: "91 °C", since: Date().addingTimeInterval(-30), detail: "WindowServer (74%)"),
-            ]
-            // 24 h simuladas: CPU com ciclos, agentes a trabalhar em três períodos, um pedido de aprovação
-            let now = Date().timeIntervalSince1970
-            m.day = (0..<1440).map { i in
-                let t = now - Double(1440 - i) * 60
-                let working = (300..<420).contains(i) || (700..<760).contains(i) || (1300..<1430).contains(i) ? 1 : 0
-                return MinuteSample(t: t, cpu: 0.12 + 0.1 * sin(Double(i) / 40) + (working > 0 ? 0.25 : 0), mem: 0.6,
-                                    temp: 42 + (working > 0 ? 18 : 0) + 4 * sin(Double(i) / 30), working: working,
-                                    attention: i == 735)
-            }
-            m.sessions.insert(AgentSession(id: "fake", kind: "Claude Code", title: "Migrar base de dados", cwd: "/Users/demo/api",
-                                           model: "claude-opus-5-5", state: .needsApproval("Bash"),
-                                           detail: "rm -rf build && npm run migrate", lastActivity: Date().addingTimeInterval(-12),
-                                           subagents: 0, process: nil), at: 0)
-        }
-        for scheme in [ColorScheme.light, .dark] {
-            for tab in Tab.allCases {
-                // Sem ScrollView: o ImageRenderer não desenha o conteúdo de uma ScrollView (a imagem saía vazia)
-                let view = PanelView(forcedTab: tab, scrollable: false)
-                    .environment(m)
-                    .environment(\.colorScheme, scheme)
-                    .background(scheme == .dark ? Color(white: 0.17) : Color(white: 0.95))
-                let r = ImageRenderer(content: view)
-                r.scale = 2
-                guard let img = r.nsImage, let tiff = img.tiffRepresentation,
-                      let rep = NSBitmapImageRep(data: tiff),
-                      let png = rep.representation(using: .png, properties: [:]) else { continue }
-                let name = "\(tab.rawValue)-\(scheme == .dark ? "dark" : "light").png"
-                try? png.write(to: URL(fileURLWithPath: dir).appendingPathComponent(name))
-            }
-        }
-        // barra de menus
-        let bar = ImageRenderer(content: MenuBarLabel().environment(m).padding(4).background(Color.white))
-        bar.scale = 3
-        if let tiff = bar.nsImage?.tiffRepresentation, let rep = NSBitmapImageRep(data: tiff),
-           let png = rep.representation(using: .png, properties: [:]) {
-            try? png.write(to: URL(fileURLWithPath: dir).appendingPathComponent("menubar.png"))
-        }
+        _ = MenuBarDrawer.image(m)
+        print("arranque ok")
     }
 
     /// Mede o custo médio de cada leitor (ms por chamada).
