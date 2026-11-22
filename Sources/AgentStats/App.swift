@@ -40,6 +40,9 @@ enum AgentStatsApp {
     @MainActor static func snapshot(to dir: String) {
         let m = Monitor()
         CaptureStore.shared.loadDemo()
+        PortsStore.shared.loadDemo()
+        BrewStore.shared.loadDemo()
+        UninstallStore.shared.loadDemo()
         ClipboardStore.shared.loadDemo()   // as capturas nunca mostram o clipboard real
         AppMixer.shared.refresh()   // só lê a lista de apps com som; não capta nada
         RunLoop.main.run(until: Date().addingTimeInterval(7))
