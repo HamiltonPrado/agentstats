@@ -19,7 +19,16 @@ work="$(mktemp -d "${RUNNER_TEMP:-${TMPDIR:-/tmp}}/agentstats-signing.XXXXXX")"
 keychain="$work/signing.keychain-db"
 p12="$work/signing.p12"
 
+search_list=()
+list_changed=0
+while IFS= read -r entry; do
+    [[ -n "$entry" ]] && search_list+=("$entry")
+done < <(security list-keychains -d user | sed -E 's/^[[:space:]]*"//; s/"[[:space:]]*$//')
+
 cleanup() {
+    if (( list_changed )); then
+        security list-keychains -d user -s "${search_list[@]}" || true
+    fi
     security delete-keychain "$keychain" >/dev/null 2>&1 || true
     [[ -f "$p12" ]] && rm -f "$p12"
     rmdir "$work" 2>/dev/null || true
@@ -34,5 +43,10 @@ security unlock-keychain -p "$keychain_password" "$keychain"
 security import "$p12" -k "$keychain" -P "$p12_password" -T /usr/bin/codesign >/dev/null
 rm -f "$p12"
 security set-key-partition-list -S apple-tool:,apple: -s -k "$keychain_password" "$keychain" >/dev/null 2>&1
+
+# No macOS 15 o codesign não encontra a identidade num porta-chaves fora da lista de procura, mesmo com
+# --keychain. Entra só enquanto assina e o cleanup repõe a lista como estava.
+list_changed=1
+security list-keychains -d user -s "$keychain" "${search_list[@]}"
 
 SIGNING_REQUIRED=1 SIGNING_KEYCHAIN="$keychain" "$HERE/sign.sh" "$APP"
