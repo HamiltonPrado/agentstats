@@ -12,6 +12,7 @@ struct SettingsView: View {
     @AppStorage("bar.battery") var showBattery = false
     @AppStorage(MenuBarDrawer.metricOrderKey) private var barOrder = "agents,cpu,ram,gpu,temp,net,battery"
     @AppStorage("panel.showUsage") private var showUsage = true
+    @AppStorage("panel.showLimits") private var showLimits = true
     @AppStorage("panel.showActivity") private var showActivity = true
     @AppStorage("agents.showRecentSection") private var showRecentSection = true
     @AppStorage("agents.showHistorySection") private var showHistorySection = true
@@ -55,6 +56,15 @@ struct SettingsView: View {
     /// Bindings para as definições guardadas no Monitor.
     private var bm: Bindable<Monitor> { Bindable(m) }
 
+    /// Diz porque é que os limites do Claude não aparecem, quando não aparecem.
+    private var limitsSubtitle: String {
+        switch m.claudeLimitsStatus {
+        case .signedOut?: return m.claudeLimits == nil ? "Claude: inicia sessão no Claude Code (claude → /login)" : "% usada e quando renova"
+        case .notInstalled?: return "Claude: precisa do Claude Code instalado"
+        default: return "% usada e quando renova"
+        }
+    }
+
     /// Seletor das secções, no mesmo estilo dos separadores do painel.
     private var sectionPicker: some View {
         HStack(spacing: 0) {
@@ -91,6 +101,21 @@ struct SettingsView: View {
                         .pickerStyle(.segmented).labelsHidden().frame(width: 128)
                     }
                     row("bell", "Notificações", "Ao terminar e quando precisa de ti", bm.notifyOnFinish)
+                    if m.notifyOnFinish {
+                        HStack(spacing: DS.md) {
+                            icon("timer")
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("Avisar ao terminar").font(DS.body)
+                                Text("Só tarefas com pelo menos").font(DS.meta).foregroundStyle(.tertiary)
+                            }
+                            Spacer()
+                            Picker("", selection: bm.finishMinMinutes) {
+                                Text("Todas").tag(0.0); Text("1 min").tag(1.0); Text("2 min").tag(2.0); Text("5 min").tag(5.0)
+                            }
+                            .pickerStyle(.segmented).labelsHidden().frame(width: 180)
+                        }
+                        .padding(.leading, 28)
+                    }
                     HStack(spacing: DS.md) {
                         icon("keyboard")
                         VStack(alignment: .leading, spacing: 2) {
@@ -252,6 +277,7 @@ struct SettingsView: View {
                         }
                         .pickerStyle(.menu).labelsHidden().frame(width: 110, alignment: .trailing)
                     }
+                    row("gauge.with.dots.needle.33percent", "Limites do plano", limitsSubtitle, $showLimits)
                     row("number", "Utilização de tokens", "Resumo diário e semanal", $showUsage)
                     row("chart.bar", "Atividade nas últimas 24 h", nil, $showActivity)
                     row("clock.arrow.circlepath", "Sessões recentes", nil, $showRecentSection)

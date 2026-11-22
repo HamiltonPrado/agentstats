@@ -1,5 +1,6 @@
 import Foundation
 import Testing
+import SQLite3
 @testable import AgentStats
 
 // Linhas no formato dos ficheiros reais do Claude Code (~/.claude/projects/*/*.jsonl)
@@ -601,5 +602,325 @@ struct SevenDayHistoryTests {
     @Test func shortHistoryIsDrawnAsIs() {
         let day = (0..<1440).map(Double.init)
         #expect(DayChart.downsampled(day) == day)
+    }
+}
+
+@Suite struct PlanLimitsTests {
+    private func json(_ s: String) -> [String: Any] {
+        (try? JSONSerialization.jsonObject(with: Data(s.utf8))) as? [String: Any] ?? [:]
+    }
+
+    @Test func codexRateLimitsBecomeWindows() throws {
+        let l = try #require(PlanLimitsParser.codex(json("""
+        {"primary":{"used_percent":40.0,"window_minutes":43200,"resets_at":1798000000},
+         "secondary":{"used_percent":12,"window_minutes":10080,"resets_at":1797000000},"plan_type":"free"}
+        """), observed: Date(timeIntervalSince1970: 1_796_000_000)))
+        #expect(l.provider == .codex)
+        #expect(l.plan == "Grátis")
+        #expect(l.windows.map(\.label) == ["30 dias", "Semana"])
+        #expect(l.windows[0].usedPercent == 40)
+        #expect(l.windows[0].resetsAt == Date(timeIntervalSince1970: 1798000000))
+    }
+
+    @Test func codexOldFormatResetsRelativeToTheLine() throws {
+        let t = Date(timeIntervalSince1970: 1_000_000)
+        let l = try #require(PlanLimitsParser.codex(json("""
+        {"primary":{"used_percent":40,"window_minutes":300,"resets_in_seconds":600},"secondary":null}
+        """), observed: t))
+        #expect(l.windows.count == 1)
+        #expect(l.windows[0].label == "5 horas")
+        #expect(l.windows[0].resetsAt == t.addingTimeInterval(600))
+    }
+
+    @Test func claudeUsageResponse() throws {
+        let l = try #require(PlanLimitsParser.claudeUsage(json("""
+        {"subscription_type":"max","rate_limits_available":true,"rate_limits":{
+          "five_hour":{"utilization":45.5,"resets_at":"2026-11-22T14:30:00.000Z"},
+          "seven_day":{"utilization":20,"resets_at":"2026-11-27T09:00:00Z"},
+          "seven_day_opus":null}}
+        """), observed: Date()))
+        #expect(l.plan == "Max")
+        #expect(l.windows.map(\.id) == ["claude.five_hour", "claude.seven_day"])
+        #expect(l.windows[0].usedPercent == 45.5)
+        #expect(l.windows[0].resetsAt != nil && l.windows[1].resetsAt != nil)
+    }
+
+    @Test func signedOutClaudeHasNoLimits() {
+        let out = Data("""
+        {"type":"control_response","response":{"subtype":"success","request_id":"i","response":{}}}
+        {"type":"control_response","response":{"subtype":"success","request_id":"u","response":{"subscription_type":null,"rate_limits_available":false,"rate_limits":null}}}
+
+        """.utf8)
+        #expect(ClaudeLimitsFetcher.parse(out, observed: Date()) == .signedOut)
+        #expect(ClaudeLimitsFetcher.parse(Data(), observed: Date()) == .failed)
+    }
+
+    @Test func claudeDesktopHistoryUsesTheLastReadingWithValues() throws {
+        let data = Data("""
+        {"version":2,"samples":[{"t":1700000000000,"u":{"fh":10,"sd":5}},{"t":1700003600500,"u":{"fh":60,"sd":25}},{"t":1700007200000,"u":{}}]}
+        """.utf8)
+        let l = try #require(PlanLimitsParser.claudeDesktopHistory(data))
+        #expect(l.windows.map(\.usedPercent) == [60, 25])
+        #expect(l.observedAt == Date(timeIntervalSince1970: 1700003600.5))
+    }
+
+    @Test func renewedWindowsAreDropped() {
+        let now = Date()
+        let l = PlanLimits(provider: .codex, plan: nil, windows: [
+            LimitWindow(id: "a", label: "5 horas", usedPercent: 90, resetsAt: now.addingTimeInterval(-60)),
+            LimitWindow(id: "b", label: "Semana", usedPercent: 30, resetsAt: now.addingTimeInterval(3600)),
+        ], observedAt: now.addingTimeInterval(-600))
+        #expect(l.current(now: now)?.windows.map(\.id) == ["b"])
+        #expect(PlanLimits(provider: .claude, plan: nil, windows: [l.windows[0]], observedAt: now).current(now: now) == nil)
+    }
+
+    @Test func resetTextIsShortAndRelative() {
+        let cal = Calendar.current
+        let now = cal.date(from: DateComponents(year: 2026, month: 11, day: 22, hour: 10))!
+        #expect(PlanLimitsCard.resetText(cal.date(byAdding: .hour, value: 4, to: now)!, now: now) == "às 14:00")
+        #expect(PlanLimitsCard.resetText(cal.date(byAdding: .hour, value: 24, to: now)!, now: now) == "amanhã às 10:00")
+        #expect(PlanLimitsCard.resetText(cal.date(byAdding: .day, value: 10, to: now)!, now: now) == "2 dez")
+    }
+
+    @Test func trackerKeepsTheLatestCodexLimits() throws {
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent("limits-\(UUID().uuidString).jsonl")
+        defer { try? FileManager.default.removeItem(at: url) }
+        let text = """
+        {"timestamp":"2026-11-20T10:00:00.000Z","type":"event_msg","payload":{"type":"token_count","info":null,"rate_limits":{"primary":{"used_percent":10,"window_minutes":300,"resets_at":1797000000}}}}
+        {"timestamp":"2026-11-20T11:00:00.000Z","type":"event_msg","payload":{"type":"token_count","info":null,"rate_limits":{"primary":{"used_percent":55,"window_minutes":300,"resets_at":1797000000}}}}
+
+        """
+        try text.write(to: url, atomically: true, encoding: .utf8)
+        let l = try #require(UsageTracker().limits(ofFile: url.path))
+        #expect(l.windows.first?.usedPercent == 55)
+    }
+}
+
+@Suite struct PricingTests {
+    @Test func modelNamesResolveToTheirPrice() {
+        #expect(Pricing.price(for: "claude-opus-5-5")?.input == 4)
+        #expect(Pricing.price(for: "claude-opus-5")?.input == 5)
+        #expect(Pricing.price(for: "us.anthropic.claude-sonnet-5-5-20261001")?.output == 10)
+        #expect(Pricing.price(for: "claude-opus-4-20250514")?.input == 15)
+        #expect(Pricing.price(for: "claude-opus-4-7")?.input == 5)
+        #expect(Pricing.price(for: "gpt-6.1-sol")?.cacheRead == 0.1)
+        #expect(Pricing.price(for: "gpt-6.2-sol") == Pricing.price(for: "gpt-6.1-sol"))   // versão nova: usa a família
+        #expect(Pricing.price(for: "<synthetic>") == nil)
+        #expect(Pricing.price(for: "llama-3") == nil)
+        #expect(Pricing.price(for: nil) == nil)
+    }
+
+    @Test func costPerMillionTokens() {
+        let u = TokenUsage(input: 1_000_000, output: 100_000, cacheRead: 2_000_000, cacheWrite: 0)
+        // opus 5.5: 4 + 0.1×20 + 2×0.2 = 6.4
+        #expect(abs((Pricing.cost(u, model: "claude-opus-5-5") ?? 0) - 6.4) < 1e-9)
+    }
+
+    @Test func usdFormatting() {
+        #expect(Fmt.usd(0.004) == "<$0,01")
+        #expect(Fmt.usd(0.42) == "$0,42")
+        #expect(Fmt.usd(12.4) == "$12,40")
+        #expect(Fmt.usd(250) == "$250")
+    }
+
+    @Test func trackerAddsCostFromEachModel() throws {
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent("cost-\(UUID().uuidString).jsonl")
+        defer { try? FileManager.default.removeItem(at: url) }
+        let text = """
+        {"timestamp":"2026-11-20T10:00:00.000Z","type":"turn_context","payload":{"cwd":"/x","model":"gpt-6.1-sol"}}
+        {"timestamp":"2026-11-20T10:00:01.000Z","type":"event_msg","payload":{"type":"token_count","info":{"last_token_usage":{"input_tokens":1000000,"cached_input_tokens":0,"output_tokens":0}}}}
+        {"timestamp":"2026-11-20T10:01:00.000Z","type":"turn_context","payload":{"cwd":"/x","model":"gpt-6-luna"}}
+        {"timestamp":"2026-11-20T10:01:01.000Z","type":"event_msg","payload":{"type":"token_count","info":{"last_token_usage":{"input_tokens":1000000,"cached_input_tokens":0,"output_tokens":0}}}}
+
+        """
+        try text.write(to: url, atomically: true, encoding: .utf8)
+        // 1M a $2 (sol) + 1M a $0,10 (luna)
+        let c = try #require(UsageTracker().cost(ofFile: url.path, codex: true))
+        #expect(abs(c - 2.1) < 1e-9)
+    }
+}
+
+@Suite("Transcripts do Claude Code: casos especiais")
+struct ClaudeTranscriptEdgeTests {
+    let reader = AgentReader()
+    private let base = #"{"type":"assistant","cwd":"/x","message":{"model":"claude-opus-5-5","content":[{"type":"tool_use","name":"Bash","input":{"command":"ls"}}]}}"#
+
+    @Test func hittingTheLimitStopsWork() {
+        let info = reader.parseTail(lines([base,
+            #"{"type":"assistant","cwd":"/x","isApiErrorMessage":true,"error":"rate_limit","message":{"model":"<synthetic>","stop_reason":"stop_sequence","content":[{"type":"text","text":"You've hit your 5-hour limit · resets 3:00pm (UTC)"}]}}"#,
+        ]))
+        #expect(info.state == .waitingUser)
+        #expect(info.detail == "Limite de 5 horas atingido · renova 3:00pm")
+        #expect(info.model == "claude-opus-5-5")   // o "<synthetic>" não substitui o modelo real
+    }
+
+    @Test func weeklyLimitText() {
+        #expect(AgentReader.limitText("You've hit your weekly limit · resets Jan 2 at 8am (UTC)")
+                == "Limite semanal atingido · renova Jan 2 at 8am")
+    }
+
+    @Test func interruptionMeansWaiting() {
+        let info = reader.parseTail(lines([base,
+            #"{"type":"user","cwd":"/x","message":{"role":"user","content":[{"type":"text","text":"[Request interrupted by user for tool use]"}]}}"#,
+        ]))
+        #expect(info.state == .waitingUser)
+        #expect(info.detail == "Interrompido por ti")
+    }
+
+    @Test func localCommandOutputIsNotWork() {
+        let info = reader.parseTail(lines([
+            #"{"type":"assistant","cwd":"/x","message":{"model":"m","stop_reason":"end_turn","content":[{"type":"text","text":"ok"}]}}"#,
+            #"{"type":"user","cwd":"/x","isMeta":true,"message":{"role":"user","content":"<local-command-caveat>Caveat</local-command-caveat>"}}"#,
+            #"{"type":"user","cwd":"/x","message":{"role":"user","content":"<command-name>/model</command-name>"}}"#,
+            #"{"type":"user","cwd":"/x","message":{"role":"user","content":"<local-command-stdout>Set model to Opus</local-command-stdout>"}}"#,
+        ]))
+        #expect(info.state == .waitingUser)
+    }
+
+    @Test func customSlashCommandStartsWork() {
+        let info = reader.parseTail(lines([
+            #"{"type":"user","cwd":"/x","message":{"role":"user","content":"<command-message>review</command-message>\n<command-name>/review</command-name>"}}"#,
+            #"{"type":"user","cwd":"/x","isMeta":true,"message":{"role":"user","content":[{"type":"text","text":"Review the diff..."}]}}"#,
+        ]))
+        #expect(info.state == .thinking)
+    }
+
+    @Test func subagentToolIsNamed() {
+        let info = reader.parseTail(lines([
+            #"{"type":"assistant","cwd":"/x","message":{"model":"m","content":[{"type":"tool_use","name":"Agent","input":{"description":"Find callers"}}]}}"#,
+            #"{"type":"assistant","cwd":"/x","isSidechain":true,"message":{"model":"m","stop_reason":"end_turn","content":[{"type":"text","text":"sub done"}]}}"#,
+        ]))
+        #expect(info.state == .runningTool("subagente"))
+        #expect(info.detail == "Find callers")
+    }
+
+    @Test func projectFollowsTheLatestFolder() throws {
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent("moved-\(UUID().uuidString).jsonl")
+        defer { try? FileManager.default.removeItem(at: url) }
+        let text = """
+        {"type":"assistant","cwd":"/tmp/scratch","timestamp":"2026-11-20T10:00:00.000Z","message":{"id":"a","model":"m","usage":{"input_tokens":1,"output_tokens":1}}}
+        {"type":"assistant","cwd":"/Users/me/AgentStats","timestamp":"2026-11-20T11:00:00.000Z","message":{"id":"b","model":"m","usage":{"input_tokens":1,"output_tokens":1}}}
+
+        """
+        try text.write(to: url, atomically: true, encoding: .utf8)
+        #expect(UsageTracker().usage(ofFile: url.path, codex: false).project == "AgentStats")
+    }
+}
+
+@Suite struct MoreAgentsTests {
+    private func events(_ s: String) -> [[String: Any]] {
+        s.split(separator: "\n").compactMap { TextTail.json(Data($0.utf8)) }
+    }
+    private let now = Date()
+    private var ts: String { ISO8601DateFormatter().string(from: now.addingTimeInterval(-60)) }
+
+    @Test func copilotPendingPermissionNeedsApproval() {
+        let t = CopilotReader.parse(events("""
+        {"type":"session.start","data":{"context":{"cwd":"/Users/me/app"}},"timestamp":"\(ts)"}
+        {"type":"assistant.turn_start","data":{"turnId":"0"},"timestamp":"\(ts)"}
+        {"type":"tool.execution_start","data":{"toolCallId":"c1","toolName":"bash","arguments":{"command":"npm test"},"model":"gpt-6-luna"},"timestamp":"\(ts)"}
+        {"type":"permission.requested","data":{"requestId":"r1","permissionRequest":{"kind":"shell","toolTitle":"bash","args":{"command":"npm test"}}},"timestamp":"\(ts)"}
+        """), now: now)
+        #expect(t.state == .needsApproval("bash"))
+        #expect(t.detail == "npm test")
+        #expect(t.model == "gpt-6-luna")
+    }
+
+    @Test func copilotApprovedToolIsRunningAndTurnEndIsWaiting() {
+        let running = CopilotReader.parse(events("""
+        {"type":"tool.execution_start","data":{"toolCallId":"c1","toolName":"bash","arguments":{"command":"ls"}},"timestamp":"\(ts)"}
+        {"type":"permission.requested","data":{"requestId":"r1","permissionRequest":{"toolTitle":"bash"}},"timestamp":"\(ts)"}
+        {"type":"permission.completed","data":{"requestId":"r1","result":{"kind":"approved"}},"timestamp":"\(ts)"}
+        """), now: now)
+        #expect(running.state == .runningTool("bash"))
+
+        let done = CopilotReader.parse(events("""
+        {"type":"assistant.message","data":{"content":"Exemplo concluído.","model":"gpt-6-luna"},"timestamp":"\(ts)"}
+        {"type":"assistant.turn_end","data":{"turnId":"0"},"timestamp":"\(ts)"}
+        """), now: now)
+        #expect(done.state == .waitingUser)
+        #expect(done.detail == "Exemplo concluído.")
+
+        let shut = CopilotReader.parse(events(#"{"type":"session.shutdown","data":{},"timestamp":"\#(ts)"}"#), now: now)
+        #expect(shut.state == .finished)
+    }
+
+    @Test func copilotTitleAndTokens() throws {
+        let head = CopilotReader.head(events("""
+        {"type":"session.start","data":{"context":{"cwd":"/Users/me/app"}}}
+        {"type":"user.message","data":{"content":"/explain este exemplo"}}
+        """))
+        #expect(head.title == "/explain este exemplo")
+        #expect(head.cwd == "/Users/me/app")
+
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent("copilot-\(UUID().uuidString).jsonl")
+        defer { try? FileManager.default.removeItem(at: url) }
+        try """
+        {"type":"session.start","data":{"context":{"cwd":"/Users/me/app"}},"timestamp":"2026-11-20T10:00:00.000Z"}
+        {"type":"session.usage_record","data":{"usage":{"model":"gpt-6-luna","inputTokens":1000000,"outputTokens":0,"cacheReadTokens":0,"cacheWriteTokens":0}},"timestamp":"2026-11-20T10:00:01.000Z"}
+
+        """.write(to: url, atomically: true, encoding: .utf8)
+        let u = UsageTracker().copilotUsage(ofFile: url.path)
+        #expect(u.session.input == 1_000_000)
+        #expect(u.project == "app")
+        #expect(abs((u.cost ?? 0) - 0.1) < 1e-9)   // gpt-6-luna: $0,10 por milhão de entrada
+    }
+
+    @Test func cursorTurns() {
+        let lines = events("""
+        {"role":"user","message":{"content":[{"type":"text","text":"<user_query>\\nCorrige o login\\n</user_query>"}]}}
+        {"role":"assistant","message":{"content":[{"type":"tool_use","name":"Shell","input":{"command":"npm test"}}]}}
+        """)
+        #expect(CursorReader.title(lines) == "Corrige o login")
+        #expect(CursorReader.parse(lines, age: 2).state == .runningTool("Shell"))
+        let ended = lines + events(#"{"type":"turn_ended","status":"success"}"#)
+        #expect(CursorReader.parse(ended, age: 2).state == .waitingUser)
+        let oldStyle = events(#"{"role":"assistant","message":{"content":[{"type":"text","text":"Feito."}]}}"#)
+        #expect(CursorReader.parse(oldStyle, age: 5).state == .thinking)
+        #expect(CursorReader.parse(oldStyle, age: 120).state == .waitingUser)
+    }
+
+    @Test func cursorProjectSlugIsResolvedOnDisk() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent("cur\(UUID().uuidString.prefix(6))")
+        let project = root.appendingPathComponent("Documents/meu-projeto")
+        try FileManager.default.createDirectory(at: project, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let slug = project.path.split(separator: "/").joined(separator: "-")
+        #expect(CursorReader.decodeProject(slug, home: root.path) == project.resolvingSymlinksInPath().path
+                || CursorReader.decodeProject(slug, home: root.path) == project.path)
+    }
+
+    @Test func openCodeMessages() throws {
+        #expect(OpenCodeReader.parse(["role": "user"]).state == .thinking)
+        #expect(OpenCodeReader.parse(["role": "assistant", "time": ["created": 1]]).state == .thinking)
+        #expect(OpenCodeReader.parse(["role": "assistant", "time": ["created": 1, "completed": 2], "finish": "stop"]).state == .waitingUser)
+        let u = try #require(OpenCodeReader.usage(["role": "assistant", "modelID": "claude-sonnet-5-5",
+            "tokens": ["input": 10, "output": 20, "reasoning": 5, "cache": ["read": 100, "write": 7]],
+            "time": ["created": 1_795_000_000_000]]))
+        #expect(u.usage == TokenUsage(input: 10, output: 25, cacheRead: 100, cacheWrite: 7))
+        #expect(u.model == "claude-sonnet-5-5")
+    }
+
+    @Test func openCodeDatabaseSessions() throws {
+        let path = FileManager.default.temporaryDirectory.appendingPathComponent("oc-\(UUID().uuidString).db").path
+        defer { try? FileManager.default.removeItem(atPath: path) }
+        var db: OpaquePointer?
+        #expect(sqlite3_open(path, &db) == SQLITE_OK)
+        let ms = Int64(Date().timeIntervalSince1970 * 1000)
+        let sql = """
+        CREATE TABLE session (id TEXT PRIMARY KEY, title TEXT, directory TEXT, time_created INTEGER, time_updated INTEGER);
+        CREATE TABLE message (id TEXT PRIMARY KEY, session_id TEXT, time_created INTEGER, time_updated INTEGER, data TEXT);
+        INSERT INTO session VALUES ('s1', 'Refatorar API', '/Users/me/api', \(ms - 5000), \(ms - 1000));
+        INSERT INTO message VALUES ('m1', 's1', \(ms - 4000), \(ms - 4000), '{"role":"user"}');
+        INSERT INTO message VALUES ('m2', 's1', \(ms - 2000), \(ms - 1000), '{"role":"assistant","modelID":"claude-sonnet-5-5","time":{"created":\(ms - 2000)}}');
+        """
+        #expect(sqlite3_exec(db, sql, nil, nil, nil) == SQLITE_OK)
+        sqlite3_close(db)
+        let s = OpenCodeReader().sessions(path: path)
+        #expect(s.count == 1)
+        #expect(s.first?.title == "Refatorar API")
+        #expect(s.first?.project == "api")
+        #expect(s.first?.state == .thinking)
+        #expect(s.first?.model == "claude-sonnet-5-5")
     }
 }

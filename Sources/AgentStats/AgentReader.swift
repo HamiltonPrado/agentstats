@@ -105,6 +105,7 @@ final class AgentReader {
         "aider": "Aider",
         "cursor-agent": "Cursor Agent",
         "opencode": "OpenCode",
+        "copilot": "Copilot",
         "goose": "Goose",
         "amp": "Amp",
     ]
@@ -352,34 +353,15 @@ final class AgentReader {
             let type = j["type"] as? String
             let sidechain = (j["isSidechain"] as? Bool) ?? false
 
-            if !stateFound, !sidechain, type == "assistant" || type == "user" {
+            if !stateFound, !sidechain, type == "assistant" || type == "user",
+               let decided = Self.decide(j) {
                 if info.timestamp == nil, let ts = j["timestamp"] as? String { info.timestamp = iso.date(from: ts) }
-                let msg = j["message"] as? [String: Any] ?? [:]
-                if type == "assistant" {
-                    let content = msg["content"] as? [[String: Any]] ?? []
-                    if let last = content.last, last["type"] as? String == "tool_use" {
-                        let name = (last["name"] as? String) ?? "ferramenta"
-                        info.state = .runningTool(Self.prettyTool(name))
-                        info.detail = Self.describe(last["input"] as? [String: Any])
-                    } else if msg["stop_reason"] as? String == "end_turn" {
-                        info.state = .waitingUser
-                        if let t = content.last(where: { $0["type"] as? String == "text" })?["text"] as? String {
-                            info.detail = Self.oneLine(t)
-                        }
-                    } else {
-                        info.state = .thinking
-                    }
-                } else {
-                    info.state = .thinking
-                    if let arr = msg["content"] as? [[String: Any]], arr.contains(where: { $0["type"] as? String == "tool_result" }) {
-                        info.detail = "A analisar o resultado"
-                    } else {
-                        info.detail = "Nova mensagem recebida"
-                    }
-                }
+                info.state = decided.state
+                info.detail = decided.detail
                 stateFound = true
             }
-            if info.model == nil, type == "assistant", let m = (j["message"] as? [String: Any])?["model"] as? String {
+            if info.model == nil, type == "assistant", let m = (j["message"] as? [String: Any])?["model"] as? String,
+               !m.hasPrefix("<") {
                 info.model = m
             }
             if stateFound && info.cwd != nil && info.model != nil { break }
@@ -387,7 +369,61 @@ final class AgentReader {
         return info
     }
 
+    /// O estado que uma linha do transcript define, ou nil se a linha não diz nada sobre o estado
+    /// (linhas internas do Claude Code, avisos do sistema, resumos de compactação).
+    static func decide(_ j: [String: Any]) -> (state: AgentState, detail: String?)? {
+        let type = j["type"] as? String
+        let msg = j["message"] as? [String: Any] ?? [:]
+        if (j["isMeta"] as? Bool) == true || (j["isCompactSummary"] as? Bool) == true { return nil }
+
+        if type == "assistant" {
+            let content = msg["content"] as? [[String: Any]] ?? []
+            let lastText = content.last(where: { $0["type"] as? String == "text" })?["text"] as? String
+            // Resposta escrita pelo próprio Claude Code em vez do modelo: limite atingido ou erro da API.
+            if (j["isApiErrorMessage"] as? Bool) == true || (msg["model"] as? String) == "<synthetic>" {
+                return (.waitingUser, lastText.map(limitText) ?? "Erro da API")
+            }
+            if let last = content.last, last["type"] as? String == "tool_use" {
+                let name = (last["name"] as? String) ?? "ferramenta"
+                return (.runningTool(prettyTool(name)), describe(last["input"] as? [String: Any]))
+            }
+            if let stop = msg["stop_reason"] as? String, ["end_turn", "stop_sequence", "max_tokens", "refusal"].contains(stop) {
+                return (.waitingUser, lastText.map(oneLine))
+            }
+            return (.thinking, nil)
+        }
+
+        // user
+        let text: String? = (msg["content"] as? String)
+            ?? (msg["content"] as? [[String: Any]])?.last(where: { $0["type"] as? String == "text" })?["text"] as? String
+        if let t = text?.trimmingCharacters(in: .whitespacesAndNewlines) {
+            if t.hasPrefix("[Request interrupted by user") { return (.waitingUser, "Interrompido por ti") }
+            // Saída de um comando local (/model, /usage, /clear…): não pede nada ao modelo.
+            if t.hasPrefix("<local-command-stdout>") || t.hasPrefix("<local-command-stderr>") { return (.waitingUser, nil) }
+            if t.hasPrefix("<local-command-caveat>") { return nil }
+            if t.hasPrefix("<command-name>") || t.hasPrefix("<command-message>") { return (.thinking, "Comando enviado") }
+        }
+        if let arr = msg["content"] as? [[String: Any]], arr.contains(where: { $0["type"] as? String == "tool_result" }) {
+            return (.thinking, "A analisar o resultado")
+        }
+        return (.thinking, "Nova mensagem recebida")
+    }
+
+    /// "You've hit your 5-hour limit · resets 3:00pm (UTC)" → "Limite de 5 horas atingido · renova 3:00pm"
+    static func limitText(_ raw: String) -> String {
+        let t = oneLine(raw)
+        guard let r = t.range(of: #"hit your (.+?) limit"#, options: .regularExpression) else { return t }
+        let kind = t[r].replacingOccurrences(of: "hit your ", with: "").replacingOccurrences(of: " limit", with: "")
+        let name = kind == "5-hour" ? "de 5 horas" : kind == "weekly" ? "semanal" : kind.hasPrefix("Opus") || kind.hasPrefix("Sonnet") ? "semanal do \(kind.split(separator: " ").first!)" : kind
+        var out = "Limite \(name) atingido"
+        if let rr = t.range(of: #"resets [^(]+"#, options: .regularExpression) {
+            out += " · renova " + t[rr].dropFirst("resets ".count).trimmingCharacters(in: .whitespaces)
+        }
+        return out
+    }
+
     private static func prettyTool(_ name: String) -> String {
+        if name == "Task" || name == "Agent" { return "subagente" }
         if name.hasPrefix("mcp__") {
             let parts = name.split(separator: "_").filter { !$0.isEmpty }
             return parts.last.map(String.init) ?? name

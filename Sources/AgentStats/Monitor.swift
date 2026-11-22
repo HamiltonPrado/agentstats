@@ -53,6 +53,9 @@ final class Monitor {
     var uptime: TimeInterval = 0
     var activeAlerts: [SystemAlert] = []
     var usage = UsageSnapshot()
+    /// Limites do plano do Claude (pelo Claude Code ou, em alternativa, pela app Claude).
+    var claudeLimits: PlanLimits?
+    var claudeLimitsStatus: ClaudeLimitsFetcher.Outcome?
     var activityHistory: [AgentActivityRecord] = AgentActivityHistoryStore.load()
 
     var cpuHistory = History()
@@ -75,6 +78,8 @@ final class Monitor {
         didSet { Pref.set(refreshInterval, "refreshInterval"); restart() }
     }
     var notifyOnFinish: Bool = Pref.bool("notifyOnFinish", true) { didSet { Pref.set(notifyOnFinish, "notifyOnFinish") } }
+    /// Só avisa quando uma tarefa termina se tiver trabalhado pelo menos isto (0 = todas).
+    var finishMinMinutes: Double = Pref.double("notify.finishMinMinutes", 2) { didSet { Pref.set(finishMinMinutes, "notify.finishMinMinutes") } }
     var cpuAlertEnabled: Bool = Pref.bool("alert.cpu.enabled", true) { didSet { Pref.set(cpuAlertEnabled, "alert.cpu.enabled") } }
     var cpuThreshold: Double = Pref.double("alert.cpu.threshold", 0.85) { didSet { Pref.set(cpuThreshold, "alert.cpu.threshold") } }
     var tempAlertEnabled: Bool = Pref.bool("alert.temp.enabled", true) { didSet { Pref.set(tempAlertEnabled, "alert.temp.enabled") } }
@@ -123,6 +128,11 @@ final class Monitor {
     var workingCount: Int { sessions.filter { $0.state.isWorking }.count }
     var needsAttentionCount: Int { sessions.filter { $0.state.needsAttention }.count }
     var liveAgentCount: Int { agents.filter { !$0.isSubagent }.count }
+    /// Limites que ainda valem (as janelas que já renovaram saem).
+    var planLimits: [PlanLimits] {
+        let now = Date()
+        return [claudeLimits, usage.codexLimits].compactMap { $0?.current(now: now) }
+    }
 
     init() {
         keepAwakeController.onTimeout = { [weak self] in self?.keepAwake = false }
@@ -151,12 +161,48 @@ final class Monitor {
             agents: panelOpen || tick % 2 == 1 || agents.isEmpty,                       // painel fechado: de 4 em 4 s
             usage: !off.contains("usage") && tick % 5 == 1,                             // de 10 em 10 s
             disabled: off)
+        if !off.contains("limits") && Pref.bool("panel.showLimits", true) { refreshClaudeLimits() }
         // O Task herda o main actor; o trabalho pesado corre no ator Sampler e volta como um valor.
         Task {
             let s = await sampler.sample(request)
             apply(s)
             sampling = false
         }
+    }
+
+    // MARK: Limites do Claude
+
+    @ObservationIgnored private var nextClaudeCheck = Date.distantPast
+    @ObservationIgnored private var claudeChecking = false
+
+    /// Pergunta ao Claude Code de tempos a tempos (é um processo que arranca e sai em ~1 s).
+    /// Sem sessão iniciada ou sem Claude Code, volta a tentar muito mais tarde.
+    func refreshClaudeLimits(force: Bool = false) {
+        guard !claudeChecking, force || Date() >= nextClaudeCheck else { return }
+        claudeChecking = true
+        Task {
+            let outcome = await Task.detached(priority: .utility) { ClaudeLimitsFetcher.fetch() }.value
+            let now = Date()
+            claudeLimitsStatus = outcome
+            switch outcome {
+            case .limits(let l):
+                claudeLimits = l
+                nextClaudeCheck = now.addingTimeInterval(panelOpen ? 5 * 60 : 15 * 60)
+            case .signedOut, .notInstalled, .failed:
+                claudeLimits = Self.claudeDesktopLimits(now: now)
+                nextClaudeCheck = now.addingTimeInterval(outcome == .notInstalled ? 6 * 3600 : outcome == .failed ? 15 * 60 : 30 * 60)
+            }
+            claudeChecking = false
+        }
+    }
+
+    /// A app Claude guarda os limites que vai vendo; só vale se a leitura for recente (menos de 1 h).
+    static func claudeDesktopLimits(now: Date) -> PlanLimits? {
+        let url = FileManager.default.homeDirectoryForCurrentUser
+            .appendingPathComponent("Library/Application Support/Claude/plan-usage-history.json")
+        guard let data = try? Data(contentsOf: url), data.count < 4 << 20,
+              let l = PlanLimitsParser.claudeDesktopHistory(data), now.timeIntervalSince(l.observedAt) < 3600 else { return nil }
+        return l
     }
 
     private func apply(_ s: Sample) {
@@ -241,8 +287,22 @@ final class Monitor {
         if let s = sessions.first(where: { $0.id == sessionID }) { focus(s) }
     }
 
-    private func handleTransitions(_ new: [AgentSession]) {
+    /// Início da tarefa em curso de cada sessão e o custo da sessão nesse momento.
+    @ObservationIgnored private var taskStart: [String: (date: Date, cost: Double)] = [:]
+
+    private func handleTransitions(_ new: [AgentSession], now: Date = Date()) {
         defer { previousStates = Dictionary(new.map { ($0.id, $0.state) }, uniquingKeysWith: { a, _ in a }) }
+        var finished: [String: (duration: TimeInterval, cost: Double?)] = [:]
+        for s in new {
+            if s.state.isWorking || s.state.needsAttention {
+                if taskStart[s.id] == nil { taskStart[s.id] = (now, usage.perSessionCost[s.id] ?? 0) }
+            } else if let start = taskStart.removeValue(forKey: s.id) {
+                let cost = usage.perSessionCost[s.id].map { $0 - start.cost }
+                finished[s.id] = (now.timeIntervalSince(start.date), cost.flatMap { $0 > 0.005 ? $0 : nil })
+            }
+        }
+        let live = Set(new.map(\.id))
+        taskStart = taskStart.filter { live.contains($0.key) }
         guard notifyOnFinish, !previousStates.isEmpty else { return }
         for s in new {
             guard let old = previousStates[s.id] else { continue }
@@ -251,9 +311,12 @@ final class Monitor {
                 content.title = s.state == .needsAnswer ? "Agente tem uma pergunta · \(s.project)" : "Agente precisa de aprovação · \(s.project)"
                 content.body = s.detail ?? s.title
                 content.interruptionLevel = .timeSensitive
-            } else if (old.isWorking || old.needsAttention), s.state == .waitingUser {
+            } else if (old.isWorking || old.needsAttention), s.state == .waitingUser,
+                      let done = finished[s.id], done.duration >= finishMinMinutes * 60 {
                 content.title = "Agente terminou · \(s.project)"
-                content.body = s.detail ?? s.title
+                var summary = "Trabalhou " + (done.duration < 60 ? "\(Int(done.duration)) s" : Fmt.duration(done.duration))
+                if let c = done.cost { summary += " · ~" + Fmt.usd(c) }
+                content.body = summary + "\n" + (s.detail ?? s.title)
             } else { continue }
             content.userInfo = ["session": s.id]   // clicar na notificação abre o agente
             content.sound = .default
@@ -393,6 +456,17 @@ enum Fmt {
     static func temp(_ c: Double, _ digits: Int = 1) -> String { num(c, digits) + " °C" }
     static func pct(_ v: Double) -> String { String(format: "%.0f%%", v * 100) }
     /// 950 → "950"; 12 300 → "12,3k"; 4 560 000 → "4,6M"
+    /// Dólares com vírgula decimal: "$0,42", "$12,40", "$1 234".
+    static func usd(_ v: Double) -> String {
+        if v < 0.01 { return "<$0,01" }
+        let f = NumberFormatter()
+        f.locale = Locale(identifier: "pt_PT")
+        f.numberStyle = .decimal
+        f.minimumFractionDigits = v < 100 ? 2 : 0
+        f.maximumFractionDigits = v < 100 ? 2 : 0
+        return "$" + (f.string(from: NSNumber(value: v)) ?? String(format: "%.2f", v))
+    }
+
     static func tokens(_ n: Int) -> String {
         let d = Double(n)
         let s: String

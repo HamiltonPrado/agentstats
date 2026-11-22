@@ -43,6 +43,9 @@ actor Sampler {
     private let codexReader = CodexReader()
     private let antigravityReader = AntigravityReader()
     private let otherAIsReader = OtherAIsReader()
+    private let copilotReader = CopilotReader()
+    private let cursorReader = CursorReader()
+    private let openCodeReader = OpenCodeReader()
     private let usageTracker = UsageTracker()
 
     func sample(_ r: SampleRequest) -> Sample {
@@ -61,8 +64,15 @@ actor Sampler {
             let agents = agentReader.agentProcesses(from: procs)
             let baseSessions = agentReader.sessions(processes: agents) +
                                codexReader.sessions() +
-                               antigravityReader.sessions(processes: agents)
-            let otherSessions = otherAIsReader.sessions(processes: agents, existingSessions: baseSessions)
+                               antigravityReader.sessions(processes: agents) +
+                               copilotReader.sessions() + cursorReader.sessions() + openCodeReader.sessions()
+            // Copilot, OpenCode e Cursor já têm sessões vindas dos ficheiros: o processo vivo na mesma
+            // pasta não aparece outra vez como sessão genérica.
+            let fileKinds = ["Copilot": "Copilot", "OpenCode": "OpenCode", "Cursor Agent": "Cursor"]
+            let otherSessions = otherAIsReader.sessions(processes: agents, existingSessions: baseSessions).filter { o in
+                guard let k = fileKinds[o.kind] else { return true }
+                return !baseSessions.contains { $0.kind == k && $0.cwd == o.cwd }
+            }
             let sessions = off.contains("sessions") ? [] :
                 (baseSessions + otherSessions).sorted { $0.lastActivity > $1.lastActivity }
             s.agents = AgentsSample(

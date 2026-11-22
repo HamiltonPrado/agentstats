@@ -53,6 +53,7 @@ struct AgentsView: View {
     @Environment(Monitor.self) private var m
     @AppStorage("agents.showRecent") private var showRecent = false
     @AppStorage("panel.showUsage") private var showUsage = true
+    @AppStorage("panel.showLimits") private var showLimits = true
     @AppStorage("panel.showActivity") private var showActivity = true
     @AppStorage("agents.showRecentSection") private var showRecentSection = true
     @AppStorage("agents.showHistorySection") private var showHistorySection = true
@@ -78,6 +79,7 @@ struct AgentsView: View {
 
         VStack(alignment: .leading, spacing: DS.lg) {
             searchAndFilters
+            if showLimits && !m.planLimits.isEmpty { PlanLimitsCard(limits: m.planLimits) }
             if showUsage && !m.usage.todayTotal.isEmpty { TodayUsage(usage: m.usage) }
             if showActivity && !m.day.isEmpty { ActivityStrip(day: m.day) }
             if !hasAnyAgent {
@@ -347,13 +349,19 @@ struct SessionCard: View {
     private var isCommand: Bool { session.state.toolName == "Bash" }
     private var density: PanelDensity { PanelDensity(rawValue: densityRawValue) ?? .normal }
 
-    /// Pasta · modelo · subagentes · CPU · tokens, numa só linha discreta.
+    /// Pasta · modelo · subagentes · CPU · tokens e custo, numa só linha discreta.
+    /// O CPU só aparece quando é relevante (≥ 5%) e vai no fim, para ser o que corta se não couber.
     private var meta: String {
         var parts = [session.project]
         if let model = Fmt.model(session.model) { parts.append(model) }
+        if let u = m.usage.perSession[session.id], !u.isEmpty {
+            var t = Fmt.tokens(u.total) + " tok"
+            if let c = m.usage.perSessionCost[session.id], c >= 0.01 { t += " ~" + Fmt.usd(c) }
+            parts.append(t)
+        }
         if session.subagents > 0 { parts.append("\(session.subagents) subagente\(session.subagents == 1 ? "" : "s")") }
-        if let p = session.process { parts.append(Fmt.num(p.cpu, 0) + "% CPU") }
-        if let u = m.usage.perSession[session.id], !u.isEmpty { parts.append(Fmt.tokens(u.total) + " tokens") }
+        // Por último: se a linha não couber, é o CPU que fica cortado.
+        if let p = session.process, p.cpu >= 5 { parts.append(Fmt.num(p.cpu, 0) + "% CPU") }
         return parts.joined(separator: " · ")
     }
 
@@ -399,7 +407,7 @@ struct SessionCard: View {
 
                     Text(meta)
                         .font(DS.meta.monospacedDigit()).foregroundStyle(.tertiary)
-                        .lineLimit(density == .detailed ? 3 : 1).truncationMode(.middle)
+                        .lineLimit(density == .detailed ? 3 : 1).truncationMode(.tail)
                         .help(m.usage.perSession[session.id].map { u in
                             "Tokens nesta sessão: \(Fmt.tokens(u.total)) · saída \(Fmt.tokens(u.output)) · entrada \(Fmt.tokens(u.input)) · cache lida \(Fmt.tokens(u.cacheRead)) · cache escrita \(Fmt.tokens(u.cacheWrite))"
                         } ?? "")
@@ -520,6 +528,64 @@ struct OtherAgentRow: View {
     }
 }
 
+/// Limites do plano de cada agente: % gasta de cada janela e quando renova.
+struct PlanLimitsCard: View {
+    let limits: [PlanLimits]
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: DS.md) {
+            ForEach(Array(limits.enumerated()), id: \.offset) { i, l in
+                if i > 0 { Divider().opacity(0.5) }
+                VStack(alignment: .leading, spacing: DS.sm) {
+                    HStack(spacing: DS.xs) {
+                        Text(l.provider.rawValue).font(DS.body.weight(.medium))
+                        if let plan = l.plan { Text("· " + plan).font(DS.body).foregroundStyle(.secondary) }
+                        Spacer(minLength: DS.xs)
+                        Text(Fmt.ago(l.observedAt)).font(DS.meta).foregroundStyle(.tertiary)
+                            .help("Última leitura dos limites")
+                    }
+                    ForEach(l.windows) { w in row(w) }
+                }
+            }
+        }
+        .cardStyle(padding: DS.md)
+    }
+
+    private func row(_ w: LimitWindow) -> some View {
+        let fraction = w.usedPercent / 100
+        let color: Color = fraction >= 0.9 ? Palette.attention : fraction >= 0.75 ? Palette.waiting : .accentColor
+        return VStack(alignment: .leading, spacing: DS.xs) {
+            HStack(alignment: .firstTextBaseline, spacing: DS.xs) {
+                Text(w.label).font(DS.body)
+                if let r = w.resetsAt {
+                    Text("· renova " + Self.resetText(r, now: Date())).font(DS.meta).foregroundStyle(.tertiary).lineLimit(1)
+                }
+                Spacer(minLength: DS.sm)
+                Text(Fmt.num(w.usedPercent, 0) + "%").font(DS.body.monospacedDigit())
+                    .foregroundStyle(fraction >= 0.75 ? color : .primary)
+            }
+            Bar(value: fraction, color: color, height: 4)
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("\(w.label): \(Fmt.num(w.usedPercent, 0))% usado" + (w.resetsAt.map { ", renova " + Self.resetText($0, now: Date()) } ?? ""))
+    }
+
+    /// "às 14:30" hoje, "amanhã às 09:00", "qui 09:00" nesta semana, "2 dez" mais longe.
+    nonisolated static func resetText(_ d: Date, now: Date) -> String {
+        let cal = Calendar.current
+        let hm = DateFormatter()
+        hm.dateFormat = "HH:mm"
+        if cal.isDate(d, inSameDayAs: now) { return "às " + hm.string(from: d) }
+        if let t = cal.date(byAdding: .day, value: 1, to: now), cal.isDate(d, inSameDayAs: t) { return "amanhã às " + hm.string(from: d) }
+        if d.timeIntervalSince(now) < 6 * 86_400 {
+            let names = ["dom", "seg", "ter", "qua", "qui", "sex", "sáb"]
+            return names[cal.component(.weekday, from: d) - 1] + " " + hm.string(from: d)
+        }
+        let months = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"]
+        return "\(cal.component(.day, from: d)) \(months[cal.component(.month, from: d) - 1])"
+    }
+}
+
 /// Tokens de hoje (Claude + Codex). Clicar abre os últimos 7 dias e os projetos que mais gastaram.
 struct TodayUsage: View {
     let usage: UsageSnapshot
@@ -532,7 +598,12 @@ struct TodayUsage: View {
                 HStack(alignment: .firstTextBaseline, spacing: DS.sm) {
                     Text("Hoje").font(DS.body).foregroundStyle(.secondary)
                     Text("\(Fmt.tokens(t.total)) tokens").font(DS.title.monospacedDigit())
-                    Text("\(Fmt.tokens(t.output)) de saída").font(DS.meta.monospacedDigit()).foregroundStyle(.tertiary)
+                    if usage.todayCost >= 0.01 {
+                        Text("~" + Fmt.usd(usage.todayCost)).font(DS.meta.monospacedDigit()).foregroundStyle(.secondary)
+                            .help("Quanto custaria na API, a preços públicos. Com um plano Pro/Max/Plus não é o que pagas.")
+                    } else {
+                        Text("\(Fmt.tokens(t.output)) de saída").font(DS.meta.monospacedDigit()).foregroundStyle(.tertiary)
+                    }
                     Spacer(minLength: DS.xs)
                     Image(systemName: "chevron.right")
                         .font(DS.meta).foregroundStyle(.tertiary)
@@ -541,7 +612,7 @@ struct TodayUsage: View {
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
-            .accessibilityLabel("Hoje, \(Fmt.tokens(t.total)) tokens, \(Fmt.tokens(t.output)) de saída")
+            .accessibilityLabel("Hoje, \(Fmt.tokens(t.total)) tokens" + (usage.todayCost >= 0.01 ? ", cerca de \(Fmt.usd(usage.todayCost)) em API" : ""))
             .accessibilityHint(expanded ? "Esconde a semana" : "Mostra os últimos 7 dias e os projetos")
 
             if expanded {
@@ -560,7 +631,8 @@ struct TodayUsage: View {
             HStack {
                 Text("Últimos 7 dias").font(DS.meta).foregroundStyle(.secondary)
                 Spacer()
-                Text(Fmt.tokens(usage.weekTotal.total) + " tokens").font(DS.meta.monospacedDigit()).foregroundStyle(.tertiary)
+                Text(Fmt.tokens(usage.weekTotal.total) + " tokens" + (usage.weekCost >= 0.01 ? " · ~" + Fmt.usd(usage.weekCost) : ""))
+                    .font(DS.meta.monospacedDigit()).foregroundStyle(.tertiary)
             }
             HStack(alignment: .bottom, spacing: DS.sm) {
                 ForEach(Array(usage.week.enumerated()), id: \.offset) { i, d in
@@ -595,6 +667,10 @@ struct TodayUsage: View {
                         Text(p.name.trimmingCharacters(in: .whitespaces)).font(DS.body).lineLimit(1).truncationMode(.middle)
                         Spacer(minLength: DS.sm)
                         Text(Fmt.tokens(p.usage.total)).font(DS.body.monospacedDigit()).foregroundStyle(.secondary)
+                        if p.cost >= 0.01 {
+                            Text("~" + Fmt.usd(p.cost)).font(DS.body.monospacedDigit()).foregroundStyle(.tertiary)
+                                .frame(minWidth: 56, alignment: .trailing)
+                        }
                     }
                     Bar(value: Double(p.usage.total) / Double(maxTotal), color: .secondary.opacity(0.5), height: 2)
                 }
