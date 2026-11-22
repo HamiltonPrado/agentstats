@@ -53,6 +53,8 @@ final class Monitor {
     var uptime: TimeInterval = 0
     var activeAlerts: [SystemAlert] = []
     var usage = UsageSnapshot()
+    /// As apps que mais gastaram energia na última leitura (nil até haver duas leituras).
+    var energyApps: [AppEnergy]?
     /// Limites do plano do Claude (pelo Claude Code ou, em alternativa, pela app Claude).
     var claudeLimits: PlanLimits?
     var claudeLimitsStatus: ClaudeLimitsFetcher.Outcome?
@@ -110,7 +112,7 @@ final class Monitor {
     /// Tempo que o valor tem de ficar acima do limite antes de alertar (evita picos curtos).
     static let alertSustain: TimeInterval = 20
     static let alertCooldown: TimeInterval = 10 * 60
-    /// Diagnóstico: AGENTSTATS_DISABLE=temps,procs,sessions,usage,gpu,disk,icon desliga partes para medir custos.
+    /// Diagnóstico: AGENTSTATS_DISABLE=temps,procs,sessions,usage,energy,gpu,disk,icon desliga partes para medir custos.
     static let disabled = Set((ProcessInfo.processInfo.environment["AGENTSTATS_DISABLE"] ?? "").split(separator: ",").map(String.init))
 
     @ObservationIgnored private let sampler = Sampler()
@@ -160,6 +162,7 @@ final class Monitor {
             battery: tick % 2 == 1,
             agents: panelOpen || tick % 2 == 1 || agents.isEmpty,                       // painel fechado: de 4 em 4 s
             usage: !off.contains("usage") && tick % 5 == 1,                             // de 10 em 10 s
+            energy: !off.contains("energy") && (tick == 1 || tick % 5 == 3),           // de 10 em 10 s
             disabled: off)
         if !off.contains("limits") && Pref.bool("panel.showLimits", true) { refreshClaudeLimits() }
         // O Task herda o main actor; o trabalho pesado corre no ator Sampler e volta como um valor.
@@ -215,6 +218,7 @@ final class Monitor {
         if let t = temps?.cpuMax { tempHistory.push(t) }
         if let b = s.battery { battery = b }
         if let u = s.usage { usage = u }
+        if let e = s.energy { energyApps = e }
         if let a = s.agents {
             topProcesses = a.topCPU
             topMemory = a.topMemory

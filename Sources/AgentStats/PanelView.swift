@@ -2,7 +2,7 @@ import SwiftUI
 import AppKit
 
 enum Tab: String, CaseIterable, Identifiable {
-    case agents, system, processes, audio, settings
+    case agents, system, processes, audio, clipboard, settings
     var id: String { rawValue }
     var title: String {
         switch self {
@@ -10,6 +10,7 @@ enum Tab: String, CaseIterable, Identifiable {
         case .system: return "Sistema"
         case .processes: return "Processos"
         case .audio: return "Áudio"
+        case .clipboard: return "Clipboard"
         case .settings: return "Definições"
         }
     }
@@ -19,10 +20,11 @@ enum Tab: String, CaseIterable, Identifiable {
         case .system: return "gauge.with.needle"
         case .processes: return "list.bullet"
         case .audio: return "speaker.wave.2"
+        case .clipboard: return "list.clipboard"
         case .settings: return "gearshape"
         }
     }
-    static let main: [Tab] = [.agents, .system, .processes, .audio]
+    static let main: [Tab] = [.agents, .system, .processes, .audio, .clipboard]
 }
 
 struct PanelView: View {
@@ -87,6 +89,7 @@ struct PanelView: View {
         case .system: SystemView()
         case .processes: ProcessesView()
         case .audio: AudioView()
+        case .clipboard: ClipboardView(store: .shared)
         case .settings: SettingsView()
         }
     }
@@ -134,31 +137,43 @@ struct PanelView: View {
         HStack(spacing: 0) {
             ForEach(Tab.main) { t in
                 Button { withAnimation(Motion.ease(0.16)) { storedTab = t } } label: {
-                    // Só texto e centrado: com 4 separadores, ícone + texto + ponto não cabiam e
-                    // desalinhavam. O ponto de estado fica sobreposto, sem mexer na centragem.
-                    Text(t.title)
-                        .font(DS.body.weight(.medium)).lineLimit(1)
+                    // Só o ícone, numa caixa fixa: os símbolos têm larguras diferentes e assim ficam todos
+                    // centrados. O ponto de estado fica sobreposto, sem mexer na centragem.
+                    Image(systemName: t.icon)
+                        .font(.system(size: 14 * TextSize.current.scale, weight: .medium))
+                        .frame(width: 20, height: 20)
                         .overlay(alignment: .topTrailing) {
-                            if t == .agents, m.workingCount + m.needsAttentionCount > 0 {
-                                StatusDot(m.needsAttentionCount > 0 ? .attention : .working, size: 5)
-                                    .offset(x: 7, y: -1)
+                            if t == .agents, let kind = agentsBadge {
+                                StatusDot(kind, size: 6).offset(x: 6, y: -1)
                             }
                         }
-                    .foregroundStyle(tab == t ? Color.primary : Color.secondary)
-                    .frame(maxWidth: .infinity).frame(height: 26)
-                    .help(t.title)
-                    .background(
-                        RoundedRectangle(cornerRadius: DS.rSmall, style: .continuous)
-                            .fill(tab == t ? (effectiveScheme == .dark ? Color.white.opacity(0.12) : Color.white) : .clear)
-                            .shadow(color: .black.opacity(tab == t ? 0.06 : 0), radius: 1, y: 1)
-                    )
-                    .contentShape(Rectangle())
+                        .foregroundStyle(tab == t ? Color.primary : Color.secondary)
+                        .frame(maxWidth: .infinity).frame(height: 28)
+                        .background(
+                            RoundedRectangle(cornerRadius: DS.rSmall, style: .continuous)
+                                .fill(tab == t ? (effectiveScheme == .dark ? Color.white.opacity(0.12) : Color.white) : .clear)
+                                .shadow(color: .black.opacity(tab == t ? 0.06 : 0), radius: 1, y: 1)
+                        )
+                        .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
+                // Sem texto visível, o nome tem de vir na dica e no VoiceOver.
+                .help(t.title)
+                .accessibilityLabel(t.title)
+                .accessibilityValue(t == .agents ? agentsBadgeDescription : "")
+                .accessibilityAddTraits(tab == t ? .isSelected : [])
             }
         }
         .padding(2)
         .background(RoundedRectangle(cornerRadius: DS.rControl, style: .continuous).fill(DS.raised))
+    }
+
+    private var agentsBadge: StatusKind? {
+        m.needsAttentionCount > 0 ? .attention : m.workingCount > 0 ? .working : nil
+    }
+
+    private var agentsBadgeDescription: String {
+        m.needsAttentionCount > 0 ? "Precisa de ti" : m.workingCount > 0 ? "A trabalhar" : ""
     }
 
     // MARK: Rodapé

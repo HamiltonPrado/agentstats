@@ -39,6 +39,8 @@ enum AgentStatsApp {
     /// Renderiza cada separador do painel em PNG (claro e escuro) para rever a interface.
     @MainActor static func snapshot(to dir: String) {
         let m = Monitor()
+        ClipboardStore.shared.loadDemo()   // as capturas nunca mostram o clipboard real
+        AppMixer.shared.refresh()   // só lê a lista de apps com som; não capta nada
         RunLoop.main.run(until: Date().addingTimeInterval(7))
         if ProcessInfo.processInfo.environment["AGENTSTATS_FAKE_ALERT"] != nil {
             m.activeAlerts = [
@@ -167,7 +169,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
     func applicationDidFinishLaunching(_ notification: Notification) {
         UNUserNotificationCenter.current().delegate = self
         MainActor.assumeIsolated {
+            NSApp.mainMenu = EditMenu.make()
             controller = StatusController(monitor: Monitor())
+            ClipboardStore.shared.start()
             AppState.controller = controller
             HookEvents.prune()
             NotificationCenter.default.addObserver(forName: NSApplication.willTerminateNotification, object: nil, queue: .main) { _ in

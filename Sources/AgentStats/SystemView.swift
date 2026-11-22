@@ -16,9 +16,7 @@ struct SystemView: View {
     @Environment(Monitor.self) private var m
     @Environment(\.agentAccentColor) private var agentAccentColor
     @AppStorage("system.detail") private var selected: Metric = .cpu
-    @StateObject private var speedTestRunning = Box(false)
-    @StateObject private var speedTestResult = Box<SpeedTestResult?>(nil)
-    @StateObject private var speedTestError = Box<String?>(nil)
+    @ObservedObject private var speed = SpeedTestStore.shared
     @StateObject private var folderScan = Box<FolderScanState>(.idle)
 
     var body: some View {
@@ -251,14 +249,41 @@ struct SystemView: View {
                 if let mins = b.minutesRemaining {
                     StatRow(label: b.isCharging ? "Até carga completa" : "Tempo restante", value: Fmt.minutes(mins))
                 }
-                if let w = b.watts, w > 0.1 { StatRow(label: "Potência", value: Fmt.num(w, 1) + " W") }
+                if let w = b.systemWatts { StatRow(label: "Consumo do Mac", value: Fmt.num(w, 1) + " W") }
+                if let w = b.watts, w > 0.1, b.isCharging { StatRow(label: "Potência de carga", value: Fmt.num(w, 1) + " W") }
                 if let h = b.health { StatRow(label: "Saúde", value: Fmt.pct(h)) }
                 StatRow(label: "Ciclos", value: "\(b.cycles)")
                 if let t = m.temps?.battery ?? b.temperature { StatRow(label: "Temperatura", value: Fmt.temp(t)) }
                 Divider().opacity(0.5)
+                energySection
+                Divider().opacity(0.5)
                 DayChart(samples: m.day, value: { $0.battery }, maxValue: 1, title: "Bateria", format: Fmt.pct)
             }
-        } else { unavailable("Energia", "powerplug", "Este Mac não tem bateria") }
+        } else {
+            Card(title: "Energia", icon: "powerplug") {
+                Text("Este Mac não tem bateria").font(DS.body).foregroundStyle(.secondary)
+                Divider().opacity(0.5)
+                energySection
+            }
+        }
+    }
+
+    @ViewBuilder private var energySection: some View {
+        Text("Apps que gastam mais").font(DS.body.weight(.medium))
+        if let apps = m.energyApps {
+            let most = max(apps.first?.watts ?? 0, 0.01)
+            ForEach(apps) { app in
+                VStack(alignment: .leading, spacing: DS.xs) {
+                    StatRow(label: app.name, value: Fmt.num(app.watts, 2) + " W")
+                    Bar(value: app.watts / most, color: .secondary.opacity(0.5), height: 2)
+                }
+            }
+            if apps.isEmpty { Text("Nada de relevante agora.").font(DS.meta).foregroundStyle(.secondary) }
+            Text("Estimativa dos últimos segundos. Não inclui o ecrã nem processos de root, como o WindowServer.")
+                .font(DS.meta).foregroundStyle(.tertiary).fixedSize(horizontal: false, vertical: true)
+        } else {
+            Text("A medir…").font(DS.meta).foregroundStyle(.tertiary)
+        }
     }
 
     private var networkDetail: some View {
@@ -270,22 +295,22 @@ struct SystemView: View {
             StatRow(label: "Enviado desde que a app abriu", value: Fmt.bytes(m.network.totalUp))
             StatRow(label: "IP local", value: m.network.localIP)
             Divider().opacity(0.5)
-            if let result = speedTestResult.value {
+            if let result = speed.result {
                 StatRow(label: "Velocidade de download", value: "\(Fmt.num(result.downloadMbps, 1)) Mbps", swatch: .accentColor)
                 StatRow(label: "Velocidade de upload", value: "\(Fmt.num(result.uploadMbps, 1)) Mbps", swatch: .secondary)
                 StatRow(label: "Latência", value: "\(Fmt.num(result.latencyMs, 0)) ms")
             }
-            if let error = speedTestError.value {
+            if let error = speed.error {
                 Text(error).font(DS.meta).foregroundStyle(.secondary)
             }
             Button {
-                Task { await runSpeedTest() }
+                speed.start()
             } label: {
                 HStack(spacing: DS.xs) {
-                    if speedTestRunning.value { ProgressView().controlSize(.small) }
-                    Text(speedTestRunning.value ? "A testar…" : speedTestResult.value == nil ? "Testar velocidade" : "Repetir teste")
+                    if speed.running { ProgressView().controlSize(.small) }
+                    Text(speed.running ? "A testar…" : speed.result == nil ? "Testar velocidade" : "Repetir teste")
                     Spacer()
-                    if let result = speedTestResult.value, !speedTestRunning.value {
+                    if let result = speed.result, !speed.running {
                         Text(result.measuredAt.formatted(date: .omitted, time: .shortened))
                             .foregroundStyle(.tertiary)
                     }
@@ -295,21 +320,10 @@ struct SystemView: View {
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
-            .disabled(speedTestRunning.value)
+            .disabled(speed.running)
             .accessibilityHint("Envia aproximadamente 32 MB para medir a ligação através do Cloudflare")
             Text("Cloudflare · cerca de 32 MB por teste; medições podem ser recolhidas de forma agregada")
                 .font(DS.meta).foregroundStyle(.tertiary)
-        }
-    }
-
-    @MainActor private func runSpeedTest() async {
-        speedTestRunning.value = true
-        speedTestError.value = nil
-        defer { speedTestRunning.value = false }
-        do {
-            speedTestResult.value = try await SpeedTest.run()
-        } catch {
-            speedTestError.value = "Não foi possível concluir o teste. Verifica a ligação e tenta novamente."
         }
     }
 

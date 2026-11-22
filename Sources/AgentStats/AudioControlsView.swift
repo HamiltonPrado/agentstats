@@ -5,7 +5,10 @@ struct AudioView: View {
     @StateObject private var audio = AudioControlStore()
 
     var body: some View {
-        AudioControlsCard(audio: audio)
+        VStack(alignment: .leading, spacing: DS.md) {
+            AudioControlsCard(audio: audio)
+            MixerCard(mixer: .shared)
+        }
     }
 }
 
@@ -72,7 +75,7 @@ struct AudioControlsCard: View {
                     .disabled(!canSet).accessibilityLabel(volumeLabel)
                 Text("\(Int((volume.wrappedValue * 100).rounded()))%")
                     .font(DS.meta.monospacedDigit()).foregroundStyle(.secondary)
-                    .frame(width: 32, alignment: .trailing)
+                    .frame(width: 36, alignment: .trailing)
             }
         }
     }

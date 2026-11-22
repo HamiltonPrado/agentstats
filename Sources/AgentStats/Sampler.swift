@@ -6,6 +6,7 @@ struct SampleRequest: Sendable {
     var battery: Bool
     var agents: Bool
     var usage: Bool
+    var energy: Bool
     var disabled: Set<String>
 }
 
@@ -28,6 +29,7 @@ struct Sample: Sendable {
     var battery: BatterySample?
     var agents: AgentsSample?
     var usage: UsageSnapshot?
+    var energy: [AppEnergy]?
 }
 
 /// Dono de todos os leitores. Os leitores são classes com estado (valores anteriores para calcular
@@ -47,6 +49,7 @@ actor Sampler {
     private let cursorReader = CursorReader()
     private let openCodeReader = OpenCodeReader()
     private let usageTracker = UsageTracker()
+    private let energyReader = EnergyReader()
 
     func sample(_ r: SampleRequest) -> Sample {
         let off = r.disabled
@@ -82,6 +85,7 @@ actor Sampler {
                 sessions: sessions)
         }
         if r.usage { s.usage = usageTracker.update() }
+        if r.energy { s.energy = energyReader.read() }
         return s
     }
 }
