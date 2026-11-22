@@ -24,6 +24,7 @@ enum DemoData {
         BrewStore.shared.loadDemo()
         UninstallStore.shared.loadDemo()
         CleanupStore.shared.loadDemo()
+        CleaningModeStore.shared.loadDemo()
         ClipboardStore.shared.loadDemo(now: now)
         SpeedTestStore.shared.loadDemo(now: now)
         DiskScanStore.shared.loadDemo()

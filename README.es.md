@@ -43,6 +43,7 @@
 
 - CPU, memoria, GPU, temperaturas, red, disco y batería, con historial de hasta 7 días y alertas.
 - Apps que más energía gastan, procesos más pesados y carpetas más grandes.
+- Disco por categorías, con los colores y las unidades de macOS. Se mide por carpetas al abrir la tarjeta, así que es aproximado.
 - Prueba de velocidad manual con Cloudflare: unos **32 MB por prueba**; las mediciones pueden recopilarse de forma agregada.
 - No controla los ventiladores.
 
@@ -66,6 +67,7 @@
 - **Homebrew:** actualiza y elimina paquetes.
 - **Desinstalar:** mueve apps a la Papelera, con los restos que elijas.
 - **Limpieza:** mueve a la Papelera cachés de una lista cerrada (Homebrew, pip y npm; Brave, Playwright, Hugging Face y npx son opcionales), con confirmación y sin tocar lo que detecte en uso. El espacio se libera al vaciar la Papelera.
+- **Teclado y pantalla:** bloquea el teclado y deja la pantalla en negro para limpiarlos. Se sale con un botón, con las dos teclas ⌘ o automáticamente tras 1, 2 o 5 minutos. El botón de encendido y Touch ID no se pueden bloquear.
 
 ### A tu medida
 
@@ -79,6 +81,7 @@ Barra de menús configurable, atajo global, perfiles, tema, color, ancho, tamañ
 | Mezclador por app | Grabación del audio del sistema |
 | Captura y grabación | Grabación de pantalla |
 | Grabar con micrófono | Micrófono |
+| Limpieza del teclado y la pantalla | Accesibilidad |
 | Historial del portapapeles | Pegar desde otras apps (macOS 15.4+) |
 | Categorías del disco, medidas al abrir la tarjeta | Carpetas personales (Escritorio, Documentos, Descargas, Música, Imágenes) |
 
@@ -143,8 +146,8 @@ AgentStats se distribuye bajo la [licencia MIT](LICENSE). Puedes usar, modificar
 Actualiza `VERSION` y envía una etiqueta con la misma versión, por ejemplo:
 
 ```bash
-git tag v1.17
-git push origin v1.17
+git tag v1.18
+git push origin v1.18
 ```
 
 GitHub Actions comprueba la versión, ejecuta las pruebas, compila la app y publica `AgentStats.zip` en la versión.

@@ -43,7 +43,9 @@ struct ToolsView: View {
             case .ports: PortsView(store: .shared)
             case .brew: BrewView(store: .shared)
             case .apps: UninstallView(store: .shared)
-            case .cleanup: CleanupView(store: .shared)
+            case .cleanup:
+                CleaningModeCard(store: .shared)
+                CleanupView(store: .shared)
             }
         }
     }

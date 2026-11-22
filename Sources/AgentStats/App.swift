@@ -142,6 +142,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
             NotificationCenter.default.addObserver(forName: NSApplication.willTerminateNotification, object: nil, queue: .main) { _ in
                 MainActor.assumeIsolated {
                     CaptureStore.shared.shutdown()
+                    CleaningModeStore.shared.stop(.system)
                     AppState.controller?.saveHistory()
                 }
             }

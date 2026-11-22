@@ -43,6 +43,7 @@
 
 - Processeur, mémoire, GPU, températures, réseau, disque et batterie, avec historique jusqu’à 7 jours et alertes.
 - Applications les plus énergivores, processus les plus lourds et dossiers les plus volumineux.
+- Disque par catégories, avec les couleurs et les unités de macOS. Il est mesuré par dossiers à l’ouverture de la carte, donc approximatif.
 - Test de débit manuel via Cloudflare : environ **32 Mo par test** ; les mesures peuvent être collectées sous forme agrégée.
 - Ne contrôle pas les ventilateurs.
 
@@ -66,6 +67,7 @@
 - **Homebrew :** met à jour et supprime des paquets.
 - **Désinstaller :** place les applications dans la Corbeille, avec les restes choisis.
 - **Nettoyage :** place dans la Corbeille des caches d’une liste fermée (Homebrew, pip et npm ; Brave, Playwright, Hugging Face et npx sont optionnels), après confirmation et sans toucher à ce qui est détecté en cours d’utilisation. L’espace est libéré quand vous videz la Corbeille.
+- **Clavier et écran :** verrouille le clavier et affiche un écran noir pour les nettoyer. Sortie par un bouton, les deux touches ⌘ ou automatiquement après 1, 2 ou 5 minutes. Le bouton d’alimentation et Touch ID ne peuvent pas être bloqués.
 
 ### À votre mesure
 
@@ -79,6 +81,7 @@ Barre des menus configurable, raccourci global, profils, thème, couleur, largeu
 | Mixeur par application | Enregistrement de l’audio du système |
 | Capture et enregistrement | Enregistrement de l’écran |
 | Enregistrer avec le micro | Micro |
+| Nettoyage du clavier et de l’écran | Accessibilité |
 | Historique du presse-papiers | Coller depuis d’autres apps (macOS 15.4+) |
 | Catégories du disque, mesurées à l’ouverture de la carte | Dossiers personnels (Bureau, Documents, Téléchargements, Musique, Images) |
 
@@ -143,8 +146,8 @@ AgentStats est distribué sous la [licence MIT](LICENSE). Vous pouvez utiliser, 
 Mettez à jour `VERSION`, puis envoyez un tag portant le même numéro, par exemple :
 
 ```bash
-git tag v1.17
-git push origin v1.17
+git tag v1.18
+git push origin v1.18
 ```
 
 GitHub Actions vérifie la version, exécute les tests, compile l’app et publie `AgentStats.zip` dans la release.

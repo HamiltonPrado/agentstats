@@ -43,6 +43,7 @@
 
 - CPU, memory, GPU, temperatures, network, disk, and battery, with up to 7 days of history and alerts.
 - Apps using the most energy, heaviest processes, and largest folders.
+- Disk by category, with the colors and units macOS uses. It is measured by folder when the card opens, so it is approximate.
 - Manual speed test through Cloudflare: about **32 MB per test**; measurements may be collected in aggregate.
 - Does not control fans.
 
@@ -66,6 +67,7 @@
 - **Homebrew:** upgrade and remove packages.
 - **Uninstall:** move apps to the Trash, with the leftovers you select.
 - **Cleanup:** moves caches from a closed list to the Trash (Homebrew, pip, and npm; Brave, Playwright, Hugging Face, and npx are optional), with confirmation and without touching anything detected as in use. Space is freed when you empty the Trash.
+- **Keyboard and screen:** locks the keyboard and turns the screen black so you can clean them. Exit with a button, both ⌘ keys, or automatically after 1, 2, or 5 minutes. The power button and Touch ID cannot be blocked.
 
 ### Make it yours
 
@@ -79,6 +81,7 @@ Configurable menu bar, global shortcut, profiles, theme, color, width, text size
 | Per-app mixer | System audio recording |
 | Capture and recording | Screen recording |
 | Recording with microphone | Microphone |
+| Keyboard and screen cleaning | Accessibility |
 | Clipboard history | Paste from other apps (macOS 15.4+) |
 | Disk categories, measured when the card opens | Personal folders (Desktop, Documents, Downloads, Music, Pictures) |
 
@@ -143,8 +146,8 @@ AgentStats is distributed under the [MIT License](LICENSE). You may use, modify,
 Update `VERSION`, then push a tag with the same version, for example:
 
 ```bash
-git tag v1.17
-git push origin v1.17
+git tag v1.18
+git push origin v1.18
 ```
 
 GitHub Actions checks the version, runs the tests, builds the app, and publishes `AgentStats.zip` to the release.
