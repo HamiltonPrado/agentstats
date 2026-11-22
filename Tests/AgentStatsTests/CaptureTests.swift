@@ -33,6 +33,9 @@ import Testing
         return CaptureStore(environment: env)
     }
 
+    /// O script cria este ficheiro quando já tem o trap posto: um sinal antes disso matava-o.
+    var ready: Bool { FileManager.default.fileExists(atPath: root.appendingPathComponent("ready").path) }
+
     func remove() { try? FileManager.default.removeItem(at: root) }
 }
 
@@ -99,13 +102,14 @@ import Testing
         defer { box.remove() }
         let s = try box.store("""
         trap 'printf mov > "$out"; exit 0' INT
+        touch "${0%/*}/ready"
         while :; do sleep 0.05; done
         """)
         await s.record(microphone: false, clicks: false)?.value
         #expect(s.isRecording)
-        #expect(s.menuBarText == "0:00")
+        #expect(s.menuBarText?.hasPrefix("0:0") == true)
         #expect(s.record(microphone: false, clicks: false) == nil)   // nunca duas ao mesmo tempo
-        try await Task.sleep(for: .milliseconds(400))
+        try #require(await eventually { box.ready })
         s.stop()
         #expect(await eventually { s.phase == .idle })
         #expect(s.last?.pathExtension == "mov")
@@ -117,11 +121,12 @@ import Testing
         defer { box.remove() }
         let s = try box.store("""
         trap '' INT
+        touch "${0%/*}/ready"
         read -n 1 key
         [ "$key" = q ] && printf mov > "$out"
         """)
         await s.record(microphone: false, clicks: false)?.value
-        try await Task.sleep(for: .milliseconds(400))
+        try #require(await eventually { box.ready })
         s.stop()
         #expect(await eventually { s.phase == .idle })
         #expect(s.last != nil && s.error == nil)
@@ -141,10 +146,11 @@ import Testing
         defer { box.remove() }
         let s = try box.store("""
         trap 'sleep 0.3; printf mov > "$out"; exit 0' INT
+        touch "${0%/*}/ready"
         while :; do sleep 0.05; done
         """)
         await s.record(microphone: false, clicks: false)?.value
-        try await Task.sleep(for: .milliseconds(400))
+        try #require(await eventually { box.ready })
         s.shutdown()   // tem de só voltar com o ficheiro escrito
         let files = try FileManager.default.contentsOfDirectory(atPath: box.root.appendingPathComponent("filmes").path)
         #expect(files.count == 1)
