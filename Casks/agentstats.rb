@@ -2,8 +2,8 @@
 #   brew tap hamiltonprado/agentstats https://github.com/HamiltonPrado/agentstats
 #   brew install --cask agentstats
 cask "agentstats" do
-  version "1.16.1"
-  sha256 "a46e56e8e7435e3c59fcf15842aed901aff065aecbf1503de6f9ec39f4556bdd"
+  version "1.17"
+  sha256 "37d2bcf193677105e0540b163f80ca52020dffdd6fe7672d3359ea255b50a34e"
 
   url "https://github.com/HamiltonPrado/agentstats/releases/download/v#{version}/AgentStats.zip"
   name "AgentStats"
