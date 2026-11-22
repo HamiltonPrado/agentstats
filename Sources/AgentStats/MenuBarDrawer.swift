@@ -134,10 +134,12 @@ enum MenuBarDrawer {
     /// Desenha o ícone da barra de menus.
     /// - Sem cores: imagem-modelo (o macOS pinta-a com a cor da barra, em claro e escuro).
     /// - Com o ponto a cores: imagem normal, com o texto na cor da barra (`appearance`) e o ponto colorido.
-    static func image(_ m: Monitor, appearance: NSAppearance? = nil) -> NSImage {
-        let colored = flag(colorDotKey, false)
+    static func image(_ m: Monitor, appearance: NSAppearance? = nil, recording: String? = nil) -> NSImage {
+        let colored = flag(colorDotKey, false) || recording != nil
         let style = MenuBarStyle.current
-        let segs = segments(m, style: style, colored: colored)
+        // A gravar, a barra mostra só isso (sempre a vermelho): não pode passar despercebido.
+        let segs: [Segment] = recording.map { [.symbol("stop.circle.fill", 13, .systemRed), .text($0, agentFont)] }
+            ?? segments(m, style: style, colored: colored)
         // símbolo + texto dos agentes ficam colados (2 pt); o resto separado por `spacing`
         let widths = segs.map(width)
         var gaps: [CGFloat] = []

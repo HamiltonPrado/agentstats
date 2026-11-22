@@ -39,6 +39,7 @@ enum AgentStatsApp {
     /// Renderiza cada separador do painel em PNG (claro e escuro) para rever a interface.
     @MainActor static func snapshot(to dir: String) {
         let m = Monitor()
+        CaptureStore.shared.loadDemo()
         ClipboardStore.shared.loadDemo()   // as capturas nunca mostram o clipboard real
         AppMixer.shared.refresh()   // só lê a lista de apps com som; não capta nada
         RunLoop.main.run(until: Date().addingTimeInterval(7))
@@ -172,10 +173,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
             NSApp.mainMenu = EditMenu.make()
             controller = StatusController(monitor: Monitor())
             ClipboardStore.shared.start()
+            CaptureStore.shared.stopOrphan()
             AppState.controller = controller
             HookEvents.prune()
             NotificationCenter.default.addObserver(forName: NSApplication.willTerminateNotification, object: nil, queue: .main) { _ in
-                MainActor.assumeIsolated { AppState.controller?.saveHistory() }
+                MainActor.assumeIsolated {
+                    CaptureStore.shared.shutdown()
+                    AppState.controller?.saveHistory()
+                }
             }
             // Diagnóstico: abre o painel ao arrancar (para medir o consumo com o painel aberto)
             if ProcessInfo.processInfo.environment["AGENTSTATS_OPEN_PANEL"] != nil {
@@ -227,6 +232,7 @@ final class StatusController: NSObject, NSPopoverDelegate {
 
         // Atualiza o ícone quando há novas amostras ou quando as definições mudam
         monitor.onUpdate = { [weak self] in self?.updateIcon() }
+        CaptureStore.shared.onChange = { [weak self] in self?.updateIcon() }
         NotificationCenter.default.publisher(for: UserDefaults.didChangeNotification)
             .debounce(for: .milliseconds(60), scheduler: RunLoop.main)
             .sink { [weak self] _ in
@@ -243,6 +249,7 @@ final class StatusController: NSObject, NSPopoverDelegate {
     /// O que o VoiceOver diz sobre o ícone da barra de menus.
     private func spokenSummary() -> String {
         let m = monitor
+        if let recording = CaptureStore.shared.menuBarText { return "AgentStats, a gravar o ecrã, \(recording). Clicar para parar" }
         var parts = ["AgentStats"]
         if m.needsAttentionCount > 0 { parts.append("\(m.needsAttentionCount) agente\(m.needsAttentionCount == 1 ? "" : "s") precisa\(m.needsAttentionCount == 1 ? "" : "m") de ti") }
         parts.append("\(m.workingCount) de \(m.liveAgentCount) agentes a trabalhar")
@@ -262,6 +269,7 @@ final class StatusController: NSObject, NSPopoverDelegate {
         // Construída passo a passo, com tipos explícitos: um único array literal com tantas expressões
         // condicionais fazia o compilador do Xcode 16 desistir da verificação de tipos.
         var parts: [String] = []
+        if let recording = CaptureStore.shared.menuBarText { return "gravar:" + recording }
         parts.append(m.activeAlerts.isEmpty ? "" : "!")
         parts.append(String(m.needsAttentionCount))
         parts.append(on("bar.agents", true) ? "\(m.workingCount)/\(m.liveAgentCount)" : "")
@@ -294,7 +302,8 @@ final class StatusController: NSObject, NSPopoverDelegate {
         guard urgent || Date().timeIntervalSince(lastIconUpdate) >= 3.9 else { return }
         lastIconSignature = sig
         lastIconUpdate = Date()
-        item.button?.image = MenuBarDrawer.image(monitor, appearance: item.button?.effectiveAppearance)
+        item.button?.image = MenuBarDrawer.image(monitor, appearance: item.button?.effectiveAppearance,
+                                                recording: CaptureStore.shared.menuBarText)
     }
 
     func saveHistory() { monitor.saveHistory() }
@@ -312,6 +321,8 @@ final class StatusController: NSObject, NSPopoverDelegate {
         }
     }
 
+    func closePanel() { popover.performClose(nil) }
+
     func openPanel() {
         popover.behavior = .applicationDefined   // diagnóstico: fica aberto mesmo ao clicar noutro sítio
         if !popover.isShown { toggle(nil) }
@@ -319,6 +330,11 @@ final class StatusController: NSObject, NSPopoverDelegate {
 
     @objc private func toggle(_ sender: Any?) {
         guard let button = item.button else { return }
+        // A gravar, clicar no ícone (ou o atalho) para logo, sem abrir o painel para dentro do vídeo.
+        if CaptureStore.shared.isRecording {
+            CaptureStore.shared.stop()
+            return
+        }
         if popover.isShown {
             popover.performClose(sender)
         } else {

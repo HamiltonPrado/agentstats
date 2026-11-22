@@ -2,7 +2,7 @@ import SwiftUI
 import AppKit
 
 enum Tab: String, CaseIterable, Identifiable {
-    case agents, system, processes, audio, clipboard, settings
+    case agents, system, processes, audio, clipboard, capture, settings
     var id: String { rawValue }
     var title: String {
         switch self {
@@ -11,6 +11,7 @@ enum Tab: String, CaseIterable, Identifiable {
         case .processes: return "Processos"
         case .audio: return "Áudio"
         case .clipboard: return "Clipboard"
+        case .capture: return "Captura"
         case .settings: return "Definições"
         }
     }
@@ -21,10 +22,11 @@ enum Tab: String, CaseIterable, Identifiable {
         case .processes: return "list.bullet"
         case .audio: return "speaker.wave.2"
         case .clipboard: return "list.clipboard"
+        case .capture: return "camera.viewfinder"
         case .settings: return "gearshape"
         }
     }
-    static let main: [Tab] = [.agents, .system, .processes, .audio, .clipboard]
+    static let main: [Tab] = [.agents, .system, .processes, .audio, .clipboard, .capture]
 }
 
 struct PanelView: View {
@@ -90,6 +92,7 @@ struct PanelView: View {
         case .processes: ProcessesView()
         case .audio: AudioView()
         case .clipboard: ClipboardView(store: .shared)
+        case .capture: CaptureView(store: .shared)
         case .settings: SettingsView()
         }
     }

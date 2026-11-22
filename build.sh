@@ -40,6 +40,7 @@ cat > "$APP/Contents/Info.plist" <<PLIST
     <key>LSMinimumSystemVersion</key><string>14.0</string>
     <key>LSUIElement</key><true/>
     <key>NSHighResolutionCapable</key><true/>
+    <key>NSMicrophoneUsageDescription</key><string>O AgentStats só usa o microfone se escolheres gravá-lo numa gravação de ecrã.</string>
     <key>NSAudioCaptureUsageDescription</key><string>O AgentStats precisa de receber o som das apps que ajustares no mixer, para lhes mudar o volume. Nada é gravado nem enviado.</string>
 </dict>
 </plist>
