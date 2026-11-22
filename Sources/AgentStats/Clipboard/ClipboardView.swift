@@ -87,18 +87,18 @@ struct ClipboardView: View {
             }
             HStack(spacing: DS.sm) {
                 if ordered.count > Self.shortList && search.value.isEmpty {
-                    link(showAll.value ? "Mostrar menos" : "Mostrar os \(ordered.count)") { showAll.value.toggle() }
+                    textLink(showAll.value ? "Mostrar menos" : "Mostrar os \(ordered.count)") { showAll.value.toggle() }
                 }
                 Spacer(minLength: 0)
                 if confirmClear.value {
                     Text("Apagar o histórico todo?").font(DS.meta).foregroundStyle(Color.text2).lineLimit(1)
-                    link("Apagar", color: .attentionText) {
+                    textLink("Apagar", color: .attentionText) {
                         store.clearHistory()
                         confirmClear.value = false
                     }
-                    link("Não") { confirmClear.value = false }
+                    textLink("Não") { confirmClear.value = false }
                 } else {
-                    link("Limpar") { confirmClear.value = true }
+                    textLink("Limpar") { confirmClear.value = true }
                 }
             }
         } else if !search.value.isEmpty {
@@ -161,12 +161,12 @@ struct ClipboardView: View {
                 }
             }
             if confirmDelete.value == snippet.id {
-                link("Apagar", color: .attentionText) {
+                textLink("Apagar", color: .attentionText) {
                     store.removeSnippet(snippet.id)
                     confirmDelete.value = nil
                 }
                 .padding(.horizontal, DS.xs)
-                link("Não") { confirmDelete.value = nil }
+                textLink("Não") { confirmDelete.value = nil }
             } else {
                 IconButton(systemName: "pencil", help: "Editar") { store.draft = snippet }
                 IconButton(systemName: "trash", help: "Apagar snippet") { confirmDelete.value = snippet.id }
@@ -211,13 +211,5 @@ struct ClipboardView: View {
         .buttonStyle(.plain)
         .help("Copiar")
         .accessibilityHint("Copia para o clipboard")
-    }
-
-    private func link(_ title: String, color: Color = .text2, action: @escaping () -> Void) -> some View {
-        Button(title, action: action).buttonStyle(.plain).font(DS.meta).foregroundStyle(color).fixedSize()
-    }
-
-    private func note(_ text: String) -> some View {
-        Text(text).font(DS.meta).foregroundStyle(Color.text3).fixedSize(horizontal: false, vertical: true)
     }
 }

@@ -43,9 +43,6 @@ struct CleaningModeCard: View {
         }
     }
 
-    private func note(_ text: String, color: Color = .text3) -> some View {
-        Text(text).font(DS.meta).foregroundStyle(color).fixedSize(horizontal: false, vertical: true)
-    }
 }
 
 /// Uma janela preta por ecrã, por cima de tudo, cada uma com o seu botão de sair.

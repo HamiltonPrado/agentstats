@@ -356,8 +356,4 @@ struct DiskCard: View {
         .font(DS.body)
         .accessibilityElement(children: .combine)
     }
-
-    private func note(_ text: String, color: Color = .text3) -> some View {
-        Text(text).font(DS.meta).foregroundStyle(color).fixedSize(horizontal: false, vertical: true)
-    }
 }

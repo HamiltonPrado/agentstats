@@ -154,9 +154,6 @@ struct MixerCard: View {
         }
     }
 
-    private func note(_ text: String) -> some View {
-        Text(text).font(DS.meta).foregroundStyle(Color.text3).fixedSize(horizontal: false, vertical: true)
-    }
 }
 
 /// Mesma grelha do cartão de cima: coluna de 16 pt para os ícones, slider e percentagem de 36 pt.

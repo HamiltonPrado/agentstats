@@ -117,10 +117,6 @@ struct CaptureView: View {
         }
     }
 
-    private func note(_ text: String) -> some View {
-        Text(text).font(DS.meta).foregroundStyle(Color.text3).fixedSize(horizontal: false, vertical: true)
-    }
-
     private func open(_ address: String) {
         if let url = URL(string: address) { NSWorkspace.shared.open(url) }
     }
