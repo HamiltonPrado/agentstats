@@ -47,6 +47,18 @@ La prueba de velocidad usa los endpoints públicos de Cloudflare y transfiere un
 
 ## Instalación
 
+Con [Homebrew](https://brew.sh):
+
+```bash
+brew tap hamiltonprado/agentstats https://github.com/HamiltonPrado/agentstats
+brew trust hamiltonprado/agentstats
+brew install --cask agentstats
+```
+
+Para actualizar, `brew upgrade --cask agentstats`. Para eliminarla, `brew uninstall --cask agentstats` (añade `--zap` para borrar también los ajustes y el historial). La app no está notarizada por Apple: el cask quita la cuarentena al instalar, así que se abre sin el aviso de macOS.
+
+O a mano:
+
 1. Descarga **AgentStats.zip** desde la [última versión](https://github.com/HamiltonPrado/agentstats/releases/latest).
 2. Descomprímelo y mueve `AgentStats.app` a la carpeta Aplicaciones.
 3. Abre la app. Si macOS bloquea el primer inicio, ve a **Ajustes del Sistema → Privacidad y seguridad → Abrir igualmente**. La app está firmada localmente y no tiene una firma de desarrollador de Apple.

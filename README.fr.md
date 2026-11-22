@@ -47,6 +47,18 @@ Le test de débit utilise les points d’accès publics de Cloudflare et transf�
 
 ## Installation
 
+Avec [Homebrew](https://brew.sh) :
+
+```bash
+brew tap hamiltonprado/agentstats https://github.com/HamiltonPrado/agentstats
+brew trust hamiltonprado/agentstats
+brew install --cask agentstats
+```
+
+Pour mettre à jour : `brew upgrade --cask agentstats`. Pour supprimer : `brew uninstall --cask agentstats` (ajoutez `--zap` pour effacer aussi les réglages et l’historique). L’app n’est pas notarisée par Apple : le cask retire la quarantaine à l’installation, elle s’ouvre donc sans l’avertissement de macOS.
+
+Ou à la main :
+
 1. Téléchargez **AgentStats.zip** depuis la [dernière version](https://github.com/HamiltonPrado/agentstats/releases/latest).
 2. Décompressez l’archive et déplacez `AgentStats.app` dans le dossier Applications.
 3. Ouvrez l’app. Si macOS bloque le premier lancement, allez dans **Réglages Système → Confidentialité et sécurité → Ouvrir quand même**. L’app est signée localement et ne possède pas de signature de développeur Apple.
