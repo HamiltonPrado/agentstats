@@ -155,7 +155,8 @@ enum ClaudeLimitsFetcher {
         let requests = [["type": "control_request", "request_id": "i", "request": ["subtype": "initialize"]],
                         ["type": "control_request", "request_id": "u", "request": ["subtype": "get_usage"]]]
         for r in requests {
-            if let d = try? JSONSerialization.data(withJSONObject: r) { input.fileHandleForWriting.write(d + Data("\n".utf8)) }
+            guard let d = try? JSONSerialization.data(withJSONObject: r),
+                  send(d + Data("\n".utf8), to: input.fileHandleForWriting) else { break }
         }
         try? input.fileHandleForWriting.close()
 
@@ -166,6 +167,19 @@ enum ClaudeLimitsFetcher {
         deadline.cancel()
         p.waitUntilExit()
         return parse(data, observed: Date())
+    }
+
+    /// Escreve sem arriscar a app: se o `claude` já saiu, escrever dá SIGPIPE, que mata o processo
+    /// inteiro. Com F_SETNOSIGPIPE passa a ser um erro normal, e `write(contentsOf:)` devolve-o
+    /// em vez de lançar uma exceção de Objective-C como o `write(_:)`.
+    static func send(_ data: Data, to handle: FileHandle) -> Bool {
+        guard fcntl(handle.fileDescriptor, F_SETNOSIGPIPE, 1) != -1 else { return false }
+        do {
+            try handle.write(contentsOf: data)
+            return true
+        } catch {
+            return false
+        }
     }
 
     /// Procura a resposta ao pedido `u` na saída do Claude Code (uma linha JSON por evento).
