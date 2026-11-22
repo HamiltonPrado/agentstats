@@ -65,6 +65,7 @@
 - **Portas:** vê o que está à escuta e termina processos teus, com confirmação.
 - **Homebrew:** atualiza e remove pacotes.
 - **Desinstalar:** move apps para o Lixo, com os restos que escolheres.
+- **Limpeza:** move para o Lixo caches de uma lista fechada (Homebrew, pip e npm; Brave, Playwright, Hugging Face e npx são opcionais), com confirmação e sem tocar no que detetar em uso. O espaço fica livre quando esvaziares o Lixo.
 
 ### À tua medida
 
@@ -79,6 +80,7 @@ Barra de menus configurável, atalho global, perfis, tema, cor, largura, tamanho
 | Captura e gravação | Gravação de ecrã |
 | Gravar com microfone | Microfone |
 | Histórico do clipboard | Colar de outras apps (macOS 15.4+) |
+| Categorias do Disco, medidas ao abrir o cartão | Pastas pessoais (Secretária, Documentos, Descargas, Música, Fotografias) |
 
 Não há conta nem telemetria. O AgentStats lê os registos dos agentes no Mac e não os envia. Só há rede no teste de velocidade, no Homebrew quando o usas e na consulta periódica dos limites, feita pelo teu Claude Code.
 

@@ -384,7 +384,7 @@ final class Monitor {
         }
         if let a = evaluate(.disk, enabled: diskAlertEnabled, value: disk.usage,
                             on: diskThreshold, off: diskThreshold - 0.02, now: now) {
-            alerts.append(SystemAlert(kind: .disk, value: Fmt.bytesShort(disk.free) + " livres", since: a, detail: nil))
+            alerts.append(SystemAlert(kind: .disk, value: Fmt.diskShort(disk.free) + " livres", since: a, detail: nil))
         }
         // Bateria: só conta na bateria. Ligado à corrente, a contagem recomeça. (Enquanto se espera
         // pelos 20 s, `evaluate` devolve nil e não se pode apagar a contagem, senão nunca chega lá.)
@@ -448,6 +448,18 @@ enum Fmt {
         let gb = Double(b) / 1_073_741_824
         if gb >= 1 { return num(gb, gb < 10 ? 1 : 0) + " GB" }
         return num(Double(b) / 1_048_576, 0) + " MB"
+    }
+    /// Espaço em disco, em múltiplos de 1000 como as Definições e o Finder: 250,79 GB
+    /// (a RAM fica em múltiplos de 1024, também como no macOS).
+    static func disk(_ b: UInt64) -> String {
+        ByteCountFormatter.string(fromByteCount: Int64(clamping: b), countStyle: .file).replacingOccurrences(of: ".", with: ",")
+    }
+    /// Versão curta do espaço em disco: 1,5 TB, 198 GB, 4,1 GB, 512 MB
+    static func diskShort(_ b: UInt64) -> String {
+        let gb: Double = Double(b) / 1_000_000_000
+        if gb >= 999.5 { return num(gb / 1000, 1) + " TB" }
+        if gb >= 1 { return num(gb, gb < 10 ? 1 : 0) + " GB" }
+        return num(Double(b) / 1_000_000, 0) + " MB"
     }
     static func rate(_ bps: Double, short: Bool = false) -> String {
         let units = short ? ["B", "K", "M", "G"] : ["B/s", "KB/s", "MB/s", "GB/s"]

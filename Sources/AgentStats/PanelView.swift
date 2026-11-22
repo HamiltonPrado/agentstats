@@ -84,6 +84,9 @@ struct PanelView: View {
         .frame(width: (PanelWidth(rawValue: panelWidthRaw) ?? .normal).points)
         .environment(\.agentAccentColor, accentColor)
         .tint(accentColor)
+        // Opaco: com a translucidez do popover, o fundo ficava cinzento sobre janelas escuras.
+        // Já arredondado como o popover, que não garante recortar o conteúdo; só a seta fica translúcida.
+        .background(RoundedRectangle(cornerRadius: DS.rPanel, style: .continuous).fill(Color.panel))
         .preferredColorScheme(selectedTheme.colorScheme)
     }
 
@@ -133,7 +136,7 @@ struct PanelView: View {
         if let t = m.temps?.cpuMax { line += " · " + Fmt.num(t, 0) + "°" }
         return HStack(spacing: DS.sm) {
             StatusDot(kind)
-            Text(line).font(DS.meta.monospacedDigit()).foregroundStyle(.secondary).lineLimit(1)
+            Text(line).font(DS.meta.monospacedDigit()).foregroundStyle(Color.text2).lineLimit(1)
         }
     }
 
@@ -153,7 +156,7 @@ struct PanelView: View {
                                 StatusDot(kind, size: 6).offset(x: 6, y: -1)
                             }
                         }
-                        .foregroundStyle(tab == t ? Color.primary : Color.secondary)
+                        .foregroundStyle(tab == t ? Color.primary : Color.text2)
                         .frame(maxWidth: .infinity).frame(height: 28)
                         .background(
                             RoundedRectangle(cornerRadius: DS.rSmall, style: .continuous)
@@ -187,7 +190,7 @@ struct PanelView: View {
     private var footer: some View {
         HStack(spacing: DS.xs) {
             Text("\(m.machine.replacingOccurrences(of: "Apple ", with: "")) · ligado há \(Fmt.duration(m.uptime))")
-                .font(DS.meta).foregroundStyle(.tertiary)
+                .font(DS.meta).foregroundStyle(Color.text3)
             Spacer()
             IconButton(systemName: "waveform.path.ecg", help: "Abrir Monitor de Atividade") {
                 NSWorkspace.shared.open(URL(fileURLWithPath: "/System/Applications/Utilities/Activity Monitor.app"))
@@ -210,16 +213,16 @@ struct AlertBanner: View {
             ForEach(alerts) { a in
                 HStack(alignment: .firstTextBaseline, spacing: DS.sm) {
                     Image(systemName: a.kind == .cpu ? "cpu" : a.kind == .temp ? "thermometer.high" : a.kind == .memory ? "memorychip" : a.kind == .disk ? "internaldrive" : "battery.25")
-                        .font(DS.body).foregroundStyle(Palette.attention).frame(width: 16)
+                        .font(DS.body).foregroundStyle(Color.attentionText).frame(width: 16)
                     Text("\(a.kind.label) · \(a.value)")
                         .font(DS.body.weight(.medium))
                         .fixedSize().layoutPriority(1)   // o valor nunca quebra; o processo é que encolhe
                     if let d = a.detail {
-                        Text(d).font(DS.meta).foregroundStyle(.secondary).lineLimit(1).truncationMode(.tail)
+                        Text(d).font(DS.meta).foregroundStyle(Color.text2).lineLimit(1).truncationMode(.tail)
                     }
                     Spacer(minLength: 0)
                     Text(Fmt.ago(a.since).replacingOccurrences(of: "há ", with: ""))
-                        .font(DS.meta.monospacedDigit()).foregroundStyle(.tertiary)
+                        .font(DS.meta.monospacedDigit()).foregroundStyle(Color.text3)
                 }
             }
         }
@@ -240,7 +243,7 @@ struct AppLogo: View {
                 .scaleEffect(1024 / 824)
         } else {
             Image(systemName: "gauge.with.needle")
-                .font(DS.body).foregroundStyle(.primary)
+                .font(DS.body).foregroundStyle(Color.primary)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .background(RoundedRectangle(cornerRadius: DS.rSmall, style: .continuous).fill(DS.raised))
         }

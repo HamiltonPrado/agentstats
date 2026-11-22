@@ -17,7 +17,6 @@ struct SystemView: View {
     @Environment(\.agentAccentColor) private var agentAccentColor
     @AppStorage("system.detail") private var selected: Metric = .cpu
     @ObservedObject private var speed = SpeedTestStore.shared
-    @StateObject private var folderScan = Box<FolderScanState>(.idle)
 
     var body: some View {
         VStack(spacing: DS.md) {
@@ -40,37 +39,37 @@ struct SystemView: View {
         case .memory:
             return Readout(title: "Memória", value: Fmt.pct(m.memory.usage),
                            sub: Fmt.bytesShort(m.memory.used),
-                           valueColor: m.memory.pressure >= 4 ? .red : m.memory.pressure >= 2 ? .orange : .primary)
+                           valueColor: m.memory.pressure >= 4 ? .attentionText : m.memory.pressure >= 2 ? .waitingText : .primary)
         case .temp:
             let t = m.temps?.cpuMax
             return Readout(title: "Temperatura", value: t.map { Fmt.num($0, 0) + "°" } ?? "—",
-                           sub: thermalLabel, valueColor: t.map { Palette.temp($0) == .secondary ? .primary : Palette.temp($0) } ?? .primary)
+                           sub: thermalLabel, valueColor: t.map(Palette.tempText) ?? .primary)
         case .gpu:
             return Readout(title: "GPU", value: m.gpu.map(Fmt.pct) ?? "—", sub: "utilização")
         case .disk:
             return Readout(title: "Disco", value: Fmt.pct(m.disk.usage),
-                           sub: Fmt.bytesShort(m.disk.free) + " livres", valueColor: heatOrPrimary(m.disk.usage))
+                           sub: Fmt.diskShort(m.disk.free) + " livres", valueColor: heatOrPrimary(m.disk.usage))
         case .battery:
             guard let b = m.battery else { return Readout(title: "Energia", value: "AC", sub: "sem bateria") }
             let sub = b.isCharging ? "a carregar" : b.externalPower ? "na corrente"
                 : b.minutesRemaining.map { Fmt.minutes($0) } ?? "na bateria"
             return Readout(title: "Bateria", value: Fmt.pct(b.percent), sub: sub,
-                           valueColor: b.percent < 0.15 && !b.isCharging ? .red : .primary)
+                           valueColor: b.percent < 0.15 && !b.isCharging ? .attentionText : .primary)
         case .network:
             return Readout(title: "Rede", value: "", sub: "")
         }
     }
 
-    private func heatOrPrimary(_ f: Double) -> Color { Palette.heat(f) == .secondary ? .primary : Palette.heat(f) }
+    private func heatOrPrimary(_ f: Double) -> Color { Palette.heatText(f) }
 
     private func readout(_ metric: Metric) -> some View {
         let d = data(metric)
         let isSel = selected == metric
         return Button { withAnimation(Motion.ease(0.16)) { selected = metric } } label: {
             VStack(alignment: .leading, spacing: 2) {
-                Text(d.title).font(DS.meta).foregroundStyle(.secondary).lineLimit(1)
+                Text(d.title).font(DS.meta).foregroundStyle(Color.text2).lineLimit(1).minimumScaleFactor(0.75)
                 Text(d.value).font(DS.figure).foregroundStyle(d.valueColor).lineLimit(1).minimumScaleFactor(0.8)
-                Text(d.sub).font(DS.meta.monospacedDigit()).foregroundStyle(.tertiary).lineLimit(1)
+                Text(d.sub).font(DS.meta.monospacedDigit()).foregroundStyle(Color.text3).lineLimit(1).minimumScaleFactor(0.75)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.horizontal, DS.md).padding(.vertical, DS.sm)
@@ -92,7 +91,7 @@ struct SystemView: View {
             HStack(spacing: DS.md) {
                 VStack(alignment: .leading, spacing: 2) {
                     Text("↓ " + Fmt.rate(m.network.downPerSec))
-                    Text("↑ " + Fmt.rate(m.network.upPerSec)).foregroundStyle(.secondary)
+                    Text("↑ " + Fmt.rate(m.network.upPerSec)).foregroundStyle(Color.text2)
                 }
                 .font(DS.body.monospacedDigit())
                 .frame(width: 96, alignment: .leading)
@@ -186,7 +185,7 @@ struct SystemView: View {
             Divider().opacity(0.5)
             StatRow(label: "Swap", value: "\(Fmt.bytes(m.memory.swapUsed)) de \(Fmt.bytes(m.memory.swapTotal))")
             StatRow(label: "Pressão", value: m.memory.pressure >= 4 ? "Crítica" : m.memory.pressure >= 2 ? "Elevada" : "Normal",
-                    valueColor: m.memory.pressure >= 4 ? .red : m.memory.pressure >= 2 ? .orange : .primary)
+                    valueColor: m.memory.pressure >= 4 ? .attentionText : m.memory.pressure >= 2 ? .waitingText : .primary)
             Divider().opacity(0.5)
             DayChart(samples: m.day, value: { $0.mem }, maxValue: 1, title: "Memória", format: Fmt.pct)
         }
@@ -212,33 +211,7 @@ struct SystemView: View {
     }
 
     private var diskDetail: some View {
-        Card(title: "Disco", icon: "internaldrive", trailing: "\(Fmt.bytes(m.disk.used)) de \(Fmt.bytes(m.disk.total))") {
-            Bar(value: m.disk.usage, color: Palette.heat(m.disk.usage) == .secondary ? .accentColor : Palette.heat(m.disk.usage), height: 6)
-            StatRow(label: "Usado", value: Fmt.bytes(m.disk.used))
-            StatRow(label: "Livre", value: Fmt.bytes(m.disk.free))
-            Divider().opacity(0.5)
-            StatRow(label: "Leitura", value: Fmt.rate(m.disk.readPerSec))
-            StatRow(label: "Escrita", value: Fmt.rate(m.disk.writePerSec))
-            Divider().opacity(0.5)
-            HStack {
-                Text("Pastas maiores").font(DS.body.weight(.medium))
-                Spacer()
-                Button(folderScan.value.isScanning ? "A analisar…" : folderScan.value.results == nil ? "Analisar" : "Atualizar") {
-                    folderScan.value = .scanning
-                    Task.detached(priority: .utility) {
-                        let results = FolderScanner.scanHome()
-                        await MainActor.run { folderScan.value = .loaded(results) }
-                    }
-                }.disabled(folderScan.value.isScanning).buttonStyle(.plain).foregroundStyle(.tint).font(DS.meta)
-            }
-            if let results = folderScan.value.results {
-                ForEach(results) { item in StatRow(label: item.name, value: Fmt.bytes(item.bytes)) }
-                Text("Tamanho das pastas principais da tua pasta pessoal; a leitura pode demorar.")
-                    .font(DS.meta).foregroundStyle(.tertiary)
-            } else {
-                Text("A análise começa só quando pedires.").font(DS.meta).foregroundStyle(.tertiary)
-            }
-        }
+        DiskCard(disk: m.disk, store: .shared)
     }
 
     @ViewBuilder private var batteryDetail: some View {
@@ -261,7 +234,7 @@ struct SystemView: View {
             }
         } else {
             Card(title: "Energia", icon: "powerplug") {
-                Text("Este Mac não tem bateria").font(DS.body).foregroundStyle(.secondary)
+                Text("Este Mac não tem bateria").font(DS.body).foregroundStyle(Color.text2)
                 Divider().opacity(0.5)
                 energySection
             }
@@ -278,11 +251,11 @@ struct SystemView: View {
                     Bar(value: app.watts / most, color: .secondary.opacity(0.5), height: 2)
                 }
             }
-            if apps.isEmpty { Text("Nada de relevante agora.").font(DS.meta).foregroundStyle(.secondary) }
+            if apps.isEmpty { Text("Nada de relevante agora.").font(DS.meta).foregroundStyle(Color.text2) }
             Text("Estimativa dos últimos segundos. Não inclui o ecrã nem processos de root, como o WindowServer.")
-                .font(DS.meta).foregroundStyle(.tertiary).fixedSize(horizontal: false, vertical: true)
+                .font(DS.meta).foregroundStyle(Color.text3).fixedSize(horizontal: false, vertical: true)
         } else {
-            Text("A medir…").font(DS.meta).foregroundStyle(.tertiary)
+            Text("A medir…").font(DS.meta).foregroundStyle(Color.text3)
         }
     }
 
@@ -301,7 +274,7 @@ struct SystemView: View {
                 StatRow(label: "Latência", value: "\(Fmt.num(result.latencyMs, 0)) ms")
             }
             if let error = speed.error {
-                Text(error).font(DS.meta).foregroundStyle(.secondary)
+                Text(error).font(DS.meta).foregroundStyle(Color.text2)
             }
             Button {
                 speed.start()
@@ -312,7 +285,7 @@ struct SystemView: View {
                     Spacer()
                     if let result = speed.result, !speed.running {
                         Text(result.measuredAt.formatted(date: .omitted, time: .shortened))
-                            .foregroundStyle(.tertiary)
+                            .foregroundStyle(Color.text3)
                     }
                 }
                 .font(DS.body)
@@ -323,13 +296,13 @@ struct SystemView: View {
             .disabled(speed.running)
             .accessibilityHint("Envia aproximadamente 32 MB para medir a ligação através do Cloudflare")
             Text("Cloudflare · cerca de 32 MB por teste; medições podem ser recolhidas de forma agregada")
-                .font(DS.meta).foregroundStyle(.tertiary)
+                .font(DS.meta).foregroundStyle(Color.text3)
         }
     }
 
     private func unavailable(_ title: String, _ icon: String, _ text: String) -> some View {
         Card(title: title, icon: icon) {
-            Text(text).font(DS.body).foregroundStyle(.secondary)
+            Text(text).font(DS.body).foregroundStyle(Color.text2)
         }
     }
 
@@ -365,7 +338,7 @@ struct TemperatureCard: View {
     var day: [MinuteSample] = []
     @StateObject private var expanded = Box(false)
 
-    private func color(_ c: Double) -> Color { Palette.temp(c) == .secondary ? .primary : Palette.temp(c) }
+    private func color(_ c: Double) -> Color { Palette.tempText(c) }
 
     var body: some View {
         Card(title: "Temperaturas", icon: "thermometer.medium", trailing: t.cpuMax.map { Fmt.temp($0, 0) }) {
@@ -388,7 +361,7 @@ struct TemperatureCard: View {
                     Text(expanded.value ? "Esconder sensores" : "Ver os \(t.sensors.count) sensores")
                     Image(systemName: "chevron.down").rotationEffect(.degrees(expanded.value ? 180 : 0))
                 }
-                .font(DS.meta).foregroundStyle(agentAccentColor)
+                .font(DS.meta).modifier(AccentText())
             }
             .buttonStyle(.plain)
             if expanded.value {

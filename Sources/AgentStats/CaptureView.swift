@@ -13,7 +13,7 @@ struct CaptureView: View {
             screenshotCard
             recordingCard
             if let error = store.error {
-                Text(error).font(DS.meta).foregroundStyle(Palette.waiting).fixedSize(horizontal: false, vertical: true)
+                Text(error).font(DS.meta).foregroundStyle(Color.waitingText).fixedSize(horizontal: false, vertical: true)
             }
             if let last = store.last { lastCard(last) }
         }
@@ -77,7 +77,7 @@ struct CaptureView: View {
     private func lastCard(_ file: URL) -> some View {
         HStack(spacing: 0) {
             VStack(alignment: .leading, spacing: 2) {
-                Text("Última").font(DS.meta).foregroundStyle(.secondary)
+                Text("Última").font(DS.meta).foregroundStyle(Color.text2)
                 Text(file.lastPathComponent).font(DS.body).lineLimit(1).truncationMode(.middle)
             }
             Spacer(minLength: DS.sm)
@@ -118,7 +118,7 @@ struct CaptureView: View {
     }
 
     private func note(_ text: String) -> some View {
-        Text(text).font(DS.meta).foregroundStyle(.tertiary).fixedSize(horizontal: false, vertical: true)
+        Text(text).font(DS.meta).foregroundStyle(Color.text3).fixedSize(horizontal: false, vertical: true)
     }
 
     private func open(_ address: String) {

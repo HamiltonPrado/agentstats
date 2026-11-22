@@ -86,7 +86,7 @@ struct AgentsView: View {
                 EmptyAgents()
             } else if !hasVisibleItems {
                 Text("Nenhuma sessão neste filtro")
-                    .font(DS.body).foregroundStyle(.secondary)
+                    .font(DS.body).foregroundStyle(Color.text2)
                     .frame(maxWidth: .infinity).padding(.vertical, DS.md)
             }
             if !attention.isEmpty {
@@ -107,7 +107,7 @@ struct AgentsView: View {
                         HStack(spacing: DS.xs) {
                             SectionHeader(title: "Recentes", count: recent.count)
                             Image(systemName: "chevron.right")
-                                .font(DS.meta).foregroundStyle(.tertiary)
+                                .font(DS.meta).foregroundStyle(Color.text3)
                                 .rotationEffect(.degrees(showRecent ? 90 : 0))
                         }
                         .contentShape(Rectangle())
@@ -124,7 +124,7 @@ struct AgentsView: View {
                         HStack(spacing: DS.xs) {
                             SectionHeader(title: "Histórico de agentes", count: history.count)
                             Image(systemName: "chevron.right")
-                                .font(DS.meta).foregroundStyle(.tertiary)
+                                .font(DS.meta).foregroundStyle(Color.text3)
                                 .rotationEffect(.degrees(showHistory.value ? 90 : 0))
                         }
                         .contentShape(Rectangle())
@@ -145,7 +145,7 @@ struct AgentsView: View {
         HStack(spacing: DS.sm) {
             Text("Sessões")
                 .font(DS.meta.weight(.medium))
-                .foregroundStyle(.secondary)
+                .foregroundStyle(Color.text2)
             Spacer(minLength: DS.sm)
             Button { isFilterPopoverShown.value.toggle() } label: {
                 HStack(spacing: DS.xs) {
@@ -153,7 +153,7 @@ struct AgentsView: View {
                     Text((AgentSessionFilter(rawValue: selectedFilter.value) ?? .all).title)
                 }
                 .font(DS.meta)
-                .foregroundStyle(selectedFilter.value == AgentSessionFilter.all.rawValue ? .secondary : .primary)
+                .foregroundStyle(selectedFilter.value == AgentSessionFilter.all.rawValue ? Color.text2 : Color.primary)
                 .padding(.horizontal, DS.sm)
                 .frame(height: 22)
                 .background(RoundedRectangle(cornerRadius: DS.rSmall, style: .continuous).fill(DS.raised))
@@ -174,7 +174,7 @@ struct AgentsView: View {
                                 Text(filter.title)
                                 Spacer(minLength: DS.md)
                                 if filter.rawValue == selectedFilter.value {
-                                    Image(systemName: "checkmark").foregroundStyle(.secondary)
+                                    Image(systemName: "checkmark").foregroundStyle(Color.text2)
                                 }
                             }
                             .font(DS.body)
@@ -253,15 +253,15 @@ struct EmptyAgents: View {
     var body: some View {
         VStack(spacing: DS.sm) {
             Image(systemName: "moon.zzz")
-                .font(.system(size: 20)).foregroundStyle(.tertiary)
+                .font(.system(size: 20)).foregroundStyle(Color.text3)
                 .frame(width: 48, height: 48)
                 .background(Circle().fill(DS.surface))
             Text("Nenhum agente a trabalhar").font(DS.title)
             Text("Quando abrires uma sessão de um agente de código, ela aparece aqui com o que está a fazer")
-                .font(DS.body).foregroundStyle(.secondary)
+                .font(DS.body).foregroundStyle(Color.text2)
                 .multilineTextAlignment(.center).fixedSize(horizontal: false, vertical: true)
             Text("Claude Code, Codex, Gemini CLI, Aider, Cursor Agent, OpenCode, Goose e Amp")
-                .font(DS.meta).foregroundStyle(.tertiary)
+                .font(DS.meta).foregroundStyle(Color.text3)
                 .multilineTextAlignment(.center).fixedSize(horizontal: false, vertical: true)
         }
         .padding(.horizontal, DS.lg)
@@ -277,13 +277,13 @@ struct StateIcon: View {
     var body: some View {
         Image(systemName: state.icon)
             .font(DS.body)
-            .foregroundStyle(state.needsAttention ? AnyShapeStyle(Palette.attention) : AnyShapeStyle(.secondary))
+            .foregroundStyle(state.needsAttention ? AnyShapeStyle(Color.attentionText) : AnyShapeStyle(Color.text2))
             .frame(width: 24, height: 24)
             .background(RoundedRectangle(cornerRadius: DS.rSmall, style: .continuous).fill(DS.raised))
             .overlay(alignment: .bottomTrailing) {
                 StatusDot(state.statusKind, size: 8)
                     .padding(1.5)
-                    .background(Circle().fill(Color(nsColor: .windowBackgroundColor)))
+                    .background(Circle().fill(Color.panel))
                     .offset(x: 3, y: 3)
             }
     }
@@ -305,22 +305,22 @@ private struct ActivityHistoryRow: View {
     var body: some View {
         HStack(alignment: .top, spacing: DS.sm) {
             Image(systemName: record.phase == .finished ? "checkmark.circle" : record.phase.shouldRemind ? "hourglass" : "clock")
-                .font(DS.body).foregroundStyle(record.phase.shouldRemind ? Palette.attention : .secondary)
+                .font(DS.body).foregroundStyle(record.phase.shouldRemind ? Color.attentionText : Color.text2)
                 .frame(width: 20, height: 20)
             VStack(alignment: .leading, spacing: 3) {
                 Text(record.title).font(DS.body.weight(.medium)).lineLimit(1)
                 Text("\(record.kind) · \(record.project) · \(record.phase.title)")
-                    .font(DS.meta).foregroundStyle(.secondary).lineLimit(1)
-                Text(timeRange).font(DS.meta).foregroundStyle(.tertiary).lineLimit(1)
+                    .font(DS.meta).foregroundStyle(Color.text2).lineLimit(1)
+                Text(timeRange).font(DS.meta).foregroundStyle(Color.text3).lineLimit(1)
                 if record.events.count > 1 {
-                    Text(eventSummary).font(DS.meta).foregroundStyle(.tertiary).lineLimit(1)
+                    Text(eventSummary).font(DS.meta).foregroundStyle(Color.text3).lineLimit(1)
                 }
             }
             Spacer(minLength: DS.xs)
             VStack(alignment: .trailing, spacing: 3) {
                 Text(Fmt.duration(record.duration())).font(DS.meta.monospacedDigit())
                 Text(record.tokens > 0 ? Fmt.tokens(record.tokens) + " tokens" : "sem tokens")
-                    .font(DS.meta.monospacedDigit()).foregroundStyle(.tertiary)
+                    .font(DS.meta.monospacedDigit()).foregroundStyle(Color.text3)
             }
         }
         .padding(.horizontal, DS.md).padding(.vertical, DS.sm)
@@ -371,22 +371,24 @@ struct SessionCard: View {
             VStack(alignment: .leading, spacing: density == .detailed ? DS.sm : DS.xs) {
                 HStack(alignment: .firstTextBaseline, spacing: DS.sm) {
                     Text(session.title).font(DS.title).lineLimit(1)
+                        // Terminada: recua no título, sem tirar contraste ao resto do cartão.
+                        .foregroundStyle(session.state == .finished ? Color.text2 : Color.primary)
                     Spacer(minLength: DS.xs)
                     if hover.value { actions } else {
-                        Text(Fmt.ago(session.lastActivity)).font(DS.meta.monospacedDigit()).foregroundStyle(.tertiary)
+                        Text(Fmt.ago(session.lastActivity)).font(DS.meta.monospacedDigit()).foregroundStyle(Color.text3)
                     }
                 }
 
                 if density == .compact {
                     Text("\(session.state.label) · \(session.kind == "Claude Code" ? "Claude" : session.kind) · \(session.project)")
                         .font(DS.meta)
-                        .foregroundStyle(session.state.needsAttention ? AnyShapeStyle(Palette.attention) : AnyShapeStyle(.secondary))
+                        .foregroundStyle(session.state.needsAttention ? AnyShapeStyle(Color.attentionText) : AnyShapeStyle(Color.text2))
                         .lineLimit(1).truncationMode(.middle)
                 } else {
                     HStack(spacing: DS.xs) {
                         Text(session.state.label)
-                            .foregroundStyle(session.state.needsAttention ? AnyShapeStyle(Palette.attention) : AnyShapeStyle(.secondary))
-                        Text("· " + (session.kind == "Claude Code" ? "Claude" : session.kind)).foregroundStyle(.tertiary)
+                            .foregroundStyle(session.state.needsAttention ? AnyShapeStyle(Color.attentionText) : AnyShapeStyle(Color.text2))
+                        Text("· " + (session.kind == "Claude Code" ? "Claude" : session.kind)).foregroundStyle(Color.text3)
                     }
                     .font(DS.body)
 
@@ -394,19 +396,19 @@ struct SessionCard: View {
                         if isCommand {
                             // O momento da app: o comando em curso, como uma linha de terminal.
                             Text("$ " + d)
-                                .font(DS.mono).foregroundStyle(.primary)
+                                .font(DS.mono).foregroundStyle(Color.primary)
                                 .lineLimit(density == .detailed ? 5 : 2)
                                 .padding(.horizontal, DS.sm).padding(.vertical, DS.xs)
                                 .frame(maxWidth: .infinity, alignment: .leading)
                                 .background(RoundedRectangle(cornerRadius: DS.rSmall, style: .continuous).fill(DS.raised))
                         } else {
-                            Text(d).font(DS.body).foregroundStyle(.secondary)
+                            Text(d).font(DS.body).foregroundStyle(Color.text2)
                                 .lineLimit(density == .detailed ? 5 : 2)
                         }
                     }
 
                     Text(meta)
-                        .font(DS.meta.monospacedDigit()).foregroundStyle(.tertiary)
+                        .font(DS.meta.monospacedDigit()).foregroundStyle(Color.text3)
                         .lineLimit(density == .detailed ? 3 : 1).truncationMode(.tail)
                         .help(m.usage.perSession[session.id].map { u in
                             "Tokens nesta sessão: \(Fmt.tokens(u.total)) · saída \(Fmt.tokens(u.output)) · entrada \(Fmt.tokens(u.input)) · cache lida \(Fmt.tokens(u.cacheRead)) · cache escrita \(Fmt.tokens(u.cacheWrite))"
@@ -414,7 +416,7 @@ struct SessionCard: View {
 
                     if let p = session.process, !p.children.isEmpty, session.state.isWorking {
                         Text("↳ " + p.children.joined(separator: " · "))
-                            .font(DS.mono).foregroundStyle(.tertiary).lineLimit(density == .detailed ? 3 : 1)
+                            .font(DS.mono).foregroundStyle(Color.text3).lineLimit(density == .detailed ? 3 : 1)
                     }
                 }
             }
@@ -422,7 +424,6 @@ struct SessionCard: View {
         .cardStyle(padding: density == .compact ? DS.sm : DS.md,
                    highlight: session.state.needsAttention ? Palette.attention.opacity(0.5) : nil)
         .background(RoundedRectangle(cornerRadius: DS.rCard, style: .continuous).fill(hover.value ? DS.surface : .clear))
-        .opacity(session.state == .finished ? 0.6 : 1)
         .contentShape(Rectangle())
         .onTapGesture { AppState.controller?.open(session) }
         .help("Clica para ir para o agente")
@@ -463,7 +464,7 @@ struct SessionCard: View {
 
     private func mini(_ icon: String, _ help: String, _ action: @escaping () -> Void) -> some View {
         Button(action: action) {
-            Image(systemName: icon).font(DS.meta).foregroundStyle(.secondary).frame(width: 20, height: 16)
+            Image(systemName: icon).font(DS.meta).foregroundStyle(Color.text2).frame(width: 20, height: 16)
         }
         .buttonStyle(.plain).help(help)
     }
@@ -507,17 +508,17 @@ struct OtherAgentRow: View {
     var body: some View {
         HStack(spacing: DS.md) {
             Image(systemName: agent.isSubagent ? "arrow.turn.down.right" : "terminal")
-                .font(DS.body).foregroundStyle(.secondary)
+                .font(DS.body).foregroundStyle(Color.text2)
                 .frame(width: 24, height: 24)
                 .background(RoundedRectangle(cornerRadius: DS.rSmall, style: .continuous).fill(DS.raised))
             VStack(alignment: .leading, spacing: 2) {
                 Text(title).font(DS.title)
-                Text(subtitle).font(DS.meta).foregroundStyle(.secondary).lineLimit(1).truncationMode(.middle)
+                Text(subtitle).font(DS.meta).foregroundStyle(Color.text2).lineLimit(1).truncationMode(.middle)
             }
             Spacer()
             VStack(alignment: .trailing, spacing: 2) {
                 Text(Fmt.num(agent.cpu, 0) + "% CPU").font(DS.body.monospacedDigit())
-                Text(Fmt.etime(agent.elapsed)).font(DS.meta.monospacedDigit()).foregroundStyle(.tertiary)
+                Text(Fmt.etime(agent.elapsed)).font(DS.meta.monospacedDigit()).foregroundStyle(Color.text3)
             }
         }
         .cardStyle()
@@ -539,9 +540,9 @@ struct PlanLimitsCard: View {
                 VStack(alignment: .leading, spacing: DS.sm) {
                     HStack(spacing: DS.xs) {
                         Text(l.provider.rawValue).font(DS.body.weight(.medium))
-                        if let plan = l.plan { Text("· " + plan).font(DS.body).foregroundStyle(.secondary) }
+                        if let plan = l.plan { Text("· " + plan).font(DS.body).foregroundStyle(Color.text2) }
                         Spacer(minLength: DS.xs)
-                        Text(Fmt.ago(l.observedAt)).font(DS.meta).foregroundStyle(.tertiary)
+                        Text(Fmt.ago(l.observedAt)).font(DS.meta).foregroundStyle(Color.text3)
                             .help("Última leitura dos limites")
                     }
                     ForEach(l.windows) { w in row(w) }
@@ -553,16 +554,17 @@ struct PlanLimitsCard: View {
 
     private func row(_ w: LimitWindow) -> some View {
         let fraction = w.usedPercent / 100
+        let textColor: Color = fraction >= 0.9 ? .attentionText : fraction >= 0.75 ? .waitingText : .primary
         let color: Color = fraction >= 0.9 ? Palette.attention : fraction >= 0.75 ? Palette.waiting : .accentColor
         return VStack(alignment: .leading, spacing: DS.xs) {
             HStack(alignment: .firstTextBaseline, spacing: DS.xs) {
                 Text(w.label).font(DS.body)
                 if let r = w.resetsAt {
-                    Text("· renova " + Self.resetText(r, now: Date())).font(DS.meta).foregroundStyle(.tertiary).lineLimit(1)
+                    Text("· renova " + Self.resetText(r, now: Date())).font(DS.meta).foregroundStyle(Color.text3).lineLimit(1)
                 }
                 Spacer(minLength: DS.sm)
                 Text(Fmt.num(w.usedPercent, 0) + "%").font(DS.body.monospacedDigit())
-                    .foregroundStyle(fraction >= 0.75 ? color : .primary)
+                    .foregroundStyle(textColor)
             }
             Bar(value: fraction, color: color, height: 4)
         }
@@ -596,17 +598,17 @@ struct TodayUsage: View {
         VStack(alignment: .leading, spacing: DS.md) {
             Button { withAnimation(Motion.ease(0.2)) { expanded.toggle() } } label: {
                 HStack(alignment: .firstTextBaseline, spacing: DS.sm) {
-                    Text("Hoje").font(DS.body).foregroundStyle(.secondary)
+                    Text("Hoje").font(DS.body).foregroundStyle(Color.text2)
                     Text("\(Fmt.tokens(t.total)) tokens").font(DS.title.monospacedDigit())
                     if usage.todayCost >= 0.01 {
-                        Text("~" + Fmt.usd(usage.todayCost)).font(DS.meta.monospacedDigit()).foregroundStyle(.secondary)
+                        Text("~" + Fmt.usd(usage.todayCost)).font(DS.meta.monospacedDigit()).foregroundStyle(Color.text2)
                             .help("Quanto custaria na API, a preços públicos. Com um plano Pro/Max/Plus não é o que pagas.")
                     } else {
-                        Text("\(Fmt.tokens(t.output)) de saída").font(DS.meta.monospacedDigit()).foregroundStyle(.tertiary)
+                        Text("\(Fmt.tokens(t.output)) de saída").font(DS.meta.monospacedDigit()).foregroundStyle(Color.text3)
                     }
                     Spacer(minLength: DS.xs)
                     Image(systemName: "chevron.right")
-                        .font(DS.meta).foregroundStyle(.tertiary)
+                        .font(DS.meta).foregroundStyle(Color.text3)
                         .rotationEffect(.degrees(expanded ? 90 : 0))
                 }
                 .contentShape(Rectangle())
@@ -629,22 +631,22 @@ struct TodayUsage: View {
         let maxTotal = max(usage.week.map(\.total.total).max() ?? 1, 1)
         return VStack(alignment: .leading, spacing: DS.sm) {
             HStack {
-                Text("Últimos 7 dias").font(DS.meta).foregroundStyle(.secondary)
+                Text("Últimos 7 dias").font(DS.meta).foregroundStyle(Color.text2)
                 Spacer()
                 Text(Fmt.tokens(usage.weekTotal.total) + " tokens" + (usage.weekCost >= 0.01 ? " · ~" + Fmt.usd(usage.weekCost) : ""))
-                    .font(DS.meta.monospacedDigit()).foregroundStyle(.tertiary)
+                    .font(DS.meta.monospacedDigit()).foregroundStyle(Color.text3)
             }
             HStack(alignment: .bottom, spacing: DS.sm) {
                 ForEach(Array(usage.week.enumerated()), id: \.offset) { i, d in
                     let isToday = i == usage.week.count - 1
                     VStack(spacing: DS.xs) {
                         Text(d.total.isEmpty ? "" : Fmt.tokens(d.total.total))
-                            .font(.system(size: 9).monospacedDigit()).foregroundStyle(.tertiary)
+                            .font(.system(size: 9).monospacedDigit()).foregroundStyle(Color.text3)
                             .lineLimit(1).minimumScaleFactor(0.7)
                         RoundedRectangle(cornerRadius: 2)
                             .fill(isToday ? Color.accentColor : Color.secondary.opacity(0.45))
                             .frame(height: max(2, 40 * Double(d.total.total) / Double(maxTotal)))
-                        Text(Self.weekday(d.day)).font(DS.meta).foregroundStyle(isToday ? .primary : .tertiary)
+                        Text(Self.weekday(d.day)).font(DS.meta).foregroundStyle(isToday ? Color.primary : Color.text3)
                     }
                     .frame(maxWidth: .infinity)
                     .accessibilityElement(children: .ignore)
@@ -660,15 +662,15 @@ struct TodayUsage: View {
         let top = Array(usage.projects.prefix(5))
         let maxTotal = max(top.first?.usage.total ?? 1, 1)
         return VStack(alignment: .leading, spacing: DS.sm) {
-            Text("Projetos esta semana").font(DS.meta).foregroundStyle(.secondary)
+            Text("Projetos esta semana").font(DS.meta).foregroundStyle(Color.text2)
             ForEach(top, id: \.name) { p in
                 VStack(alignment: .leading, spacing: DS.xs) {
                     HStack {
                         Text(p.name.trimmingCharacters(in: .whitespaces)).font(DS.body).lineLimit(1).truncationMode(.middle)
                         Spacer(minLength: DS.sm)
-                        Text(Fmt.tokens(p.usage.total)).font(DS.body.monospacedDigit()).foregroundStyle(.secondary)
+                        Text(Fmt.tokens(p.usage.total)).font(DS.body.monospacedDigit()).foregroundStyle(Color.text2)
                         if p.cost >= 0.01 {
-                            Text("~" + Fmt.usd(p.cost)).font(DS.body.monospacedDigit()).foregroundStyle(.tertiary)
+                            Text("~" + Fmt.usd(p.cost)).font(DS.body.monospacedDigit()).foregroundStyle(Color.text3)
                                 .frame(minWidth: 56, alignment: .trailing)
                         }
                     }
@@ -702,10 +704,10 @@ struct ActivityStrip: View {
         let active = History24h.activeMinutes(recent, now: now)
         VStack(alignment: .leading, spacing: DS.sm) {
             HStack(alignment: .firstTextBaseline) {
-                Text("Últimas 24 h").font(DS.body).foregroundStyle(.secondary)
+                Text("Últimas 24 h").font(DS.body).foregroundStyle(Color.text2)
                 Spacer()
                 Text(active > 0 ? "agentes ativos " + Fmt.minutes(active) : "sem atividade")
-                    .font(DS.meta.monospacedDigit()).foregroundStyle(.tertiary)
+                    .font(DS.meta.monospacedDigit()).foregroundStyle(Color.text3)
             }
             HStack(alignment: .bottom, spacing: 1) {
                 ForEach(Array(buckets.enumerated()), id: \.offset) { _, b in
@@ -724,7 +726,7 @@ struct ActivityStrip: View {
                 Spacer()
                 Text("agora").font(DS.meta)
             }
-            .foregroundStyle(.tertiary)
+            .foregroundStyle(Color.text3)
             .accessibilityHidden(true)
         }
         .cardStyle()

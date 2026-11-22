@@ -27,7 +27,7 @@ struct ProcessesView: View {
             .cardStyle(padding: DS.xs)
 
             Text("Botão direito num processo para o terminar")
-                .font(DS.meta).foregroundStyle(.tertiary)
+                .font(DS.meta).foregroundStyle(Color.text3)
                 .frame(maxWidth: .infinity)
         }
     }
@@ -36,7 +36,7 @@ struct ProcessesView: View {
         Button(action: action) {
             Text(title)
                 .font(DS.body.weight(.medium))
-                .foregroundStyle(selected ? Color.primary : Color.secondary)
+                .foregroundStyle(selected ? Color.primary : Color.text2)
                 .frame(maxWidth: .infinity).frame(height: 24)
                 .background(RoundedRectangle(cornerRadius: DS.rSmall, style: .continuous)
                     .fill(selected ? (scheme == .dark ? Color.white.opacity(0.12) : Color.white) : .clear)
@@ -63,7 +63,7 @@ struct ProcRow: View {
                 if let icon = running.icon {
                     Image(nsImage: icon).resizable()
                 } else {
-                    Image(systemName: "gearshape").resizable().scaledToFit().padding(2).foregroundStyle(.tertiary)
+                    Image(systemName: "gearshape").resizable().scaledToFit().padding(2).foregroundStyle(Color.text3)
                 }
             }
             .frame(width: 16, height: 16)
@@ -71,18 +71,18 @@ struct ProcRow: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text(running.name ?? p.name).font(DS.body).lineLimit(1)
                 Text("PID \(String(p.pid)) · \(Fmt.etime(p.elapsed))")
-                    .font(DS.meta.monospacedDigit()).foregroundStyle(.tertiary)
+                    .font(DS.meta.monospacedDigit()).foregroundStyle(Color.text3)
                     .lineLimit(1).minimumScaleFactor(0.8)
             }
             Spacer(minLength: DS.sm)
             VStack(alignment: .trailing, spacing: DS.xs) {
                 HStack(spacing: DS.xs) {
                     Text(Fmt.num(p.cpu, 1) + "%")
-                        .foregroundStyle(sortByMem ? Color.secondary : (p.cpu > 80 ? Color.red : Color.primary))
+                        .foregroundStyle(sortByMem ? Color.text2 : (p.cpu > 80 ? Color.attentionText : Color.primary))
                         .frame(width: 44, alignment: .trailing)
                         .lineLimit(1).minimumScaleFactor(0.75)
                     Text(Fmt.bytesShort(p.rssKB * 1024))
-                        .foregroundStyle(sortByMem ? Color.primary : Color.secondary)
+                        .foregroundStyle(sortByMem ? Color.primary : Color.text2)
                         .frame(width: 56, alignment: .trailing)
                         .lineLimit(1).minimumScaleFactor(0.75)
                 }

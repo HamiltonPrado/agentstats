@@ -43,10 +43,10 @@ struct SettingsView: View {
             case .alerts: alertsSection
             }
             HStack {
-                Text("AgentStats " + (Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "")).font(DS.meta).foregroundStyle(.tertiary)
+                Text("AgentStats " + (Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "")).font(DS.meta).foregroundStyle(Color.text3)
                 Spacer()
                 Link("Código no GitHub", destination: URL(string: "https://github.com/HamiltonPrado/agentstats")!)
-                    .font(DS.meta)
+                    .font(DS.meta).modifier(AccentText())
             }
             .padding(.horizontal, DS.xs)
         }
@@ -73,7 +73,7 @@ struct SettingsView: View {
                 Button { withAnimation(Motion.ease(0.16)) { sectionRaw = section.rawValue } } label: {
                     Text(section.title)
                         .font(DS.meta.weight(.medium)).lineLimit(1)
-                        .foregroundStyle(selected ? Color.primary : Color.secondary)
+                        .foregroundStyle(selected ? Color.primary : Color.text2)
                         .frame(maxWidth: .infinity).frame(height: 24)
                         .background(RoundedRectangle(cornerRadius: DS.rSmall, style: .continuous)
                             .fill(selected ? DS.raised : .clear))
@@ -108,7 +108,7 @@ struct SettingsView: View {
                                 icon("timer")
                                 VStack(alignment: .leading, spacing: 2) {
                                     Text("Avisar ao terminar").font(DS.body)
-                                    Text("Só tarefas com pelo menos").font(DS.meta).foregroundStyle(.tertiary)
+                                    Text("Só tarefas com pelo menos").font(DS.meta).foregroundStyle(Color.text3)
                                 }
                             }
                             Picker("", selection: bm.finishMinMinutes) {
@@ -122,7 +122,7 @@ struct SettingsView: View {
                         icon("keyboard")
                         VStack(alignment: .leading, spacing: 2) {
                             Text("Atalho para abrir o painel").font(DS.body)
-                            Text("Funciona em qualquer app").font(DS.meta).foregroundStyle(.tertiary)
+                            Text("Funciona em qualquer app").font(DS.meta).foregroundStyle(Color.text3)
                         }
                         Spacer()
                         Picker("", selection: $hotkey) {
@@ -139,7 +139,7 @@ struct SettingsView: View {
                                 login.value = on; loginErr.value = nil
                             } catch { loginErr.value = error.localizedDescription }
                         }))
-                    if let e = loginErr.value { Text(e).font(DS.meta).foregroundStyle(.red) }
+                    if let e = loginErr.value { Text(e).font(DS.meta).foregroundStyle(Color.attentionText) }
                 }
             }
             group("Energia") {
@@ -188,7 +188,7 @@ struct SettingsView: View {
                     .buttonStyle(.plain)
                     .disabled(activeProfile == "custom")
                     Text("Aplica Trabalho ou Monitorização e guarda aqui as alterações feitas.")
-                        .font(DS.meta).foregroundStyle(.tertiary)
+                        .font(DS.meta).foregroundStyle(Color.text3)
                 }
             }
         }
@@ -220,7 +220,7 @@ struct SettingsView: View {
                             VStack(alignment: .leading, spacing: 2) {
                                 Text(metric.title).font(DS.body)
                                 if let subtitle = metric.subtitle {
-                                    Text(subtitle).font(DS.meta).foregroundStyle(.tertiary)
+                                    Text(subtitle).font(DS.meta).foregroundStyle(Color.text3)
                                 }
                             }
                             Spacer(minLength: DS.xs)
@@ -374,7 +374,7 @@ struct SettingsView: View {
 
     private func group<C: View>(_ title: String, @ViewBuilder _ content: () -> C) -> some View {
         VStack(alignment: .leading, spacing: DS.sm) {
-            Text(title).font(DS.meta.weight(.medium)).foregroundStyle(.secondary)
+            Text(title).font(DS.meta.weight(.medium)).foregroundStyle(Color.text2)
                 .padding(.leading, DS.xs)
             content().cardStyle()
         }
@@ -461,7 +461,7 @@ struct SettingsView: View {
 
     /// Ícones de linha, todos do mesmo tamanho e na cor do texto secundário.
     private func icon(_ name: String) -> some View {
-        Image(systemName: name).font(DS.body).foregroundStyle(.secondary).frame(width: 16)
+        Image(systemName: name).font(DS.body).foregroundStyle(Color.text2).frame(width: 16)
     }
 
     private func row(_ iconName: String, _ title: String, _ sub: String?, _ binding: Binding<Bool>) -> some View {
@@ -469,7 +469,7 @@ struct SettingsView: View {
             icon(iconName)
             VStack(alignment: .leading, spacing: 2) {
                 Text(title).font(DS.body).lineLimit(1)
-                if let sub { Text(sub).font(DS.meta).foregroundStyle(.tertiary).lineLimit(2) }
+                if let sub { Text(sub).font(DS.meta).foregroundStyle(Color.text3).lineLimit(2) }
             }
             Spacer()
             Toggle("", isOn: binding).toggleStyle(.switch).controlSize(.mini).labelsHidden()

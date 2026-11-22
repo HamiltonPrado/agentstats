@@ -15,7 +15,7 @@ struct ClipboardView: View {
         VStack(alignment: .leading, spacing: DS.md) {
             if store.items.count + store.snippets.count > 5 || !search.value.isEmpty { searchField }
             if let error = store.storageError {
-                Text(error).font(DS.meta).foregroundStyle(Palette.waiting).fixedSize(horizontal: false, vertical: true)
+                Text(error).font(DS.meta).foregroundStyle(Color.waitingText).fixedSize(horizontal: false, vertical: true)
             }
             historyCard
             snippetsCard
@@ -91,8 +91,8 @@ struct ClipboardView: View {
                 }
                 Spacer(minLength: 0)
                 if confirmClear.value {
-                    Text("Apagar o histórico todo?").font(DS.meta).foregroundStyle(.secondary).lineLimit(1)
-                    link("Apagar", color: Palette.attention) {
+                    Text("Apagar o histórico todo?").font(DS.meta).foregroundStyle(Color.text2).lineLimit(1)
+                    link("Apagar", color: .attentionText) {
                         store.clearHistory()
                         confirmClear.value = false
                     }
@@ -113,7 +113,7 @@ struct ClipboardView: View {
                     Text(ClipboardRules.preview(item.text)).font(DS.body).lineLimit(1).truncationMode(.tail)
                     Text(copied.value == item.id ? "Copiado" : Fmt.ago(item.date))
                         .font(DS.meta)
-                        .foregroundStyle(copied.value == item.id ? AnyShapeStyle(Palette.working) : AnyShapeStyle(.tertiary))
+                        .foregroundStyle(copied.value == item.id ? AnyShapeStyle(Color.workingText) : AnyShapeStyle(Color.text3))
                 }
             }
             IconButton(systemName: item.pinned ? "pin.fill" : "pin", help: item.pinned ? "Desafixar" : "Afixar") {
@@ -157,11 +157,11 @@ struct ClipboardView: View {
                     Text(snippet.name).font(DS.body).lineLimit(1)
                     Text(copied.value == snippet.id ? "Copiado" : ClipboardRules.preview(snippet.text))
                         .font(DS.meta).lineLimit(1)
-                        .foregroundStyle(copied.value == snippet.id ? AnyShapeStyle(Palette.working) : AnyShapeStyle(.tertiary))
+                        .foregroundStyle(copied.value == snippet.id ? AnyShapeStyle(Color.workingText) : AnyShapeStyle(Color.text3))
                 }
             }
             if confirmDelete.value == snippet.id {
-                link("Apagar", color: Palette.attention) {
+                link("Apagar", color: .attentionText) {
                     store.removeSnippet(snippet.id)
                     confirmDelete.value = nil
                 }
@@ -213,11 +213,11 @@ struct ClipboardView: View {
         .accessibilityHint("Copia para o clipboard")
     }
 
-    private func link(_ title: String, color: Color = .secondary, action: @escaping () -> Void) -> some View {
+    private func link(_ title: String, color: Color = .text2, action: @escaping () -> Void) -> some View {
         Button(title, action: action).buttonStyle(.plain).font(DS.meta).foregroundStyle(color).fixedSize()
     }
 
     private func note(_ text: String) -> some View {
-        Text(text).font(DS.meta).foregroundStyle(.tertiary).fixedSize(horizontal: false, vertical: true)
+        Text(text).font(DS.meta).foregroundStyle(Color.text3).fixedSize(horizontal: false, vertical: true)
     }
 }

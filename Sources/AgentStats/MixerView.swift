@@ -113,7 +113,7 @@ struct MixerCard: View {
                 Spacer(minLength: DS.sm)
                 if mixer.rows.contains(where: \.adjusted) {
                     Button("Repor tudo") { mixer.resetAll() }
-                        .buttonStyle(.plain).font(DS.meta).foregroundStyle(.secondary)
+                        .buttonStyle(.plain).font(DS.meta).foregroundStyle(Color.text2)
                         .help("Todas as apps voltam a 100%")
                 }
             }
@@ -155,7 +155,7 @@ struct MixerCard: View {
     }
 
     private func note(_ text: String) -> some View {
-        Text(text).font(DS.meta).foregroundStyle(.tertiary).fixedSize(horizontal: false, vertical: true)
+        Text(text).font(DS.meta).foregroundStyle(Color.text3).fixedSize(horizontal: false, vertical: true)
     }
 }
 
@@ -172,14 +172,14 @@ private struct MixerRowView: View {
                 Spacer(minLength: DS.sm)
                 if let state = stateText {
                     Text(state).font(DS.meta).lineLimit(1).help(state)
-                        .foregroundStyle(isProblem ? AnyShapeStyle(Palette.waiting) : AnyShapeStyle(.tertiary))
+                        .foregroundStyle(isProblem ? AnyShapeStyle(Color.waitingText) : AnyShapeStyle(Color.text3))
                 }
             }
             HStack(spacing: DS.sm) {
                 Button { mixer.toggleMute(row.id) } label: {
                     Image(systemName: row.muted ? "speaker.slash" : "speaker.wave.2")
                         .font(DS.body)
-                        .foregroundStyle(row.muted ? AnyShapeStyle(Palette.attention) : AnyShapeStyle(.secondary))
+                        .foregroundStyle(row.muted ? AnyShapeStyle(Color.attentionText) : AnyShapeStyle(Color.text2))
                         .frame(width: 16, height: 16)
                         .contentShape(Rectangle())
                 }
@@ -193,7 +193,7 @@ private struct MixerRowView: View {
                     .accessibilityValue("\(percent)%")
                 Text("\(percent)%")
                     .font(DS.meta.monospacedDigit())
-                    .foregroundStyle(row.level > 1 && !row.muted ? AnyShapeStyle(Palette.waiting) : AnyShapeStyle(.secondary))
+                    .foregroundStyle(row.level > 1 && !row.muted ? AnyShapeStyle(Color.waitingText) : AnyShapeStyle(Color.text2))
                     .frame(width: 36, alignment: .trailing)
             }
         }
@@ -222,7 +222,7 @@ private struct MixerRowView: View {
         if let path = row.appPath {
             Image(nsImage: NSWorkspace.shared.icon(forFile: path)).resizable().interpolation(.high)
         } else {
-            Image(systemName: "waveform").font(DS.body).foregroundStyle(.secondary)
+            Image(systemName: "waveform").font(DS.body).foregroundStyle(Color.text2)
         }
     }
 }

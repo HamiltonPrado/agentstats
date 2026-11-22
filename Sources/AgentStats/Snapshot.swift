@@ -30,7 +30,7 @@ enum Snapshot {
                     .environment(m)
                     .environment(\.colorScheme, scheme)
                     .environment(\.controlActiveState, .key)
-                    .background(dark ? Color(white: 0.17) : Color(white: 0.95))
+                    .background(Color.panel)   // os cantos, que no popover são recortados
                 let file = folder.appendingPathComponent("\(tab.rawValue)-\(dark ? "dark" : "light").png")
                 if !render(AnyView(view), dark: dark, scale: 2, to: file) { failed = true }
             }

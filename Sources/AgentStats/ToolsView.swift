@@ -2,13 +2,14 @@ import SwiftUI
 import AppKit
 
 enum ToolSection: String, CaseIterable, Identifiable {
-    case ports, brew, apps
+    case ports, brew, apps, cleanup
     var id: String { rawValue }
     var title: String {
         switch self {
         case .ports: "Portas"
         case .brew: "Homebrew"
         case .apps: "Desinstalar"
+        case .cleanup: "Limpeza"
         }
     }
 }
@@ -23,8 +24,9 @@ struct ToolsView: View {
                 ForEach(ToolSection.allCases) { item in
                     Button { section = item } label: {
                         Text(item.title)
-                            .font(DS.body.weight(.medium)).lineLimit(1)
-                            .foregroundStyle(section == item ? Color.primary : Color.secondary)
+                            .font(DS.body.weight(.medium)).lineLimit(1).minimumScaleFactor(0.75)
+                            .padding(.horizontal, DS.xs)
+                            .foregroundStyle(section == item ? Color.primary : Color.text2)
                             .frame(maxWidth: .infinity).frame(height: 24)
                             .background(RoundedRectangle(cornerRadius: DS.rSmall, style: .continuous)
                                 .fill(section == item ? (scheme == .dark ? Color.white.opacity(0.12) : Color.white) : .clear))
@@ -41,6 +43,7 @@ struct ToolsView: View {
             case .ports: PortsView(store: .shared)
             case .brew: BrewView(store: .shared)
             case .apps: UninstallView(store: .shared)
+            case .cleanup: CleanupView(store: .shared)
             }
         }
     }
@@ -50,11 +53,11 @@ struct ToolsView: View {
 
 @MainActor private func toolNote(_ text: String, color: Color? = nil) -> some View {
     Text(text).font(DS.meta)
-        .foregroundStyle(color.map { AnyShapeStyle($0) } ?? AnyShapeStyle(.tertiary))
+        .foregroundStyle(color.map { AnyShapeStyle($0) } ?? AnyShapeStyle(Color.text3))
         .fixedSize(horizontal: false, vertical: true)
 }
 
-@MainActor private func toolLink(_ title: String, color: Color = .secondary, action: @escaping () -> Void) -> some View {
+@MainActor private func toolLink(_ title: String, color: Color = .text2, action: @escaping () -> Void) -> some View {
     Button(title, action: action).buttonStyle(.plain).font(DS.meta).foregroundStyle(color).fixedSize()
 }
 
@@ -67,7 +70,7 @@ private struct ConfirmBar: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: DS.sm) {
-            Text(text).font(DS.meta).foregroundStyle(.primary).fixedSize(horizontal: false, vertical: true)
+            Text(text).font(DS.meta).foregroundStyle(Color.primary).fixedSize(horizontal: false, vertical: true)
             HStack(spacing: DS.sm) {
                 Spacer(minLength: 0)
                 Button("Cancelar", action: cancel)
@@ -99,7 +102,7 @@ private struct PortsView: View {
                 toolNote("Nenhum processo teu está à escuta.")
             }
             ForEach(store.listeners) { listener in row(listener) }
-            if let message = store.message { toolNote(message, color: .secondary) }
+            if let message = store.message { toolNote(message, color: .text2) }
             toolNote("Só portas TCP dos teus processos. “Rede” quer dizer que outros aparelhos lhe podem chegar.")
         }
         .cardStyle()
@@ -111,18 +114,18 @@ private struct PortsView: View {
             HStack(spacing: DS.sm) {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(listener.name).font(DS.body).lineLimit(1).truncationMode(.middle)
-                    Text(detail(listener)).font(DS.meta.monospacedDigit()).foregroundStyle(.tertiary).lineLimit(2)
+                    Text(detail(listener)).font(DS.meta.monospacedDigit()).foregroundStyle(Color.text3).lineLimit(2)
                 }
                 Spacer(minLength: DS.sm)
                 if store.stopping.contains(listener.pid) {
-                    Text("A fechar…").font(DS.meta).foregroundStyle(.secondary)
+                    Text("A fechar…").font(DS.meta).foregroundStyle(Color.text2)
                 } else if let identity = listener.identity, PortRules.canTerminate(identity) {
                     let force = store.stubborn.contains(listener.pid)
-                    toolLink(force ? "Forçar" : "Terminar", color: force ? Palette.attention : .secondary) {
+                    toolLink(force ? "Forçar" : "Terminar", color: force ? .attentionText : .text2) {
                         store.confirming = listener.pid
                     }
                 } else {
-                    Text("macOS").font(DS.meta).foregroundStyle(.tertiary).help("É do sistema: não se termina por aqui")
+                    Text("macOS").font(DS.meta).foregroundStyle(Color.text3).help("É do sistema: não se termina por aqui")
                 }
             }
             if store.confirming == listener.pid {
@@ -172,8 +175,8 @@ private struct BrewView: View {
         }
         if let running = store.running {
             HStack(spacing: DS.sm) {
-                Image(systemName: "hourglass").font(DS.meta).foregroundStyle(.secondary)
-                Text(progress(running)).font(DS.meta).foregroundStyle(.secondary)
+                Image(systemName: "hourglass").font(DS.meta).foregroundStyle(Color.text2)
+                Text(progress(running)).font(DS.meta).foregroundStyle(Color.text2)
             }
         } else if store.outdated.count > 1 {
             if store.confirming == .upgradeAll {
@@ -181,14 +184,15 @@ private struct BrewView: View {
                            confirm: "Atualizar", cancel: { store.confirming = nil },
                            action: { Task { await store.perform(.upgradeAll) } })
             } else {
-                toolLink("Atualizar os \(store.outdated.count)…", color: .accentColor) { store.confirming = .upgradeAll }
+                Button("Atualizar os \(store.outdated.count)…") { store.confirming = .upgradeAll }
+                    .buttonStyle(.plain).font(DS.meta).modifier(AccentText()).fixedSize()
             }
         }
-        if let message = store.message { toolNote(message, color: .secondary) }
+        if let message = store.message { toolNote(message, color: .text2) }
         if let output = store.output, !output.isEmpty {
             Text(output)
                 .font(.system(size: 10 * TextSize.current.scale, design: .monospaced))
-                .foregroundStyle(.secondary).textSelection(.enabled)
+                .foregroundStyle(Color.text2).textSelection(.enabled)
                 .fixedSize(horizontal: false, vertical: true)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(DS.sm)
@@ -227,7 +231,7 @@ private struct BrewView: View {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(package.name).font(DS.body).lineLimit(1)
                     Text(detail(package)).font(DS.meta.monospacedDigit()).lineLimit(1).truncationMode(.middle)
-                        .foregroundStyle(package.outdated && !package.pinned ? AnyShapeStyle(Palette.waiting) : AnyShapeStyle(.tertiary))
+                        .foregroundStyle(package.outdated && !package.pinned ? AnyShapeStyle(Color.waitingText) : AnyShapeStyle(Color.text3))
                 }
                 Spacer(minLength: DS.sm)
                 if package.outdated && !package.pinned {
@@ -279,12 +283,12 @@ private struct UninstallView: View {
         HStack(spacing: DS.sm) {
             Text("Apps").font(DS.body.weight(.medium))
             Spacer(minLength: DS.sm)
-            if store.loaded { Text("\(store.apps.count)").font(DS.meta.monospacedDigit()).foregroundStyle(.tertiary) }
+            if store.loaded { Text("\(store.apps.count)").font(DS.meta.monospacedDigit()).foregroundStyle(Color.text3) }
         }
         if store.apps.count > 5 {
             TextField("Procurar app", text: $search.value).textFieldStyle(.roundedBorder).font(DS.body)
         }
-        if let message = store.message { toolNote(message, color: .secondary) }
+        if let message = store.message { toolNote(message, color: .text2) }
         if !store.loaded { toolNote("A ler as apps…") }
         let found = store.apps.filter { search.value.isEmpty || $0.name.localizedStandardContains(search.value) }
         LazyVStack(spacing: 0) {
@@ -294,7 +298,7 @@ private struct UninstallView: View {
                         Image(nsImage: NSWorkspace.shared.icon(forFile: app.path)).resizable().frame(width: 16, height: 16)
                         Text(app.name).font(DS.body).lineLimit(1)
                         Spacer(minLength: DS.sm)
-                        Image(systemName: "chevron.right").font(DS.meta).foregroundStyle(.tertiary)
+                        Image(systemName: "chevron.right").font(DS.meta).foregroundStyle(Color.text3)
                     }
                     .padding(.vertical, 6)
                     .contentShape(Rectangle())
@@ -310,12 +314,12 @@ private struct UninstallView: View {
             IconButton(systemName: "chevron.left", help: "Voltar às apps") { store.cancel() }
             VStack(alignment: .leading, spacing: 2) {
                 Text(plan.app.name).font(DS.body.weight(.medium)).lineLimit(1)
-                Text(plan.app.bundleID).font(DS.meta).foregroundStyle(.tertiary).lineLimit(1).truncationMode(.middle)
+                Text(plan.app.bundleID).font(DS.meta).foregroundStyle(Color.text3).lineLimit(1).truncationMode(.middle)
             }
             Spacer(minLength: 0)
         }
         HStack(spacing: DS.sm) {
-            Image(systemName: "checkmark.square.fill").foregroundStyle(.secondary).frame(width: 16)
+            Image(systemName: "checkmark.square.fill").foregroundStyle(Color.text2).frame(width: 16)
             Text(store.shortPath(plan.app.path)).lineLimit(1).truncationMode(.middle)
         }
         .font(DS.body)
@@ -326,7 +330,7 @@ private struct UninstallView: View {
             toolNote("Não encontrei restos com o identificador desta app.")
         } else {
             HStack(spacing: DS.sm) {
-                Text("Restos, escolhe o que vai").font(DS.meta).foregroundStyle(.secondary)
+                Text("Restos, escolhe o que vai").font(DS.meta).foregroundStyle(Color.text2)
                 Spacer(minLength: DS.sm)
                 let everything = Set(plan.leftovers.map(\.path))
                 toolLink(store.selected == everything ? "Nenhum" : "Todos") {
@@ -336,11 +340,11 @@ private struct UninstallView: View {
             }
             ForEach(plan.leftovers) { entry in leftover(entry) }
             if plan.leftovers.contains(where: { $0.path.contains("/Library/Containers/") }) {
-                toolNote("A pasta em Containers pode ter documentos teus.", color: Palette.waiting)
+                toolNote("A pasta em Containers pode ter documentos teus.", color: .waitingText)
             }
         }
 
-        if let message = store.message { toolNote(message, color: Palette.waiting) }
+        if let message = store.message { toolNote(message, color: .waitingText) }
         if store.confirming {
             ConfirmBar(text: "Mover \(plan.app.name)\(selectionText) para o Lixo?", confirm: "Mover para o Lixo",
                        cancel: { store.confirming = false }, action: { store.moveToTrash() })
@@ -365,7 +369,7 @@ private struct UninstallView: View {
         } label: {
             HStack(spacing: DS.sm) {
                 Image(systemName: on ? "checkmark.square.fill" : "square")
-                    .foregroundStyle(on ? AnyShapeStyle(.tint) : AnyShapeStyle(.secondary)).frame(width: 16)
+                    .foregroundStyle(on ? AnyShapeStyle(.tint) : AnyShapeStyle(Color.text2)).frame(width: 16)
                 Text(store.shortPath(entry.path)).lineLimit(1).truncationMode(.middle)
                 Spacer(minLength: 0)
             }
@@ -376,5 +380,104 @@ private struct UninstallView: View {
         .buttonStyle(.plain)
         .help(entry.path)
         .accessibilityValue(on ? "Selecionado" : "Não selecionado")
+    }
+}
+
+// MARK: - Limpeza
+
+struct CleanupView: View {
+    @ObservedObject var store: CleanupStore
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: DS.sm) {
+            HStack(spacing: DS.sm) {
+                Text("Caches conhecidas").font(DS.body.weight(.medium))
+                Spacer(minLength: DS.sm)
+                IconButton(systemName: "arrow.clockwise", help: "Procurar outra vez") { Task { await store.refresh() } }
+                    .disabled(store.busy)
+            }
+            if !store.loaded {
+                toolNote("A medir e a ver o que está em uso…")
+            } else if store.entries.isEmpty {
+                toolNote("Não há nada que valha a pena limpar.")
+            }
+            group("Seguras", store.entries.filter(\.target.recommended))
+            group("Opcionais, escolhe tu", store.entries.filter { !$0.target.recommended })
+            result
+            action
+            toolNote("Só toca nesta lista e só move para o Lixo. O espaço fica livre quando o esvaziares.")
+        }
+        .cardStyle()
+        .task { await store.refresh() }
+    }
+
+    @ViewBuilder private func group(_ title: String, _ entries: [CleanupEntry]) -> some View {
+        if !entries.isEmpty {
+            Text(title).font(DS.meta.weight(.medium)).foregroundStyle(Color.text2).padding(.top, DS.xs)
+            ForEach(entries) { entry in row(entry) }
+        }
+    }
+
+    private func row(_ entry: CleanupEntry) -> some View {
+        let on = store.isSelected(entry)
+        return Button { store.toggle(entry) } label: {
+            HStack(alignment: .top, spacing: DS.sm) {
+                box(entry, on: on).font(DS.body).frame(width: 16)
+                VStack(alignment: .leading, spacing: 2) {
+                    HStack(spacing: DS.sm) {
+                        Text(entry.target.name).font(DS.body).foregroundStyle(entry.block == nil ? Color.primary : Color.text2)
+                        Spacer(minLength: DS.sm)
+                        Text((entry.complete ? "" : "pelo menos ") + Fmt.disk(entry.bytes))
+                            .font(DS.body.monospacedDigit()).foregroundStyle(Color.text2).lineLimit(1)
+                    }
+                    Text(entry.block?.text ?? entry.target.detail)
+                        .font(DS.meta)
+                        .foregroundStyle(entry.block == nil ? Color.text3 : Color.waitingText)
+                        .multilineTextAlignment(.leading)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+            .padding(.vertical, 3)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        // Sem .disabled: esbatia o motivo, que é o que se precisa de ler.
+        .allowsHitTesting(entry.block == nil && !store.busy)
+        .help(store.shortPath(entry))
+        .accessibilityValue(entry.block != nil ? "Não disponível" : on ? "Selecionado" : "Não selecionado")
+    }
+
+    @ViewBuilder private func box(_ entry: CleanupEntry, on: Bool) -> some View {
+        if entry.block != nil {
+            Image(systemName: "minus.square").foregroundStyle(Color.text3)
+        } else if on {
+            Image(systemName: "checkmark.square.fill").foregroundStyle(.tint)
+        } else {
+            Image(systemName: "square").foregroundStyle(Color.text2)
+        }
+    }
+
+    @ViewBuilder private var result: some View {
+        if let message = store.message { toolNote(message, color: .text2) }
+        ForEach(store.problems, id: \.self) { problem in toolNote(problem, color: .waitingText) }
+    }
+
+    @ViewBuilder private var action: some View {
+        if store.moving {
+            toolNote("A mover para o Lixo…")
+        } else if store.scanning && !store.entries.isEmpty {
+            toolNote("A confirmar tamanhos e o que está em uso…")
+        } else if let pending = store.pending {
+            ConfirmBar(text: "Mover \(size(pending)) para o Lixo? \(pending.map(\.target.name).joined(separator: ", ")). Nada é apagado de vez.",
+                       confirm: "Mover para o Lixo",
+                       cancel: { store.cancel() },
+                       action: { Task { await store.moveToTrash() } })
+        } else if !store.selected.isEmpty {
+            Button("Mover \(size(store.selected)) para o Lixo…") { store.askToConfirm() }.controlSize(.small)
+        }
+    }
+
+    private func size(_ entries: [CleanupEntry]) -> String {
+        Fmt.disk(entries.reduce(UInt64(0)) { $0 + $1.bytes })
     }
 }

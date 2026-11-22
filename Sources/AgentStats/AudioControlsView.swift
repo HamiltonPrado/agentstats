@@ -35,7 +35,7 @@ struct AudioControlsCard: View {
                     canMute: audio.canMuteInput,
                     activeIcon: "mic", mutedIcon: "mic.slash", volumeLabel: "Nível do microfone")
             Text("Os controlos variam por aparelho. Silenciar o microfone pode não afetar todas as apps.")
-                .font(DS.meta).foregroundStyle(.tertiary).fixedSize(horizontal: false, vertical: true)
+                .font(DS.meta).foregroundStyle(Color.text3).fixedSize(horizontal: false, vertical: true)
         }
         .cardStyle()
     }
@@ -47,15 +47,21 @@ struct AudioControlsCard: View {
         VStack(alignment: .leading, spacing: DS.sm) {
             // Linha 1: nome + aparelho
             HStack(spacing: DS.sm) {
-                Text(title).font(DS.body.weight(.medium))
-                Spacer(minLength: DS.sm)
+                // O título fica inteiro e encolhe o seletor, que tem a largura do nome mais comprido da lista.
+                ZStack(alignment: .leading) {
+                    Text("Microfone").hidden().accessibilityHidden(true)   // a mesma coluna nas duas secções
+                    Text(title)
+                }
+                .font(DS.body.weight(.medium)).fixedSize().layoutPriority(1)
+                Spacer(minLength: 0)
                 if devices.isEmpty {
-                    Text("Indisponível").font(DS.meta).foregroundStyle(.tertiary)
+                    Text("Indisponível").font(DS.meta).foregroundStyle(Color.text3)
                 } else {
                     Picker(title, selection: selection) {
                         ForEach(devices) { device in Text(device.name).tag(device.id) }
                     }
-                    .labelsHidden().fixedSize()
+                    .labelsHidden()
+                    .help(devices.first { $0.id == selection.wrappedValue }?.name ?? title)
                 }
             }
             // Linha 2: silenciar (na coluna do ícone) + volume + percentagem
@@ -63,7 +69,7 @@ struct AudioControlsCard: View {
                 Button { muted.wrappedValue.toggle() } label: {
                     Image(systemName: muted.wrappedValue ? mutedIcon : activeIcon)
                         .font(DS.body)
-                        .foregroundStyle(muted.wrappedValue ? AnyShapeStyle(Palette.attention) : AnyShapeStyle(.secondary))
+                        .foregroundStyle(muted.wrappedValue ? AnyShapeStyle(Color.attentionText) : AnyShapeStyle(Color.text2))
                         .frame(width: 16, height: 16)
                         .contentShape(Rectangle())
                 }
@@ -74,7 +80,7 @@ struct AudioControlsCard: View {
                     .controlSize(.small)
                     .disabled(!canSet).accessibilityLabel(volumeLabel)
                 Text("\(Int((volume.wrappedValue * 100).rounded()))%")
-                    .font(DS.meta.monospacedDigit()).foregroundStyle(.secondary)
+                    .font(DS.meta.monospacedDigit()).foregroundStyle(Color.text2)
                     .frame(width: 36, alignment: .trailing)
             }
         }

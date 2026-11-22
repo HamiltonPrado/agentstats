@@ -10,8 +10,9 @@ final class Box<T>: ObservableObject {
 // MARK: - Sistema de design
 //
 // Direção: um painel de instrumentos à noite — atento, exato, discreto.
-// Superfícies em grafite neutro (os materiais do macOS), uma só cor de destaque (a do sistema),
+// Superfícies em grafite neutro e opaco (o texto tem de se ler, esteja o que estiver atrás), uma só cor de destaque,
 // e cor de estado apenas onde tem significado: verde a trabalhar, âmbar à espera, vermelho precisa de ti.
+// Exceção: a barra do disco, colorida por categoria como a de Armazenamento do iOS.
 
 enum DS {
     // Espaçamento: grelha de 4
@@ -31,6 +32,7 @@ enum DS {
     static let rSmall: CGFloat = 6
     static let rControl: CGFloat = 8
     static let rCard: CGFloat = 12
+    static let rPanel: CGFloat = 13
 
     // Superfícies (passos do mesmo neutro) e linha fina
     static let surface = Color.primary.opacity(0.04)
@@ -74,6 +76,8 @@ enum Palette {
     /// Cor de calor só quando há algo a assinalar; o normal fica neutro.
     static func heat(_ fraction: Double) -> Color { fraction > 0.85 ? .red : fraction > 0.7 ? .orange : .secondary }
     static func temp(_ c: Double) -> Color { c >= 90 ? .red : c >= 80 ? .orange : .secondary }
+    static func heatText(_ fraction: Double) -> Color { fraction > 0.85 ? .attentionText : fraction > 0.7 ? .waitingText : .primary }
+    static func tempText(_ c: Double) -> Color { c >= 90 ? .attentionText : c >= 80 ? .waitingText : .primary }
     static let working = Color.green
     static let waiting = Color.orange
     static let attention = Color.red
@@ -217,11 +221,11 @@ struct Card<Content: View>: View {
     var body: some View {
         VStack(alignment: .leading, spacing: DS.sm) {
             HStack(spacing: DS.sm) {
-                Image(systemName: icon).font(DS.body).foregroundStyle(.secondary).frame(width: 16)
+                Image(systemName: icon).font(DS.body).foregroundStyle(Color.text2).frame(width: 16)
                 Text(title).font(DS.title)
                 Spacer()
                 if let trailing {
-                    Text(trailing).font(DS.body.monospacedDigit()).foregroundStyle(.secondary)
+                    Text(trailing).font(DS.body.monospacedDigit()).foregroundStyle(Color.text2)
                 }
             }
             content
@@ -237,8 +241,8 @@ struct SectionHeader: View {
     var body: some View {
         HStack(spacing: DS.sm) {
             if let kind { StatusDot(kind) }
-            Text(title).font(DS.meta.weight(.medium)).foregroundStyle(.secondary)
-            if let count { Text("\(count)").font(DS.meta.monospacedDigit()).foregroundStyle(.tertiary) }
+            Text(title).font(DS.meta.weight(.medium)).foregroundStyle(Color.text2)
+            if let count { Text("\(count)").font(DS.meta.monospacedDigit()).foregroundStyle(Color.text3) }
             Spacer()
         }
         .accessibilityElement(children: .combine)
@@ -309,7 +313,7 @@ struct StatRow: View {
     var body: some View {
         HStack(spacing: DS.sm) {
             if let swatch { RoundedRectangle(cornerRadius: 2).fill(swatch).frame(width: 8, height: 8) }
-            Text(label).foregroundStyle(.secondary)
+            Text(label).foregroundStyle(Color.text2)
             Spacer(minLength: DS.sm)
             Text(value).monospacedDigit().foregroundStyle(valueColor)
         }
@@ -328,7 +332,7 @@ struct IconButton: View {
         Button(action: action) {
             Image(systemName: systemName)
                 .font(DS.body)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(Color.text2)
                 .frame(width: 24, height: 24)
                 .background(RoundedRectangle(cornerRadius: DS.rSmall, style: .continuous)
                     .fill(hover.value ? DS.raised : .clear))
@@ -362,10 +366,10 @@ struct DayChart: View {
         let vals = Self.downsampled(samples.compactMap(value))
         VStack(alignment: .leading, spacing: DS.xs) {
             HStack {
-                Text(samples.count > 1440 ? "Últimos 7 dias" : "Histórico · até 7 dias").font(DS.meta).foregroundStyle(.secondary)
+                Text(samples.count > 1440 ? "Últimos 7 dias" : "Histórico · até 7 dias").font(DS.meta).foregroundStyle(Color.text2)
                 Spacer()
                 if let mx = vals.max() {
-                    Text("máximo " + format(mx)).font(DS.meta.monospacedDigit()).foregroundStyle(.tertiary)
+                    Text("máximo " + format(mx)).font(DS.meta.monospacedDigit()).foregroundStyle(Color.text3)
                 }
             }
             if vals.count > 1 {
@@ -373,13 +377,13 @@ struct DayChart: View {
                     .accessibilityLabel("\(title) no histórico de até sete dias")
                     .accessibilityValue(vals.max().map { "máximo " + format($0) } ?? "")
                 HStack {
-                    Text(samples.first.map { Self.hour($0.t) } ?? "").font(DS.meta.monospacedDigit()).foregroundStyle(.tertiary)
+                    Text(samples.first.map { Self.hour($0.t) } ?? "").font(DS.meta.monospacedDigit()).foregroundStyle(Color.text3)
                     Spacer()
-                    Text("agora").font(DS.meta).foregroundStyle(.tertiary)
+                    Text("agora").font(DS.meta).foregroundStyle(Color.text3)
                 }
                 .accessibilityHidden(true)
             } else {
-                Text("A recolher histórico, um ponto por minuto").font(DS.meta).foregroundStyle(.tertiary)
+                Text("A recolher histórico, um ponto por minuto").font(DS.meta).foregroundStyle(Color.text3)
             }
         }
     }

@@ -65,6 +65,7 @@
 - **Ports:** see what is listening and stop your own processes, with confirmation.
 - **Homebrew:** upgrade and remove packages.
 - **Uninstall:** move apps to the Trash, with the leftovers you select.
+- **Cleanup:** moves caches from a closed list to the Trash (Homebrew, pip, and npm; Brave, Playwright, Hugging Face, and npx are optional), with confirmation and without touching anything detected as in use. Space is freed when you empty the Trash.
 
 ### Make it yours
 
@@ -79,6 +80,7 @@ Configurable menu bar, global shortcut, profiles, theme, color, width, text size
 | Capture and recording | Screen recording |
 | Recording with microphone | Microphone |
 | Clipboard history | Paste from other apps (macOS 15.4+) |
+| Disk categories, measured when the card opens | Personal folders (Desktop, Documents, Downloads, Music, Pictures) |
 
 There is no account and no telemetry. AgentStats reads agent logs on your Mac and does not send them. The network is used only by the speed test, by Homebrew when you use it, and by the periodic limits check made through your Claude Code.
 

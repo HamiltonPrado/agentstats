@@ -65,6 +65,7 @@
 - **Ports :** affiche ce qui est à l’écoute et arrête vos processus, après confirmation.
 - **Homebrew :** met à jour et supprime des paquets.
 - **Désinstaller :** place les applications dans la Corbeille, avec les restes choisis.
+- **Nettoyage :** place dans la Corbeille des caches d’une liste fermée (Homebrew, pip et npm ; Brave, Playwright, Hugging Face et npx sont optionnels), après confirmation et sans toucher à ce qui est détecté en cours d’utilisation. L’espace est libéré quand vous videz la Corbeille.
 
 ### À votre mesure
 
@@ -79,6 +80,7 @@ Barre des menus configurable, raccourci global, profils, thème, couleur, largeu
 | Capture et enregistrement | Enregistrement de l’écran |
 | Enregistrer avec le micro | Micro |
 | Historique du presse-papiers | Coller depuis d’autres apps (macOS 15.4+) |
+| Catégories du disque, mesurées à l’ouverture de la carte | Dossiers personnels (Bureau, Documents, Téléchargements, Musique, Images) |
 
 Ni compte ni télémétrie. AgentStats lit les journaux des agents sur le Mac et ne les envoie pas. Le réseau ne sert qu’au test de débit, à Homebrew quand vous l’utilisez et à la consultation périodique des limites par votre Claude Code.
 

@@ -23,8 +23,10 @@ enum DemoData {
         PortsStore.shared.loadDemo()
         BrewStore.shared.loadDemo()
         UninstallStore.shared.loadDemo()
+        CleanupStore.shared.loadDemo()
         ClipboardStore.shared.loadDemo(now: now)
         SpeedTestStore.shared.loadDemo(now: now)
+        DiskScanStore.shared.loadDemo()
         AppMixer.shared.loadDemo(safari: safari, music: music)
         AudioControlStore.demo = true
 
@@ -78,8 +80,8 @@ enum DemoData {
         m.network.localIP = "192.0.2.24"   // reservado para documentação (RFC 5737)
         m.network.interface = "en0"
 
-        m.disk.total = 512 * gb
-        m.disk.free = 236 * gb
+        m.disk.total = 494_380_000_000   // o disco conta em múltiplos de 1000
+        m.disk.free = 218_270_000_000
         m.disk.readPerSec = 4_100_000
         m.disk.writePerSec = 1_300_000
         m.gpu = 0.18

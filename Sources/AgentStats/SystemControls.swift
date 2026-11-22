@@ -91,8 +91,11 @@ final class AudioControlStore: ObservableObject {
     func setInputMuted(_ value: Bool) { setMute(inputID, scope: kAudioDevicePropertyScopeInput, value: value); readControls() }
 
     private func loadDemo() {
-        outputs = [SystemAudioDevice(id: 1, name: "Colunas do MacBook")]
-        inputs = [SystemAudioDevice(id: 2, name: "Microfone do MacBook")]
+        // O seletor mede-se pelo nome mais comprido da lista, não pelo escolhido: há sempre um segundo aparelho.
+        outputs = [SystemAudioDevice(id: 1, name: "Colunas (MacBook Pro)"),
+                   SystemAudioDevice(id: 3, name: "Auscultadores Bluetooth")]
+        inputs = [SystemAudioDevice(id: 2, name: "Microfone (MacBook Pro)"),
+                  SystemAudioDevice(id: 4, name: "Microfone do iPhone de Ana")]
         outputID = 1
         inputID = 2
         outputVolume = 0.65

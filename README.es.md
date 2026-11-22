@@ -65,6 +65,7 @@
 - **Puertos:** muestra lo que está a la escucha y termina procesos tuyos, con confirmación.
 - **Homebrew:** actualiza y elimina paquetes.
 - **Desinstalar:** mueve apps a la Papelera, con los restos que elijas.
+- **Limpieza:** mueve a la Papelera cachés de una lista cerrada (Homebrew, pip y npm; Brave, Playwright, Hugging Face y npx son opcionales), con confirmación y sin tocar lo que detecte en uso. El espacio se libera al vaciar la Papelera.
 
 ### A tu medida
 
@@ -79,6 +80,7 @@ Barra de menús configurable, atajo global, perfiles, tema, color, ancho, tamañ
 | Captura y grabación | Grabación de pantalla |
 | Grabar con micrófono | Micrófono |
 | Historial del portapapeles | Pegar desde otras apps (macOS 15.4+) |
+| Categorías del disco, medidas al abrir la tarjeta | Carpetas personales (Escritorio, Documentos, Descargas, Música, Imágenes) |
 
 No hay cuenta ni telemetría. AgentStats lee los registros de los agentes en el Mac y no los envía. Solo usan la red la prueba de velocidad, Homebrew cuando lo utilizas y la consulta periódica de límites mediante tu Claude Code.
 
