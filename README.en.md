@@ -87,7 +87,7 @@ Configurable menu bar, global shortcut, profiles, theme, color, width, text size
 
 There is no account and no telemetry. AgentStats reads agent logs on your Mac and does not send them. The network is used only by the speed test, by Homebrew when you use it, and by the periodic limits check made through your Claude Code.
 
-The app has no Developer ID, so **macOS may ask for these permissions again after each update**.
+Starting with 1.18.1 the app has a fixed signature, so **permissions persist across updates**. When coming from an earlier version you need to grant them one last time: if one looks enabled but does not work, remove AgentStats from that list with − and add it again.
 
 ## Requirements
 
@@ -109,7 +109,7 @@ Or by hand:
 
 1. Download **AgentStats.zip** from the [latest release](https://github.com/HamiltonPrado/agentstats/releases/latest).
 2. Unzip it and move `AgentStats.app` to your Applications folder.
-3. Open the app. If macOS blocks the first launch, go to **System Settings → Privacy & Security → Open Anyway**. The app is locally signed and does not have an Apple Developer signature.
+3. Open the app. If macOS blocks the first launch, go to **System Settings → Privacy & Security → Open Anyway**. The app uses its own certificate, not an Apple Developer signature.
 
 You can also install from the command line with the [GitHub CLI](https://cli.github.com):
 
@@ -143,11 +143,11 @@ AgentStats is distributed under the [MIT License](LICENSE). You may use, modify,
 
 ### Creating a release
 
-Update `VERSION`, then push a tag with the same version, for example:
+The first time only, the repository owner runs `Scripts/setup-signing.sh` to create the signing key. Then update `VERSION` and push a tag with the same version, for example:
 
 ```bash
-git tag v1.18
-git push origin v1.18
+git tag v1.18.1
+git push origin v1.18.1
 ```
 
 GitHub Actions checks the version, runs the tests, builds the app, and publishes `AgentStats.zip` to the release.

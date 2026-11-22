@@ -46,5 +46,5 @@ cat > "$APP/Contents/Info.plist" <<PLIST
 </plist>
 PLIST
 
-codesign --force --deep --sign - "$APP"
+Scripts/sign.sh "$APP"
 echo "✅ Criado: $PWD/$APP (versão $VERSION)"

@@ -87,7 +87,7 @@ Barre des menus configurable, raccourci global, profils, thème, couleur, largeu
 
 Ni compte ni télémétrie. AgentStats lit les journaux des agents sur le Mac et ne les envoie pas. Le réseau ne sert qu’au test de débit, à Homebrew quand vous l’utilisez et à la consultation périodique des limites par votre Claude Code.
 
-L’application n’a pas de Developer ID : **macOS peut redemander ces autorisations après chaque mise à jour**.
+À partir de la 1.18.1, l’application a une signature fixe afin que **les autorisations persistent entre les mises à jour**. Depuis une version antérieure, il faut les accorder une dernière fois : si l’une semble activée sans fonctionner, retirez AgentStats de la liste avec − puis ajoutez-le à nouveau.
 
 ## Configuration requise
 
@@ -109,7 +109,7 @@ Ou à la main :
 
 1. Téléchargez **AgentStats.zip** depuis la [dernière version](https://github.com/HamiltonPrado/agentstats/releases/latest).
 2. Décompressez l’archive et déplacez `AgentStats.app` dans le dossier Applications.
-3. Ouvrez l’app. Si macOS bloque le premier lancement, allez dans **Réglages Système → Confidentialité et sécurité → Ouvrir quand même**. L’app est signée localement et ne possède pas de signature de développeur Apple.
+3. Ouvrez l’app. Si macOS bloque le premier lancement, allez dans **Réglages Système → Confidentialité et sécurité → Ouvrir quand même**. L’app utilise son propre certificat, et non une signature de développeur Apple.
 
 Vous pouvez aussi installer l’app en ligne de commande avec [GitHub CLI](https://cli.github.com) :
 
@@ -143,11 +143,11 @@ AgentStats est distribué sous la [licence MIT](LICENSE). Vous pouvez utiliser, 
 
 ### Créer une version
 
-Mettez à jour `VERSION`, puis envoyez un tag portant le même numéro, par exemple :
+La première fois seulement, le propriétaire du dépôt exécute `Scripts/setup-signing.sh` pour créer la clé de signature. Mettez ensuite à jour `VERSION`, puis envoyez un tag portant le même numéro, par exemple :
 
 ```bash
-git tag v1.18
-git push origin v1.18
+git tag v1.18.1
+git push origin v1.18.1
 ```
 
 GitHub Actions vérifie la version, exécute les tests, compile l’app et publie `AgentStats.zip` dans la release.

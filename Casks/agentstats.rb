@@ -20,7 +20,7 @@ cask "agentstats" do
 
   app "AgentStats.app"
 
-  # A app é assinada localmente (sem Developer ID nem notarização). Sem tirar a quarentena,
+  # A app tem certificado próprio (sem Developer ID nem notarização). Sem tirar a quarentena,
   # o macOS bloquearia a primeira abertura.
   postflight_steps do
     run "/usr/bin/xattr", args: ["-dr", "com.apple.quarantine", "{{appdir}}/AgentStats.app"]

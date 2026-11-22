@@ -87,7 +87,7 @@ Barra de menús configurable, atajo global, perfiles, tema, color, ancho, tamañ
 
 No hay cuenta ni telemetría. AgentStats lee los registros de los agentes en el Mac y no los envía. Solo usan la red la prueba de velocidad, Homebrew cuando lo utilizas y la consulta periódica de límites mediante tu Claude Code.
 
-La app no tiene Developer ID, por lo que **macOS puede volver a pedir estos permisos tras cada actualización**.
+A partir de la 1.18.1 la app tiene una firma fija, para que **los permisos se mantengan entre actualizaciones**. Si vienes de una versión anterior debes concederlos una última vez: si alguno aparece activado y no funciona, quita AgentStats de esa lista con − y vuelve a añadirlo.
 
 ## Requisitos
 
@@ -109,7 +109,7 @@ O a mano:
 
 1. Descarga **AgentStats.zip** desde la [última versión](https://github.com/HamiltonPrado/agentstats/releases/latest).
 2. Descomprímelo y mueve `AgentStats.app` a la carpeta Aplicaciones.
-3. Abre la app. Si macOS bloquea el primer inicio, ve a **Ajustes del Sistema → Privacidad y seguridad → Abrir igualmente**. La app está firmada localmente y no tiene una firma de desarrollador de Apple.
+3. Abre la app. Si macOS bloquea el primer inicio, ve a **Ajustes del Sistema → Privacidad y seguridad → Abrir igualmente**. La app usa un certificado propio, no una firma de desarrollador de Apple.
 
 También puedes instalarla desde la línea de comandos con [GitHub CLI](https://cli.github.com):
 
@@ -143,11 +143,11 @@ AgentStats se distribuye bajo la [licencia MIT](LICENSE). Puedes usar, modificar
 
 ### Crear una versión
 
-Actualiza `VERSION` y envía una etiqueta con la misma versión, por ejemplo:
+Solo la primera vez, el propietario del repositorio ejecuta `Scripts/setup-signing.sh` para crear la clave de firma. Después actualiza `VERSION` y envía una etiqueta con la misma versión, por ejemplo:
 
 ```bash
-git tag v1.18
-git push origin v1.18
+git tag v1.18.1
+git push origin v1.18.1
 ```
 
 GitHub Actions comprueba la versión, ejecuta las pruebas, compila la app y publica `AgentStats.zip` en la versión.

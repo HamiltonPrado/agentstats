@@ -87,7 +87,7 @@ Barra de menus configurável, atalho global, perfis, tema, cor, largura, tamanho
 
 Não há conta nem telemetria. O AgentStats lê os registos dos agentes no Mac e não os envia. Só há rede no teste de velocidade, no Homebrew quando o usas e na consulta periódica dos limites, feita pelo teu Claude Code.
 
-Como a app não tem Developer ID, **o macOS pode voltar a pedir estas permissões depois de cada atualização**.
+A partir da 1.18.1 a app tem uma assinatura fixa, para **as permissões se manterem entre atualizações**. Ao vires de uma versão anterior tens de as dar uma última vez: se alguma aparecer ligada e não funcionar, tira o AgentStats dessa lista com − e volta a juntá-lo.
 
 ## Requisitos
 
@@ -109,7 +109,7 @@ Ou à mão:
 
 1. Descarrega **AgentStats.zip** na [página de releases](https://github.com/HamiltonPrado/agentstats/releases/latest).
 2. Descomprime o ficheiro e move `AgentStats.app` para a pasta Aplicações.
-3. Abre a app. Se o macOS bloquear a primeira abertura, vai a **Definições do Sistema → Privacidade e Segurança → Abrir mesmo assim**. A app é assinada localmente e não tem assinatura de programador Apple.
+3. Abre a app. Se o macOS bloquear a primeira abertura, vai a **Definições do Sistema → Privacidade e Segurança → Abrir mesmo assim**. A app tem certificado próprio, não uma assinatura de programador Apple.
 
 Também podes instalar pela linha de comandos com o [GitHub CLI](https://cli.github.com):
 
@@ -143,11 +143,11 @@ O AgentStats é distribuído sob a [licença MIT](LICENSE). Podes usar, modifica
 
 ### Criar uma release
 
-Atualiza `VERSION` e envia uma tag com a mesma versão, por exemplo:
+Só na primeira vez, o dono do repositório corre `Scripts/setup-signing.sh` para criar a chave de assinatura. Depois atualiza `VERSION` e envia uma tag com a mesma versão, por exemplo:
 
 ```bash
-git tag v1.18
-git push origin v1.18
+git tag v1.18.1
+git push origin v1.18.1
 ```
 
 O GitHub Actions valida a versão, executa os testes, compila a app e publica `AgentStats.zip` na release.
