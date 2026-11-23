@@ -5,11 +5,14 @@ struct TokenUsage: Equatable {
     var output = 0
     var cacheRead = 0
     var cacheWrite = 0
+    /// A parte de `cacheWrite` guardada por 1 hora (o Claude Code usa-a), que custa mais do que a de 5 minutos.
+    var cacheWrite1h = 0
     var total: Int { input + output + cacheRead + cacheWrite }
     var isEmpty: Bool { total == 0 }
     static func + (a: TokenUsage, b: TokenUsage) -> TokenUsage {
         TokenUsage(input: a.input + b.input, output: a.output + b.output,
-                   cacheRead: a.cacheRead + b.cacheRead, cacheWrite: a.cacheWrite + b.cacheWrite)
+                   cacheRead: a.cacheRead + b.cacheRead, cacheWrite: a.cacheWrite + b.cacheWrite,
+                   cacheWrite1h: a.cacheWrite1h + b.cacheWrite1h)
     }
 }
 
@@ -63,8 +66,12 @@ final class UsageTracker {
         var cost: Double = 0
         var costByDay: [String: Double] = [:]
         var priced = false            // pelo menos um pedido com preço conhecido
+        var codexTotal: [Int]?        // Codex: total acumulado do último token_count (repetido = evento duplicado)
     }
     private var files: [String: FileState] = [:]
+    /// Claude: id da mensagem → ficheiro onde conta. Uma sessão continuada copia o histórico da anterior,
+    /// e cada pedido só deve contar uma vez, no ficheiro mais antigo.
+    private var claudeOwner: [String: String] = [:]
     private let home = FileManager.default.homeDirectoryForCurrentUser
 
     private let iso: ISO8601DateFormatter = {
@@ -138,7 +145,12 @@ final class UsageTracker {
                 }
             }
         }
-        return out
+        // Os mais antigos primeiro: ficam donos das mensagens que as continuações copiam.
+        return out.sorted { (created($0), $0.path) < (created($1), $1.path) }
+    }
+
+    private func created(_ url: URL) -> Date {
+        (try? url.resourceValues(forKeys: [.creationDateKey]).creationDate) ?? .distantPast
     }
 
     private func codexFiles(modifiedSince since: Date) -> [String] {
@@ -218,9 +230,32 @@ final class UsageTracker {
         return (st.session, st.priced ? st.cost : nil, st.project)
     }
 
+    /// false quando o `total_token_usage` é igual ao do evento anterior (evento repetido).
+    static func codexIsNew(_ info: [String: Any], previous: inout [Int]?) -> Bool {
+        guard let total = info["total_token_usage"] as? [String: Any] else { return true }
+        let key = ["input_tokens", "cached_input_tokens", "output_tokens", "reasoning_output_tokens", "total_tokens"]
+            .map { (total[$0] as? Int) ?? -1 }
+        defer { previous = key }
+        return key != previous
+    }
+
+    /// Os tokens de um pedido do Claude. A divisão entre cache de 5 min e de 1 h vem em `cache_creation`;
+    /// sem ela (versões antigas), conta tudo como 5 min.
+    static func claudeUsage(_ usage: [String: Any]) -> TokenUsage {
+        let write = (usage["cache_creation_input_tokens"] as? Int) ?? 0
+        let long = ((usage["cache_creation"] as? [String: Any])?["ephemeral_1h_input_tokens"] as? Int) ?? 0
+        return TokenUsage(input: (usage["input_tokens"] as? Int) ?? 0,
+                          output: (usage["output_tokens"] as? Int) ?? 0,
+                          cacheRead: (usage["cache_read_input_tokens"] as? Int) ?? 0,
+                          cacheWrite: write, cacheWrite1h: min(max(0, long), write))
+    }
+
     // MARK: Leitura incremental
 
     enum Source { case claude, codex, copilot }
+
+    /// Quanto se lê de cada vez. Os testes usam blocos pequenos para cortar linhas a meio.
+    var chunkSize = 4 << 20
 
     private func scan(_ path: String, source: Source) -> FileState {
         let codex = source == .codex
@@ -229,81 +264,95 @@ final class UsageTracker {
         guard let h = FileHandle(forReadingAtPath: path) else { return st }
         defer { try? h.close() }
         let size = (try? h.seekToEnd()) ?? 0
-        if size < st.offset { st = FileState() }        // ficheiro reescrito
+        if size < st.offset {                           // ficheiro reescrito
+            st = FileState()
+            claudeOwner = claudeOwner.filter { $0.value != path }
+        }
         guard size > st.offset else { files[path] = st; return st }
         try? h.seek(toOffset: st.offset)
-        let data = (try? h.readToEnd()) ?? Data()
-        // Só processa até à última linha completa; o resto fica para a próxima vez.
-        guard let lastNL = data.lastIndex(of: UInt8(ascii: "\n")) else { files[path] = st; return st }
-        let complete = data[data.startIndex...lastNL]
-        st.offset += UInt64(complete.count)
 
         let marker = Data((codex ? "\"token_count\"" : copilot ? "\"session.usage_record\"" : "\"usage\"").utf8)
         let copilotStart = Data("\"session.start\"".utf8)
         let metaMarker = Data("\"session_meta\"".utf8)
         let contextMarker = Data("\"turn_context\"".utf8)
-        for line in complete.split(separator: UInt8(ascii: "\n")) {
-            // Codex: a pasta do projeto só vem na linha inicial (session_meta)
-            let isMeta = codex && st.project == nil && line.range(of: metaMarker) != nil
-            // Codex: o modelo vem em cada turn_context (pode mudar a meio da sessão)
-            let isContext = codex && line.range(of: contextMarker) != nil
-            let isCopilotStart = copilot && line.range(of: copilotStart) != nil
-            guard line.count > 20, isMeta || isContext || isCopilotStart || line.range(of: marker) != nil,
-                  let j = try? JSONSerialization.jsonObject(with: Data(line)) as? [String: Any] else { continue }
-            // Fica a pasta mais recente: uma sessão pode mudar de pasta a meio.
-            let cwd = codex ? (j["payload"] as? [String: Any])?["cwd"] as? String
-                : copilot ? ((j["data"] as? [String: Any])?["context"] as? [String: Any])?["cwd"] as? String
-                : j["cwd"] as? String
-            if let cwd, !cwd.isEmpty { st.project = (cwd as NSString).lastPathComponent }
-            if isMeta || isCopilotStart { continue }
-            if isContext {
-                if j["type"] as? String == "turn_context", let model = (j["payload"] as? [String: Any])?["model"] as? String { st.model = model }
-                continue
-            }
-            let date = (j["timestamp"] as? String).flatMap { iso.date(from: $0) }
-            let day = date.map { dayFormat.string(from: $0) } ?? ""
-            var u: TokenUsage?
-            var model: String? = st.model
-            if codex, let limits = (j["payload"] as? [String: Any])?["rate_limits"] as? [String: Any],
-               let parsed = PlanLimitsParser.codex(limits, observed: date ?? Date()) {
-                st.limits = parsed
-            }
-            if copilot {
-                if let usage = (j["data"] as? [String: Any])?["usage"] as? [String: Any] {
-                    func int(_ k: String) -> Int { (usage[k] as? NSNumber)?.intValue ?? 0 }
-                    model = usage["model"] as? String
-                    u = TokenUsage(input: int("inputTokens"), output: int("outputTokens"),
-                                   cacheRead: int("cacheReadTokens"), cacheWrite: int("cacheWriteTokens"))
+        let newline = UInt8(ascii: "\n")
+        // Aos blocos: um transcript pode ter centenas de MB e lê-lo de uma vez fazia disparar a memória.
+        // Só se processa até à última linha completa; o resto fica para o bloco seguinte ou para a próxima vez.
+        var carry = Data()
+        while true {
+            let chunk = autoreleasepool { (try? h.read(upToCount: chunkSize)) ?? Data() }
+            guard !chunk.isEmpty else { break }
+            carry.append(chunk)
+            guard let lastNL = carry.lastIndex(of: newline) else { continue }
+            let complete = carry[carry.startIndex...lastNL]
+            st.offset += UInt64(complete.count)
+            autoreleasepool {
+                for line in complete.split(separator: UInt8(ascii: "\n")) {
+                    // Codex: a pasta do projeto só vem na linha inicial (session_meta)
+                    let isMeta = codex && st.project == nil && line.range(of: metaMarker) != nil
+                    // Codex: o modelo vem em cada turn_context (pode mudar a meio da sessão)
+                    let isContext = codex && line.range(of: contextMarker) != nil
+                    let isCopilotStart = copilot && line.range(of: copilotStart) != nil
+                    guard line.count > 20, isMeta || isContext || isCopilotStart || line.range(of: marker) != nil,
+                          let j = try? JSONSerialization.jsonObject(with: Data(line)) as? [String: Any] else { continue }
+                    // Fica a pasta mais recente: uma sessão pode mudar de pasta a meio.
+                    let cwd = codex ? (j["payload"] as? [String: Any])?["cwd"] as? String
+                        : copilot ? ((j["data"] as? [String: Any])?["context"] as? [String: Any])?["cwd"] as? String
+                        : j["cwd"] as? String
+                    if let cwd, !cwd.isEmpty { st.project = (cwd as NSString).lastPathComponent }
+                    if isMeta || isCopilotStart { continue }
+                    if isContext {
+                        if j["type"] as? String == "turn_context", let model = (j["payload"] as? [String: Any])?["model"] as? String { st.model = model }
+                        continue
+                    }
+                    let date = (j["timestamp"] as? String).flatMap { iso.date(from: $0) }
+                    let day = date.map { dayFormat.string(from: $0) } ?? ""
+                    var u: TokenUsage?
+                    var model: String? = st.model
+                    if codex, let limits = (j["payload"] as? [String: Any])?["rate_limits"] as? [String: Any],
+                       let parsed = PlanLimitsParser.codex(limits, observed: date ?? Date()) {
+                        st.limits = parsed
+                    }
+                    if copilot {
+                        if let usage = (j["data"] as? [String: Any])?["usage"] as? [String: Any] {
+                            func int(_ k: String) -> Int { (usage[k] as? NSNumber)?.intValue ?? 0 }
+                            model = usage["model"] as? String
+                            u = TokenUsage(input: int("inputTokens"), output: int("outputTokens"),
+                                           cacheRead: int("cacheReadTokens"), cacheWrite: int("cacheWriteTokens"))
+                        }
+                    } else if codex {
+                        // event_msg/token_count: info.last_token_usage é o consumo deste pedido
+                        // O mesmo evento pode vir repetido: o total acumulado não muda e não há consumo novo.
+                        if let info = (j["payload"] as? [String: Any])?["info"] as? [String: Any],
+                           let last = info["last_token_usage"] as? [String: Any],
+                           Self.codexIsNew(info, previous: &st.codexTotal) {
+                            let input = (last["input_tokens"] as? Int) ?? 0
+                            let cached = (last["cached_input_tokens"] as? Int) ?? 0
+                            u = TokenUsage(input: max(0, input - cached), output: (last["output_tokens"] as? Int) ?? 0, cacheRead: cached)
+                        }
+                    } else if j["type"] as? String == "assistant",
+                              let msg = j["message"] as? [String: Any],
+                              let usage = msg["usage"] as? [String: Any] {
+                        let id = (msg["id"] as? String) ?? UUID().uuidString
+                        model = msg["model"] as? String
+                        let owner = claudeOwner[id]
+                        if owner == nil || owner == path, st.seenIDs.insert(id).inserted {
+                            claudeOwner[id] = path
+                            u = Self.claudeUsage(usage)
+                        }
+                    }
+                    if let u {
+                        st.session = st.session + u
+                        st.byDay[day, default: TokenUsage()] = st.byDay[day, default: TokenUsage()] + u
+                        if let c = Pricing.cost(u, model: model) {
+                            st.cost += c
+                            st.costByDay[day, default: 0] += c
+                            st.priced = true
+                        }
+                    }
                 }
-            } else if codex {
-                // event_msg/token_count: info.last_token_usage é o consumo deste pedido
-                if let info = (j["payload"] as? [String: Any])?["info"] as? [String: Any],
-                   let last = info["last_token_usage"] as? [String: Any] {
-                    let input = (last["input_tokens"] as? Int) ?? 0
-                    let cached = (last["cached_input_tokens"] as? Int) ?? 0
-                    u = TokenUsage(input: max(0, input - cached), output: (last["output_tokens"] as? Int) ?? 0, cacheRead: cached)
-                }
-            } else if j["type"] as? String == "assistant",
-                      let msg = j["message"] as? [String: Any],
-                      let usage = msg["usage"] as? [String: Any] {
-                let id = (msg["id"] as? String) ?? UUID().uuidString
-                model = msg["model"] as? String
-                if st.seenIDs.insert(id).inserted {
-                    u = TokenUsage(input: (usage["input_tokens"] as? Int) ?? 0,
-                                   output: (usage["output_tokens"] as? Int) ?? 0,
-                                   cacheRead: (usage["cache_read_input_tokens"] as? Int) ?? 0,
-                                   cacheWrite: (usage["cache_creation_input_tokens"] as? Int) ?? 0)
-                }
             }
-            if let u {
-                st.session = st.session + u
-                st.byDay[day, default: TokenUsage()] = st.byDay[day, default: TokenUsage()] + u
-                if let c = Pricing.cost(u, model: model) {
-                    st.cost += c
-                    st.costByDay[day, default: 0] += c
-                    st.priced = true
-                }
-            }
+            carry = Data(carry[carry.index(after: lastNL)...])
         }
         files[path] = st
         return st

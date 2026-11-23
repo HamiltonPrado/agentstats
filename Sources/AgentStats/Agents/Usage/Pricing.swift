@@ -5,11 +5,15 @@ struct ModelPrice: Sendable, Equatable {
     var input: Double
     var output: Double
     var cacheRead: Double
+    /// Escrita em cache de 5 minutos.
     var cacheWrite: Double
+    /// Escrita em cache de 1 hora: o dobro da entrada na tabela da Anthropic.
+    var cacheWrite1h: Double { input * 2 }
 
     func cost(_ u: TokenUsage) -> Double {
-        (Double(u.input) * input + Double(u.output) * output
-         + Double(u.cacheRead) * cacheRead + Double(u.cacheWrite) * cacheWrite) / 1_000_000
+        let long = min(u.cacheWrite1h, u.cacheWrite)
+        return (Double(u.input) * input + Double(u.output) * output + Double(u.cacheRead) * cacheRead
+                + Double(u.cacheWrite - long) * cacheWrite + Double(long) * cacheWrite1h) / 1_000_000
     }
 }
 
