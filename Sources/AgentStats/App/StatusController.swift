@@ -15,6 +15,7 @@ final class StatusController: NSObject, NSPopoverDelegate {
     private var lastIconUpdate = Date.distantPast
     private var cancellables = Set<AnyCancellable>()
     private let hotKey = GlobalHotKey()
+    private let tabKeys = TabHotKeys()
 
     init(monitor: Monitor) {
         self.monitor = monitor
@@ -42,12 +43,39 @@ final class StatusController: NSObject, NSPopoverDelegate {
             .sink { [weak self] _ in
                 self?.updateIcon()
                 self?.hotKey.register(GlobalHotKey.configured)   // só re-regista se a escolha mudou
+                self?.updateTabKeys()
             }
             .store(in: &cancellables)
 
         // Atalho global para abrir e fechar o painel
         GlobalHotKey.handler = { [weak self] in self?.toggle(nil) }
         hotKey.register(GlobalHotKey.configured)
+        TabHotKeys.install { [weak self] number in
+            if let tab = TabLayout.shortcutTab(number, visible: TabLayout.currentVisible) { self?.show(tab) }
+        }
+        updateTabKeys()
+    }
+
+    private func updateTabKeys() {
+        let on = UserDefaults.standard.bool(forKey: TabLayout.shortcutsKey)
+        tabKeys.update(count: on ? TabLayout.currentVisible.count : 0)
+    }
+
+    private static let tabKey = "panel.tab2"
+
+    /// Atalho de um separador: abre o painel nele; se já estava aberto nele, fecha.
+    func show(_ tab: Tab) {
+        if CaptureStore.shared.isRecording {
+            CaptureStore.shared.stop()
+            return
+        }
+        let current = UserDefaults.standard.string(forKey: Self.tabKey)
+        if popover.isShown {
+            if current == tab.rawValue { popover.performClose(nil) } else { UserDefaults.standard.set(tab.rawValue, forKey: Self.tabKey) }
+            return
+        }
+        UserDefaults.standard.set(tab.rawValue, forKey: Self.tabKey)
+        present()
     }
 
     /// O que o VoiceOver diz sobre o ícone da barra de menus.
@@ -133,7 +161,6 @@ final class StatusController: NSObject, NSPopoverDelegate {
     }
 
     @objc private func toggle(_ sender: Any?) {
-        guard let button = item.button else { return }
         // A gravar, clicar no ícone (ou o atalho) para logo, sem abrir o painel para dentro do vídeo.
         if CaptureStore.shared.isRecording {
             CaptureStore.shared.stop()
@@ -142,13 +169,22 @@ final class StatusController: NSObject, NSPopoverDelegate {
         if popover.isShown {
             popover.performClose(sender)
         } else {
-            host.rootView = AnyView(PanelView().environment(monitor))
-            monitor.panelOpen = true
-            monitor.sample()   // dados frescos ao abrir
-            NSApp.activate(ignoringOtherApps: true)
-            popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
-            popover.contentViewController?.view.window?.makeKey()
+            let d = UserDefaults.standard
+            let stored = Tab(rawValue: d.string(forKey: Self.tabKey) ?? "") ?? .agents
+            let tab = TabLayout.tabOnOpen(stored: stored, start: d.string(forKey: TabLayout.startKey), visible: TabLayout.currentVisible)
+            if tab != stored { d.set(tab.rawValue, forKey: Self.tabKey) }
+            present()
         }
+    }
+
+    private func present() {
+        guard let button = item.button else { return }
+        host.rootView = AnyView(PanelView().environment(monitor))
+        monitor.panelOpen = true
+        monitor.sample()   // dados frescos ao abrir
+        NSApp.activate(ignoringOtherApps: true)
+        popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
+        popover.contentViewController?.view.window?.makeKey()
     }
 
     func popoverDidClose(_ notification: Notification) {

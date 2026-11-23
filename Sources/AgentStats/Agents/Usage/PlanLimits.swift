@@ -6,6 +6,8 @@ struct LimitWindow: Sendable, Equatable, Identifiable {
     var label: String          // "5 horas", "Semana", "Semana · Opus", "30 dias"
     var usedPercent: Double    // 0...100
     var resetsAt: Date?
+    /// Quanto dura a janela inteira (para prever o ritmo). nil se não se souber.
+    var duration: TimeInterval? = nil
 }
 
 /// Os limites de um agente, tal como foram lidos num dado momento.
@@ -63,7 +65,7 @@ enum PlanLimitsParser {
             let resets = number(w["resets_at"]).map { Date(timeIntervalSince1970: $0) }
                 ?? number(w["resets_in_seconds"]).map { observed.addingTimeInterval($0) }
             return LimitWindow(id: "codex.\(key)", label: minutes.map(label(minutes:)) ?? (key == "primary" ? "Sessão" : "Semana"),
-                               usedPercent: min(100, max(0, used)), resetsAt: resets)
+                               usedPercent: min(100, max(0, used)), resetsAt: resets, duration: minutes.map { Double($0) * 60 })
         }
         guard !windows.isEmpty else { return nil }
         return PlanLimits(provider: .codex, plan: planName(limits["plan_type"] as? String), windows: windows, observedAt: observed)
@@ -73,12 +75,15 @@ enum PlanLimitsParser {
     static func claudeUsage(_ response: [String: Any], observed: Date) -> PlanLimits? {
         guard response["rate_limits_available"] as? Bool == true,
               let limits = response["rate_limits"] as? [String: Any] else { return nil }
-        let keys: [(String, String)] = [("five_hour", "5 horas"), ("seven_day", "Semana"),
-                                        ("seven_day_opus", "Semana · Opus"), ("seven_day_sonnet", "Semana · Sonnet")]
-        let windows: [LimitWindow] = keys.compactMap { key, label in
+        let hours: TimeInterval = 3600
+        let keys: [(String, String, TimeInterval)] = [("five_hour", "5 horas", 5 * hours), ("seven_day", "Semana", 168 * hours),
+                                                      ("seven_day_opus", "Semana · Opus", 168 * hours),
+                                                      ("seven_day_sonnet", "Semana · Sonnet", 168 * hours)]
+        let windows: [LimitWindow] = keys.compactMap { key, label, duration in
             guard let w = limits[key] as? [String: Any], let used = number(w["utilization"]) else { return nil }
             let resets = (w["resets_at"] as? String).flatMap(parseISO)
-            return LimitWindow(id: "claude.\(key)", label: label, usedPercent: min(100, max(0, used)), resetsAt: resets)
+            return LimitWindow(id: "claude.\(key)", label: label, usedPercent: min(100, max(0, used)), resetsAt: resets,
+                               duration: duration)
         }
         guard !windows.isEmpty else { return nil }
         return PlanLimits(provider: .claude, plan: planName(response["subscription_type"] as? String),

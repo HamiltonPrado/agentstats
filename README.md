@@ -35,7 +35,8 @@
 
 - Sessões com projeto, modelo, subagentes e estado: a trabalhar, à tua espera ou a precisar de aprovação. Clica numa para voltar à app onde corre.
 - Reconhece Claude Code, Codex, Copilot, Cursor Agent, OpenCode, Antigravity, Aider, Goose, Gemini CLI e Amp. O detalhe varia com o que cada um regista no Mac.
-- **Limites do plano** do Claude e do Codex, com a hora de renovação.
+- **Limites do plano** do Claude e do Codex, com a hora de renovação, aviso aos 75% (ou o valor que escolheres), aos 90% e quando renova, e quando acabam se continuares a este ritmo.
+- **Ligação ao Claude Code num clique** (Definições → Geral): os pedidos de aprovação chegam logo, em vez de serem adivinhados pelos processos.
 - **Tokens e custo estimado em API** por sessão, dia e projeto, para Claude Code, Codex, Copilot e OpenCode. O custo só aparece para modelos com preço conhecido e não é o que pagas com um plano.
 - Aviso quando uma tarefa longa termina ou um agente precisa de ti, com lembretes se continuar à espera.
 
@@ -71,7 +72,7 @@
 
 ### À tua medida
 
-Barra de menus configurável, atalho global, perfis, tema, cor, largura, tamanho do texto, manter o Mac acordado, início de sessão automático e suporte a VoiceOver e “Reduzir movimento”. A interface está em português.
+Barra de menus configurável, separadores à tua escolha (quais, por que ordem e em qual abre), atalhos ⌥⌘1 a ⌥⌘7 para cada um, limites de alerta com qualquer valor, atalho global, perfis, tema, cor, largura, tamanho do texto, manter o Mac acordado (por tempo ou enquanto houver agentes a trabalhar), início de sessão automático e suporte a VoiceOver e “Reduzir movimento”. A interface está em português.
 
 ## Permissões e privacidade
 

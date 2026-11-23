@@ -31,7 +31,7 @@ struct AgentsView: View {
 
         VStack(alignment: .leading, spacing: DS.lg) {
             searchAndFilters
-            if showLimits && !m.planLimits.isEmpty { PlanLimitsCard(limits: m.planLimits) }
+            if showLimits && (!m.planLimits.isEmpty || m.claudeLimitsHint != nil) { PlanLimitsCard(limits: m.planLimits, hint: m.claudeLimitsHint) }
             if showUsage && !m.usage.todayTotal.isEmpty { TodayUsage(usage: m.usage) }
             if showActivity && !m.day.isEmpty { ActivityStrip(day: m.day) }
             if !hasAnyAgent {

@@ -4,6 +4,7 @@ import AppKit
 /// Limites do plano de cada agente: % gasta de cada janela e quando renova.
 struct PlanLimitsCard: View {
     let limits: [PlanLimits]
+    var hint: String? = nil
 
     var body: some View {
         VStack(alignment: .leading, spacing: DS.md) {
@@ -19,6 +20,11 @@ struct PlanLimitsCard: View {
                     }
                     ForEach(l.windows) { w in row(w) }
                 }
+            }
+            if let hint {
+                if !limits.isEmpty { Divider().opacity(0.5) }
+                Label(hint, systemImage: "info.circle").font(DS.meta).foregroundStyle(Color.text2)
+                    .fixedSize(horizontal: false, vertical: true)
             }
         }
         .cardStyle(padding: DS.md)
@@ -39,9 +45,14 @@ struct PlanLimitsCard: View {
                     .foregroundStyle(textColor)
             }
             Bar(value: fraction, color: color, height: 4)
+            if let end = LimitForecast.runsOut(w, now: Date()) {
+                Text("A este ritmo acaba " + Self.resetText(end, now: Date()) + ", antes de renovar")
+                    .font(DS.meta).foregroundStyle(Color.waitingText).lineLimit(2).fixedSize(horizontal: false, vertical: true)
+            }
         }
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("\(w.label): \(Fmt.num(w.usedPercent, 0))% usado" + (w.resetsAt.map { ", renova " + Self.resetText($0, now: Date()) } ?? ""))
+        .accessibilityLabel("\(w.label): \(Fmt.num(w.usedPercent, 0))% usado" + (w.resetsAt.map { ", renova " + Self.resetText($0, now: Date()) } ?? "")
+                            + (LimitForecast.runsOut(w, now: Date()).map { ", a este ritmo acaba " + Self.resetText($0, now: Date()) } ?? ""))
     }
 
     /// "às 14:30" hoje, "amanhã às 09:00", "qui 09:00" nesta semana, "2 dez" mais longe.

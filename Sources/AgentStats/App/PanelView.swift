@@ -39,6 +39,8 @@ struct PanelView: View {
     @AppStorage("appearance.accentHex") private var accentHex = "#0A84FF"
     @AppStorage(TextSize.defaultsKey) private var textSizeRaw = TextSize.normal.rawValue
     @AppStorage(PanelWidth.defaultsKey) private var panelWidthRaw = PanelWidth.normal.rawValue
+    @AppStorage(TabLayout.orderKey) private var tabOrder = ""
+    @AppStorage(TabLayout.hiddenKey) private var hiddenTabs = ""
     var forcedTab: Tab? = nil
     var scrollable = true
     @StateObject private var contentHeight = Box<CGFloat>(300)
@@ -144,7 +146,7 @@ struct PanelView: View {
 
     private var tabBar: some View {
         HStack(spacing: 0) {
-            ForEach(Tab.main) { t in
+            ForEach(TabLayout.visible(order: tabOrder, hidden: hiddenTabs)) { t in
                 Button { withAnimation(Motion.ease(0.16)) { storedTab = t } } label: {
                     // Só o ícone, numa caixa fixa: os símbolos têm larguras diferentes e assim ficam todos
                     // centrados. O ponto de estado fica sobreposto, sem mexer na centragem.

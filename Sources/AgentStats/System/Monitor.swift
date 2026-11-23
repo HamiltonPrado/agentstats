@@ -76,6 +76,17 @@ final class Monitor {
     var keepAwake = false {
         didSet { keepAwakeController.setEnabled(keepAwake, minutes: keepAwakeMinutes) }
     }
+    var keepAwakeForAgents: Bool = Pref.bool(AgentAwake.key, false) {
+        didSet { Pref.set(keepAwakeForAgents, AgentAwake.key); updateAgentAwake() }
+    }
+    /// Está agora a impedir o Mac de adormecer por causa dos agentes.
+    var holdingForAgents = false
+    var limitAlertsEnabled: Bool = Pref.bool(LimitWatch.enabledKey, true) {
+        didSet { Pref.set(limitAlertsEnabled, LimitWatch.enabledKey) }
+    }
+    var limitAlertLevel: Double = Pref.double(LimitWatch.levelKey, LimitWatch.defaultLevel) {
+        didSet { Pref.set(limitAlertLevel, LimitWatch.levelKey) }
+    }
     var keepAwakeMinutes: Double = Pref.double("power.keepAwake.minutes", 60) {
         didSet {
             Pref.set(keepAwakeMinutes, "power.keepAwake.minutes")
@@ -96,6 +107,8 @@ final class Monitor {
 
     @ObservationIgnored private let sampler = Sampler()
     @ObservationIgnored let keepAwakeController = KeepAwakeController()
+    @ObservationIgnored private let agentAwakeController = KeepAwakeController(reason: "AgentStats: agentes a trabalhar")
+    @ObservationIgnored private var lastWorking: Date?
     @ObservationIgnored private var timer: Timer?
     @ObservationIgnored private var tick = 0
     @ObservationIgnored private var sampling = false
@@ -113,6 +126,16 @@ final class Monitor {
     var planLimits: [PlanLimits] {
         let now = Date()
         return [claudeLimits, usage.codexLimits].compactMap { $0?.current(now: now) }
+    }
+
+    /// Porque é que o Claude não aparece nos limites, quando se sabe.
+    var claudeLimitsHint: String? {
+        guard !planLimits.contains(where: { $0.provider == .claude }) else { return nil }
+        switch claudeLimitsStatus {
+        case .signedOut?: return "Claude: sem sessão no Claude Code da linha de comandos. No Terminal, corre claude e depois /login."
+        case .notInstalled?: return "Claude: precisa do Claude Code da linha de comandos instalado."
+        default: return nil
+        }
     }
 
     /// `demo`: não lê o Mac, não carrega nem grava históricos e não pede permissões (ver `DemoData`).
@@ -176,7 +199,7 @@ final class Monitor {
                 nextClaudeCheck = now.addingTimeInterval(panelOpen ? 5 * 60 : 15 * 60)
             case .signedOut, .notInstalled, .failed:
                 claudeLimits = Self.claudeDesktopLimits(now: now)
-                nextClaudeCheck = now.addingTimeInterval(outcome == .notInstalled ? 6 * 3600 : outcome == .failed ? 15 * 60 : 30 * 60)
+                nextClaudeCheck = now.addingTimeInterval(outcome == .notInstalled ? 6 * 3600 : outcome == .failed ? 15 * 60 : 10 * 60)
             }
             claudeChecking = false
         }
@@ -209,6 +232,7 @@ final class Monitor {
             handleTransitions(a.sessions)
             updateAgentHistory(a.sessions)
             checkWaitingReminders(a.sessions)
+            if a.sessions.contains(where: { $0.state.isWorking }) { lastWorking = Date() }
             sessions = a.sessions
         }
         thermal = ProcessInfo.processInfo.thermalState
@@ -219,6 +243,8 @@ final class Monitor {
         downHistory.push(s.network.downPerSec)
         upHistory.push(s.network.upPerSec)
         checkAlerts()
+        checkLimitAlerts()
+        updateAgentAwake()
         recordMinute()
         onUpdate?()
     }
@@ -309,6 +335,41 @@ final class Monitor {
             content.sound = .default
             UNUserNotificationCenter.current().add(
                 UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: nil))
+        }
+    }
+
+    // MARK: Limites e energia
+
+    private func updateAgentAwake(now: Date = Date()) {
+        let hold = keepAwakeForAgents && AgentAwake.shouldHold(working: workingCount, lastWorking: lastWorking, now: now)
+        if hold != agentAwakeController.isHolding { agentAwakeController.setEnabled(hold, minutes: 0) }
+        if holdingForAgents != hold { holdingForAgents = hold }
+    }
+
+    private func checkLimitAlerts(now: Date = Date()) {
+        guard limitAlertsEnabled else { return }
+        let limits = [claudeLimits, usage.codexLimits].compactMap { $0 }
+        guard !limits.isEmpty else { return }
+        let saved = UserDefaults.standard.dictionary(forKey: LimitWatch.stateKey) as? [String: Double] ?? [:]
+        let result = LimitWatch.evaluate(limits, notified: saved, first: limitAlertLevel, now: now)
+        if result.notified != saved { UserDefaults.standard.set(result.notified, forKey: LimitWatch.stateKey) }
+        for event in result.events {
+            let content = UNMutableNotificationContent()
+            switch event {
+            case .reached(let provider, let w, _, let runsOut):
+                content.title = "\(provider.rawValue) · \(w.label) a \(Fmt.num(w.usedPercent, 0))%"
+                var lines: [String] = []
+                if let r = w.resetsAt { lines.append("Renova " + PlanLimitsCard.resetText(r, now: now) + ".") }
+                if let end = runsOut { lines.append("A este ritmo acaba " + PlanLimitsCard.resetText(end, now: now) + ".") }
+                content.body = lines.isEmpty ? "Limite do plano" : lines.joined(separator: " ")
+                if w.usedPercent >= LimitWatch.lastLevel { content.interruptionLevel = .timeSensitive }
+            case .renewed(let provider, let label):
+                content.title = "\(provider.rawValue) · \(label) renovou"
+                content.body = "Podes voltar a usar à vontade."
+            }
+            content.sound = .default
+            UNUserNotificationCenter.current().add(
+                UNNotificationRequest(identifier: "limit-\(UUID().uuidString)", content: content, trigger: nil))
         }
     }
 

@@ -301,6 +301,8 @@ struct DiskCard: View {
     @ObservedObject var store: DiskScanStore
     @AppStorage("panel.tab2") private var tab: Tab = .agents
     @AppStorage("tools.section") private var toolSection: ToolSection = .ports
+    @AppStorage(TabLayout.orderKey) private var tabOrder = ""
+    @AppStorage(TabLayout.hiddenKey) private var hiddenTabs = ""
 
     var body: some View {
         let parts = DiskStorage.parts(total: disk.total, free: disk.free, measures: store.measures,
@@ -319,12 +321,14 @@ struct DiskCard: View {
                 let names: String = store.incomplete.map(\.label).joined(separator: ", ")
                 note("Não consegui ler tudo em \(names). O que falta conta em Sistema e outros.", color: .waitingText)
             }
-            Button("Limpar caches…") {
-                toolSection = .cleanup
-                tab = .tools
+            if TabLayout.visible(order: tabOrder, hidden: hiddenTabs).contains(.tools) {
+                Button("Limpar caches…") {
+                    toolSection = .cleanup
+                    tab = .tools
+                }
+                .buttonStyle(.plain).modifier(AccentText()).font(DS.meta)
+                .help("Abre Ferramentas → Limpeza. Nada se move sem confirmares.")
             }
-            .buttonStyle(.plain).modifier(AccentText()).font(DS.meta)
-            .help("Abre Ferramentas → Limpeza. Nada se move sem confirmares.")
             Divider().opacity(0.5)
             StatRow(label: "Leitura", value: Fmt.rate(disk.readPerSec))
             StatRow(label: "Escrita", value: Fmt.rate(disk.writePerSec))

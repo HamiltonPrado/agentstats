@@ -5,9 +5,16 @@ import CoreAudio
 
 @MainActor
 final class KeepAwakeController {
+    private let reason: String
     private var assertion: IOPMAssertionID = 0
     private var timeout: Timer?
     var onTimeout: (() -> Void)?
+
+    init(reason: String = "AgentStats: manter o Mac acordado") {
+        self.reason = reason
+    }
+
+    var isHolding: Bool { assertion != 0 }
 
     func setEnabled(_ enabled: Bool, minutes: Double) {
         timeout?.invalidate()
@@ -20,7 +27,7 @@ final class KeepAwakeController {
             let result = IOPMAssertionCreateWithName(
                 kIOPMAssertionTypePreventUserIdleSystemSleep as CFString,
                 IOPMAssertionLevel(kIOPMAssertionLevelOn),
-                "AgentStats: manter o Mac acordado" as CFString,
+                reason as CFString,
                 &assertion)
             if result != kIOReturnSuccess { assertion = 0; return }
             if minutes > 0 { schedule(minutes: minutes) }
@@ -38,5 +45,17 @@ final class KeepAwakeController {
             }
         }
     }
+}
 
+/// Manter acordado enquanto há agentes a trabalhar, e mais um pouco: entre dois passos de um agente há
+/// pausas curtas, e o Mac não deve adormecer nelas.
+enum AgentAwake {
+    static let key = "power.keepAwakeForAgents"
+    static let grace: TimeInterval = 3 * 60
+
+    static func shouldHold(working: Int, lastWorking: Date?, now: Date) -> Bool {
+        if working > 0 { return true }
+        guard let lastWorking else { return false }
+        return now.timeIntervalSince(lastWorking) < grace
+    }
 }

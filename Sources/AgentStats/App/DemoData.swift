@@ -25,6 +25,7 @@ enum DemoData {
         UninstallStore.shared.loadDemo()
         CleanupStore.shared.loadDemo()
         CleaningModeStore.shared.loadDemo()
+        ClaudeHookStore.shared.loadDemo()
         ClipboardStore.shared.loadDemo(now: now)
         SpeedTestStore.shared.loadDemo(now: now)
         DiskScanStore.shared.loadDemo()
@@ -216,16 +217,16 @@ enum DemoData {
         ]
 
         let codexWindows: [LimitWindow] = [
-            LimitWindow(id: "codex.primary", label: "5 horas", usedPercent: 18, resetsAt: now.addingTimeInterval(3 * 3600)),
-            LimitWindow(id: "codex.secondary", label: "Semana", usedPercent: 33, resetsAt: now.addingTimeInterval(4 * 86_400)),
+            LimitWindow(id: "codex.primary", label: "5 horas", usedPercent: 18, resetsAt: now.addingTimeInterval(3 * 3600), duration: 5 * 3600),
+            LimitWindow(id: "codex.secondary", label: "Semana", usedPercent: 33, resetsAt: now.addingTimeInterval(4 * 86_400), duration: 7 * 86_400),
         ]
         usage.codexLimits = PlanLimits(provider: .codex, plan: "Plus", windows: codexWindows,
                                        observedAt: now.addingTimeInterval(-90))
         m.usage = usage
 
         let claudeWindows: [LimitWindow] = [
-            LimitWindow(id: "claude.five", label: "5 horas", usedPercent: 42, resetsAt: now.addingTimeInterval(2 * 3600)),
-            LimitWindow(id: "claude.week", label: "Semana", usedPercent: 78, resetsAt: now.addingTimeInterval(2 * 86_400)),
+            LimitWindow(id: "claude.five", label: "5 horas", usedPercent: 42, resetsAt: now.addingTimeInterval(2 * 3600), duration: 5 * 3600),
+            LimitWindow(id: "claude.week", label: "Semana", usedPercent: 78, resetsAt: now.addingTimeInterval(2 * 86_400), duration: 7 * 86_400),
         ]
         m.claudeLimits = PlanLimits(provider: .claude, plan: "Max", windows: claudeWindows,
                                     observedAt: now.addingTimeInterval(-30))

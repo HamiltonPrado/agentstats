@@ -28,6 +28,11 @@ struct SettingsView: View {
     @AppStorage(MenuBarDrawer.colorDotKey) private var colorDot = false
     @AppStorage(PanelWidth.defaultsKey) private var panelWidth = PanelWidth.normal.rawValue
     @AppStorage(TextSize.defaultsKey) private var textSize = TextSize.normal.rawValue
+    @AppStorage(TabLayout.orderKey) private var tabOrder = ""
+    @AppStorage(TabLayout.hiddenKey) private var hiddenTabs = ""
+    @AppStorage(TabLayout.startKey) private var startTab = TabLayout.lastUsed
+    @AppStorage(TabLayout.shortcutsKey) private var tabShortcuts = false
+    @ObservedObject private var hook = ClaudeHookStore.shared
     @StateObject private var login = Box(SMAppService.mainApp.status == .enabled)
     @StateObject private var loginErr = Box<String?>(nil)
     @StateObject private var savedProfile = Box<String?>(nil)
@@ -51,6 +56,18 @@ struct SettingsView: View {
             .padding(.horizontal, DS.xs)
         }
         .onChange(of: currentSnapshot) { _, _ in savedProfile.value = nil }
+    }
+
+    private var hookNeedsAction: Bool { hook.state == .stale || hook.state == .unreadable }
+
+    private var hookSubtitle: String {
+        switch hook.state {
+        case .noClaude: "O Claude Code não está instalado"
+        case .off: "Deteta melhor os pedidos de aprovação"
+        case .on: "Ligada: os pedidos de aprovação chegam logo"
+        case .stale: "Aponta para uma cópia da app que já não existe"
+        case .unreadable: "O ~/.claude/settings.json não é JSON válido; não lhe mexo"
+        }
     }
 
     /// Bindings para as definições guardadas no Monitor.
@@ -142,8 +159,35 @@ struct SettingsView: View {
                     if let e = loginErr.value { Text(e).font(DS.meta).foregroundStyle(Color.attentionText) }
                 }
             }
+            group("Claude Code") {
+                VStack(alignment: .leading, spacing: DS.md) {
+                    HStack(spacing: DS.md) {
+                        icon("link")
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Ligação ao Claude Code").font(DS.body)
+                            Text(hookSubtitle).font(DS.meta).foregroundStyle(hookNeedsAction ? Color.waitingText : Color.text3)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                        Spacer(minLength: DS.sm)
+                        switch hook.state {
+                        case .off: Button("Ligar") { hook.set(true) }.controlSize(.small)
+                        case .stale: Button("Reparar") { hook.set(true) }.controlSize(.small)
+                        case .on: Button("Desligar") { hook.set(false) }.controlSize(.small)
+                        case .noClaude, .unreadable: EmptyView()
+                        }
+                    }
+                    if let message = hook.message { note(message, color: .waitingText) }
+                    if hook.state == .off || hook.state == .stale {
+                        note("Junta uma entrada ao ~/.claude/settings.json, com cópia de segurança ao lado. Desligar tira só essa entrada.")
+                    }
+                }
+            }
+            .onAppear { hook.refresh() }
             group("Energia") {
                 VStack(alignment: .leading, spacing: DS.md) {
+                    row("terminal", "Acordado com agentes a trabalhar",
+                        m.holdingForAgents ? "Agora a manter acordado" : "Até 3 min depois de pararem; o ecrã pode desligar-se",
+                        bm.keepAwakeForAgents)
                     row("moon.zzz", "Manter o Mac acordado", "Termina automaticamente após o período", Binding(
                         get: { m.keepAwake }, set: { m.keepAwake = $0 }))
                     if m.keepAwake {
@@ -286,6 +330,48 @@ struct SettingsView: View {
                     row("clock", "Histórico de agentes", nil, $showHistorySection)
                 }
             }
+            group("Separadores") {
+                VStack(alignment: .leading, spacing: DS.md) {
+                    let all = TabLayout.order(tabOrder)
+                    let shown = TabLayout.visible(order: tabOrder, hidden: hiddenTabs)
+                    ForEach(Array(all.enumerated()), id: \.element) { index, tab in
+                        HStack(spacing: DS.md) {
+                            icon(tab.icon)
+                            Text(tab.title).font(DS.body).lineLimit(1)
+                                .foregroundStyle(shown.contains(tab) ? Color.primary : Color.text3)
+                            Spacer(minLength: DS.xs)
+                            Button { tabOrder = TabLayout.moved(order: tabOrder, tab, by: -1) } label: {
+                                Image(systemName: "arrow.up").font(DS.meta)
+                            }
+                            .buttonStyle(.plain).disabled(index == 0)
+                            .help("Mover \(tab.title) para cima").accessibilityLabel("Mover \(tab.title) para cima")
+                            Button { tabOrder = TabLayout.moved(order: tabOrder, tab, by: 1) } label: {
+                                Image(systemName: "arrow.down").font(DS.meta)
+                            }
+                            .buttonStyle(.plain).disabled(index == all.count - 1)
+                            .help("Mover \(tab.title) para baixo").accessibilityLabel("Mover \(tab.title) para baixo")
+                            Toggle(tab.title, isOn: Binding(
+                                get: { shown.contains(tab) },
+                                set: { _ in hiddenTabs = TabLayout.toggled(hidden: hiddenTabs, tab, order: tabOrder) }))
+                                .toggleStyle(.switch).controlSize(.mini).labelsHidden()
+                                .disabled(shown == [tab])   // fica sempre pelo menos um
+                        }
+                    }
+                    Divider().opacity(0.5)
+                    HStack(spacing: DS.md) {
+                        icon("arrow.right.square")
+                        Text("Abrir em").font(DS.body).lineLimit(1).fixedSize().layoutPriority(1)
+                        Spacer(minLength: DS.xs)
+                        Picker("Abrir em", selection: $startTab) {
+                            Text("Último usado").tag(TabLayout.lastUsed)
+                            ForEach(shown) { Text($0.title).tag($0.rawValue) }
+                        }
+                        .labelsHidden().fixedSize()
+                    }
+                    row("command", "Atalhos para cada separador",
+                        "⌥⌘1 a ⌥⌘\(shown.count), pela ordem acima. Funcionam em qualquer app", $tabShortcuts)
+                }
+            }
         }
     }
 
@@ -322,49 +408,34 @@ struct SettingsView: View {
                 VStack(alignment: .leading, spacing: DS.md) {
                     row("cpu", "CPU alta", "Notifica após 20 s acima do limite", bm.cpuAlertEnabled)
                     if m.cpuAlertEnabled {
-                        Picker("", selection: bm.cpuThreshold) {
-                            Text("70%").tag(0.7); Text("80%").tag(0.8); Text("85%").tag(0.85); Text("90%").tag(0.9); Text("95%").tag(0.95)
-                        }
-                        .pickerStyle(.segmented).labelsHidden().padding(.leading, 28)
+                        limit("Limite da CPU", bm.cpuThreshold, in: 0.5...0.99, step: 0.01) { Fmt.pct($0) }
                     }
                     row("thermometer.high", "Temperatura alta", "Máximo da CPU", bm.tempAlertEnabled)
                     if m.tempAlertEnabled {
-                        Picker("", selection: bm.tempThreshold) {
-                            Text("75°").tag(75.0); Text("80°").tag(80.0); Text("85°").tag(85.0); Text("90°").tag(90.0); Text("95°").tag(95.0)
-                        }
-                        .pickerStyle(.segmented).labelsHidden().padding(.leading, 28)
+                        limit("Limite da temperatura", bm.tempThreshold, in: 60...105, step: 1) { Fmt.num($0, 0) + "°" }
                     }
                     row("memorychip", "Memória alta", "Alerta após 20 s acima do limite", bm.memoryAlertEnabled)
                     if m.memoryAlertEnabled {
-                        Picker("", selection: bm.memoryThreshold) {
-                            Text("80%").tag(0.8); Text("85%").tag(0.85); Text("90%").tag(0.9); Text("95%").tag(0.95)
-                        }.pickerStyle(.segmented).labelsHidden().padding(.leading, 28)
+                        limit("Limite da memória", bm.memoryThreshold, in: 0.6...0.99, step: 0.01) { Fmt.pct($0) }
                     }
                     row("internaldrive", "Pouco espaço em disco", "Quando o espaço livre fica baixo", bm.diskAlertEnabled)
                     if m.diskAlertEnabled {
-                        Picker("", selection: bm.diskThreshold) {
-                            Text("10% livre").tag(0.9); Text("5% livre").tag(0.95); Text("2% livre").tag(0.98)
-                        }.pickerStyle(.segmented).labelsHidden().padding(.leading, 28)
+                        // Guarda-se a fração usada; aqui escolhe-se o espaço livre, que é como se pensa.
+                        limit("Espaço livre mínimo", Binding(get: { 1 - m.diskThreshold }, set: { m.diskThreshold = 1 - $0 }),
+                              in: 0.01...0.3, step: 0.01) { Fmt.pct($0) + " livre" }
                     }
                     row("battery.25", "Bateria fraca", "Só sem carregador ligado", bm.batteryAlertEnabled)
                     if m.batteryAlertEnabled {
-                        Picker("", selection: bm.batteryThreshold) {
-                            Text("25%").tag(0.25); Text("20%").tag(0.2); Text("15%").tag(0.15); Text("10%").tag(0.1)
-                        }.pickerStyle(.segmented).labelsHidden().padding(.leading, 28)
+                        limit("Limite da bateria", bm.batteryThreshold, in: 0.05...0.5, step: 0.01) { Fmt.pct($0) }
+                    }
+                    row("gauge.with.dots.needle.67percent", "Limites do plano", "Claude e Codex: avisa também aos 90% e quando renova",
+                        bm.limitAlertsEnabled)
+                    if m.limitAlertsEnabled {
+                        limit("Avisar aos", bm.limitAlertLevel, in: 50...95, step: 5) { Fmt.num($0, 0) + "%" }
                     }
                     row("hourglass", "Lembretes de espera", "Avisa se um agente continuar à espera", bm.waitingAlertEnabled)
                     if m.waitingAlertEnabled {
-                        VStack(alignment: .leading, spacing: DS.sm) {
-                            HStack(spacing: DS.md) {
-                                icon("bell.badge")
-                                Text("Lembrar após").font(DS.body)
-                            }
-                            Picker("", selection: bm.waitingAlertMinutes) {
-                                Text("3 min").tag(3.0); Text("5 min").tag(5.0); Text("10 min").tag(10.0)
-                            }
-                            .pickerStyle(.segmented).labelsHidden()
-                        }
-                        .padding(.leading, 28)
+                        limit("Lembrar após", bm.waitingAlertMinutes, in: 1...60, step: 1) { Fmt.num($0, 0) + " min" }
                     }
                 }
             }
@@ -457,6 +528,25 @@ struct SettingsView: View {
         guard ids.indices.contains(index), ids.indices.contains(destination) else { return }
         ids.swapAt(index, destination)
         barOrder = ids.joined(separator: ",")
+    }
+
+    /// Limite de um alerta: qualquer valor no intervalo, com o valor escrito ao lado.
+    private func limit(_ title: String, _ value: Binding<Double>, in range: ClosedRange<Double>, step: Double,
+                       format: @escaping (Double) -> String) -> some View {
+        HStack(spacing: DS.md) {
+            // Sem "step" no Slider: o macOS desenhava uma marca por passo. Arredonda-se aqui.
+            Slider(value: Binding(get: { value.wrappedValue },
+                                  set: { value.wrappedValue = min(max(($0 / step).rounded() * step, range.lowerBound), range.upperBound) }),
+                   in: range)
+                .controlSize(.small)
+                .accessibilityLabel(title)
+                .accessibilityValue(format(value.wrappedValue))
+            Text(format(value.wrappedValue))
+                .font(DS.body.monospacedDigit())
+                .lineLimit(1).fixedSize()
+                .frame(minWidth: 48, alignment: .trailing)
+        }
+        .padding(.leading, 28)
     }
 
     /// Ícones de linha, todos do mesmo tamanho e na cor do texto secundário.
