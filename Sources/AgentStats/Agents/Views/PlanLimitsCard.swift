@@ -34,6 +34,8 @@ struct PlanLimitsCard: View {
         let fraction = w.usedPercent / 100
         let textColor: Color = fraction >= 0.9 ? .attentionText : fraction >= 0.75 ? .waitingText : .primary
         let color: Color = fraction >= 0.9 ? Palette.attention : fraction >= 0.75 ? Palette.waiting : .accentColor
+        let now = Date()
+        let runsOut: Date? = LimitForecast.runsOut(w, now: now)
         return VStack(alignment: .leading, spacing: DS.xs) {
             HStack(alignment: .firstTextBaseline, spacing: DS.xs) {
                 Text(w.label).font(DS.body)
@@ -45,14 +47,20 @@ struct PlanLimitsCard: View {
                     .foregroundStyle(textColor)
             }
             Bar(value: fraction, color: color, height: 4)
-            if let end = LimitForecast.runsOut(w, now: Date()) {
-                Text("A este ritmo acaba " + Self.resetText(end, now: Date()) + ", antes de renovar")
+            if let end = runsOut {
+                Text("A este ritmo acaba " + Self.resetText(end, now: now) + ", antes de renovar")
                     .font(DS.meta).foregroundStyle(Color.waitingText).lineLimit(2).fixedSize(horizontal: false, vertical: true)
             }
         }
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("\(w.label): \(Fmt.num(w.usedPercent, 0))% usado" + (w.resetsAt.map { ", renova " + Self.resetText($0, now: Date()) } ?? "")
-                            + (LimitForecast.runsOut(w, now: Date()).map { ", a este ritmo acaba " + Self.resetText($0, now: Date()) } ?? ""))
+        .accessibilityLabel(Self.spoken(w, runsOut: runsOut, now: now))
+    }
+
+    private static func spoken(_ w: LimitWindow, runsOut: Date?, now: Date) -> String {
+        var text = "\(w.label): \(Fmt.num(w.usedPercent, 0))% usado"
+        if let r = w.resetsAt { text += ", renova " + resetText(r, now: now) }
+        if let end = runsOut { text += ", a este ritmo acaba " + resetText(end, now: now) }
+        return text
     }
 
     /// "às 14:30" hoje, "amanhã às 09:00", "qui 09:00" nesta semana, "2 dez" mais longe.
