@@ -43,8 +43,8 @@ struct ActivityHistoryRow: View {
                 AppState.controller?.open(session)
             } else if let cwd = record.cwd {
                 AgentActions.openFolder(cwd)
-            } else if record.id.hasPrefix("/") {
-                AgentActions.revealTranscript(record.id)
+            } else if let path = AgentActions.transcriptPath(record.id) {
+                AgentActions.revealTranscript(path)
             }
         }
         .help("Observada pela primeira vez \(Fmt.ago(record.firstSeen)); duração medida pela app")

@@ -117,8 +117,10 @@ struct SessionCard: View {
         .accessibilityAction(named: "Abrir pasta") {
             if let cwd = session.cwd { AgentActions.openFolder(cwd) }
         }
-        .accessibilityAction(named: "Mostrar transcript") {
-            AgentActions.revealTranscript(session.id)
+        .accessibilityActions {
+            if let path = AgentActions.transcriptPath(session.id) {
+                Button("Mostrar transcript") { AgentActions.revealTranscript(path) }
+            }
         }
         .contextMenu { menu }
     }
@@ -136,8 +138,8 @@ struct SessionCard: View {
             if let cwd = session.cwd {
                 mini("folder", "Abrir pasta") { AgentActions.openFolder(cwd) }
             }
-            mini("doc.text.magnifyingglass", "Mostrar transcript") {
-                AgentActions.revealTranscript(session.id)
+            if let path = AgentActions.transcriptPath(session.id) {
+                mini("doc.text.magnifyingglass", "Mostrar transcript") { AgentActions.revealTranscript(path) }
             }
         }
     }
@@ -155,7 +157,9 @@ struct SessionCard: View {
             Button("Abrir no Terminal") { AgentActions.openInTerminal(cwd) }
             Button("Copiar caminho") { AgentActions.copyPath(cwd) }
         }
-        Button("Mostrar transcript") { AgentActions.revealTranscript(session.id) }
+        if let path = AgentActions.transcriptPath(session.id) {
+            Button("Mostrar transcript") { AgentActions.revealTranscript(path) }
+        }
         if let p = session.process {
             Divider()
             Button("Terminar agente… (PID \(String(p.pid)))", role: .destructive) { ProcessKiller.confirmAndTerminate(pid: p.pid, name: session.title) }
