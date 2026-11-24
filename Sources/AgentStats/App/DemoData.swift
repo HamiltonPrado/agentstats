@@ -20,11 +20,15 @@ enum DemoData {
 
     static func load(now: Date = Date()) -> Monitor {
         CaptureStore.shared.loadDemo()
+        ScreenToolsStore.shared.loadDemo()
         PortsStore.shared.loadDemo()
         BrewStore.shared.loadDemo()
         UninstallStore.shared.loadDemo()
         CleanupStore.shared.loadDemo()
         DisksStore.shared.loadDemo()
+        NetworkExtrasStore.shared.loadDemo()
+        AccessoryBatteryStore.shared.loadDemo()
+        QuickTogglesStore.shared.loadDemo()
         StartupStore.shared.loadDemo()
         DNSFlushStore.shared.loadDemo()
         LargeFilesStore.shared.loadDemo(now: now)

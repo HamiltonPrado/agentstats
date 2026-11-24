@@ -48,6 +48,7 @@
 - Disco por categorias, com as cores e as unidades do macOS. Mede-se por pastas ao abrir o cartão, por isso é aproximado.
 - Teste de velocidade manual pelo Cloudflare: cerca de **32 MB por teste**; as medições podem ser recolhidas de forma agregada.
 - Wi-Fi: qualidade do sinal, ruído, velocidade da ligação e canal. O nome da rede só aparece se deres acesso à Localização, que o macOS exige para isso; a app não pede a tua posição.
+- IP público (só quando carregas em “Ver”, pelo Cloudflare) e VPN ativa. Bateria dos AirPods, rato, teclado e outros acessórios Bluetooth.
 - Aviso de versão nova no painel e por notificação, com o comando do Homebrew se a instalaste por lá. Consulta o GitHub uma vez por dia e desliga-se nas Definições.
 - Não controla ventoinhas.
 
@@ -64,9 +65,11 @@
 ### Captura
 
 - Captura uma área, uma janela ou o ecrã, e grava o ecrã inteiro com microfone e cliques opcionais. Para gravar uma área abre a ferramenta do macOS.
+- **Ler o ecrã:** copia o texto de uma área (OCR), lê códigos QR e apanha a cor de qualquer ponto em HEX ou RGB. Tudo neste Mac, sem rede.
 
 ### Ferramentas
 
+- **Atalhos rápidos:** modo escuro, esconder os ícones da secretária (o Finder reinicia) e Não incomodar, que precisa de um atalho com esse nome na app Atalhos.
 - **Rede:** vê as portas à escuta e termina processos teus, com confirmação, e limpa a cache de DNS (pede a password de administrador no diálogo do macOS).
 - **Discos:** ejeta discos externos, imagens de disco e volumes de rede, e diz que app está a impedir a ejeção.
 - **Arranque:** o que arranca sozinho (LaunchAgents e LaunchDaemons). Os teus podem desligar-se e voltar a ligar-se; os outros só se veem.
@@ -80,6 +83,8 @@
 
 Barra de menus configurável, separadores à tua escolha (quais, por que ordem e em qual abre), atalhos ⌥⌘1 a ⌥⌘7 para cada um, limites de alerta com qualquer valor, atalho global, perfis, tema, cor, largura, tamanho do texto, manter o Mac acordado (por tempo ou enquanto houver agentes a trabalhar), início de sessão automático e suporte a VoiceOver e “Reduzir movimento”. A interface está em português.
 
+Comporta-se como os outros ícones da barra de menus: o botão direito abre um menu com os separadores, os atalhos rápidos, as Definições e Sair, e clicar fora do painel, incluindo na secretária, fecha-o.
+
 ## Permissões e privacidade
 
 | Funcionalidade | Permissão que o macOS pode pedir |
@@ -92,8 +97,9 @@ Barra de menus configurável, separadores à tua escolha (quais, por que ordem e
 | Histórico do clipboard | Colar de outras apps (macOS 15.4+) |
 | Categorias do Disco, medidas ao abrir o cartão | Pastas pessoais (Secretária, Documentos, Descargas, Música, Fotografias) |
 | Nome da rede Wi-Fi (opcional) | Localização |
+| Modo escuro nos atalhos rápidos | Automação (System Events) |
 
-Não há conta nem telemetria. O AgentStats lê os registos dos agentes no Mac e não os envia. Só há rede no teste de velocidade, no Homebrew quando o usas, na consulta periódica dos limites, feita pelo teu Claude Code, e na procura diária de versões novas no GitHub, que podes desligar.
+Não há conta nem telemetria. O AgentStats lê os registos dos agentes no Mac e não os envia. Só há rede no teste de velocidade, no Homebrew quando o usas, na consulta periódica dos limites, feita pelo teu Claude Code, na procura diária de versões novas no GitHub, que podes desligar, e no IP público, só quando o pedes.
 
 A partir da 1.18.1 a app tem uma assinatura fixa, para **as permissões se manterem entre atualizações**. Ao vires de uma versão anterior tens de as dar uma última vez: se alguma aparecer ligada e não funcionar, tira o AgentStats dessa lista com − e volta a juntá-lo.
 

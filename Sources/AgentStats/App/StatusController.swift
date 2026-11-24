@@ -16,6 +16,8 @@ final class StatusController: NSObject, NSPopoverDelegate {
     private var cancellables = Set<AnyCancellable>()
     private let hotKey = GlobalHotKey()
     private let tabKeys = TabHotKeys()
+    /// Cliques noutras apps ou na secretária: fecham o painel, como nos menus do macOS.
+    private var outsideClicks: Any?
 
     init(monitor: Monitor) {
         self.monitor = monitor
@@ -30,7 +32,8 @@ final class StatusController: NSObject, NSPopoverDelegate {
 
         if let button = item.button {
             button.target = self
-            button.action = #selector(toggle(_:))
+            button.action = #selector(clicked(_:))
+            button.sendAction(on: [.leftMouseUp, .rightMouseUp])
             button.imagePosition = .imageOnly
         }
         updateIcon()
@@ -160,6 +163,47 @@ final class StatusController: NSObject, NSPopoverDelegate {
         if !popover.isShown { toggle(nil) }
     }
 
+    /// Botão direito (ou Control+clique, ou clique secundário no trackpad): o menu da app, como nos outros ícones.
+    @objc private func clicked(_ sender: Any?) {
+        if let e = NSApp.currentEvent, e.type == .rightMouseUp || e.modifierFlags.contains(.control) {
+            showMenu()
+        } else {
+            toggle(sender)
+        }
+    }
+
+    private func showMenu() {
+        guard let button = item.button else { return }
+        if popover.isShown { popover.performClose(nil) }
+        let menu = NSMenu()
+        func add(_ title: String, _ key: String = "", _ action: @escaping () -> Void) {
+            let i = NSMenuItem(title: title, action: #selector(MenuAction.run), keyEquivalent: key)
+            let target = MenuAction(action)
+            i.target = target
+            i.representedObject = target   // o NSMenuItem não guarda o target: fica vivo assim
+            menu.addItem(i)
+        }
+        add("Abrir AgentStats") { [weak self] in self?.toggle(nil) }
+        menu.addItem(.separator())
+        for tab in TabLayout.currentVisible where tab != .settings {
+            add(tab.title) { [weak self] in self?.show(tab) }
+        }
+        menu.addItem(.separator())
+        let quick = QuickTogglesStore.shared
+        add(QuickToggles.isDark ? "Modo claro" : "Modo escuro") { Task { await quick.toggleDarkMode() } }
+        add(QuickToggles.desktopIconsShown ? "Esconder ícones da secretária" : "Mostrar ícones da secretária") {
+            Task { await quick.toggleDesktopIcons() }
+        }
+        menu.addItem(.separator())
+        add("Definições…", ",") { [weak self] in self?.show(.settings) }
+        add("Abrir Monitor de Atividade") {
+            NSWorkspace.shared.open(URL(fileURLWithPath: "/System/Applications/Utilities/Activity Monitor.app"))
+        }
+        menu.addItem(.separator())
+        add("Sair do AgentStats", "q") { NSApp.terminate(nil) }
+        menu.popUp(positioning: nil, at: NSPoint(x: 0, y: button.bounds.height + 5), in: button)
+    }
+
     @objc private func toggle(_ sender: Any?) {
         // A gravar, clicar no ícone (ou o atalho) para logo, sem abrir o painel para dentro do vídeo.
         if CaptureStore.shared.isRecording {
@@ -185,10 +229,25 @@ final class StatusController: NSObject, NSPopoverDelegate {
         NSApp.activate(ignoringOtherApps: true)
         popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
         popover.contentViewController?.view.window?.makeKey()
+        // O .transient às vezes deixa-o aberto (clique na secretária, noutro ecrã): isto garante que fecha.
+        if outsideClicks == nil, popover.behavior == .transient {
+            outsideClicks = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown, .otherMouseDown]) { [weak self] _ in
+                MainActor.assumeIsolated { self?.popover.performClose(nil) }
+            }
+        }
     }
 
     func popoverDidClose(_ notification: Notification) {
+        if let outsideClicks { NSEvent.removeMonitor(outsideClicks) }
+        outsideClicks = nil
         host.rootView = AnyView(EmptyView())
         monitor.panelOpen = false
     }
+}
+
+/// Liga um item de menu a um bloco.
+private final class MenuAction: NSObject {
+    let action: () -> Void
+    init(_ action: @escaping () -> Void) { self.action = action }
+    @objc func run() { action() }
 }

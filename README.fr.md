@@ -48,6 +48,7 @@
 - Disque par catégories, avec les couleurs et les unités de macOS. Il est mesuré par dossiers à l’ouverture de la carte, donc approximatif.
 - Test de débit manuel via Cloudflare : environ **32 Mo par test** ; les mesures peuvent être collectées sous forme agrégée.
 - Wi-Fi : qualité du signal, bruit, débit de liaison et canal. Le nom du réseau n’apparaît que si vous autorisez la Localisation, que macOS exige pour cela ; l’app ne demande jamais votre position.
+- IP publique (seulement quand vous cliquez sur « Voir », via Cloudflare) et VPN active. Batterie des AirPods, de la souris, du clavier et d’autres accessoires Bluetooth.
 - Avis de nouvelle version dans le panneau et par notification, avec la commande Homebrew si vous l’avez installée ainsi. Consulte GitHub une fois par jour et se désactive dans les Réglages.
 - Ne contrôle pas les ventilateurs.
 
@@ -64,9 +65,11 @@
 ### Capture
 
 - Capturez une zone, une fenêtre ou l’écran et enregistrez l’écran entier, avec micro et clics en option. L’enregistrement d’une zone ouvre l’outil de macOS.
+- **Lire l’écran :** copiez le texte d’une zone (OCR), lisez les codes QR et prélevez la couleur de n’importe quel point en HEX ou RVB. Tout sur ce Mac, sans réseau.
 
 ### Outils
 
+- **Raccourcis rapides :** mode sombre, masquer les icônes du bureau (le Finder redémarre) et Ne pas déranger, qui nécessite un raccourci de ce nom dans l’app Raccourcis.
 - **Réseau :** voyez les ports à l’écoute et quittez vos processus, après confirmation, et videz le cache DNS (demande le mot de passe administrateur dans la fenêtre de macOS).
 - **Disques :** éjectez disques externes, images disque et volumes réseau, et voyez quelle app empêche l’éjection.
 - **Démarrage :** ce qui démarre tout seul (LaunchAgents et LaunchDaemons). Les vôtres se désactivent et se réactivent ; les autres sont seulement affichés.
@@ -80,6 +83,8 @@
 
 Barre des menus configurable, onglets au choix (lesquels, dans quel ordre et lequel s’ouvre), raccourcis ⌥⌘1 à ⌥⌘7 pour chacun, seuils d’alerte à n’importe quelle valeur, raccourci global, profils, thème, couleur, largeur, taille du texte, maintien en éveil (pour une durée ou tant que des agents travaillent), lancement automatique et prise en charge de VoiceOver et de « Réduire les animations ».
 
+Il se comporte comme les autres icônes de la barre des menus : le clic droit ouvre un menu avec les onglets, les raccourcis rapides, les Réglages et Quitter, et cliquer hors du panneau, y compris sur le bureau, le ferme.
+
 ## Autorisations et confidentialité
 
 | Fonction | Autorisation que macOS peut demander |
@@ -92,8 +97,9 @@ Barre des menus configurable, onglets au choix (lesquels, dans quel ordre et leq
 | Historique du presse-papiers | Coller depuis d’autres apps (macOS 15.4+) |
 | Catégories du disque, mesurées à l’ouverture de la carte | Dossiers personnels (Bureau, Documents, Téléchargements, Musique, Images) |
 | Nom du réseau Wi-Fi (optionnel) | Localisation |
+| Mode sombre des raccourcis rapides | Automatisation (System Events) |
 
-Ni compte ni télémétrie. AgentStats lit les journaux des agents sur le Mac et ne les envoie pas. Le réseau ne sert qu’au test de débit, à Homebrew quand vous l’utilisez, à la consultation périodique des limites par votre Claude Code et à la recherche quotidienne de nouvelles versions sur GitHub, que vous pouvez désactiver.
+Ni compte ni télémétrie. AgentStats lit les journaux des agents sur le Mac et ne les envoie pas. Le réseau ne sert qu’au test de débit, à Homebrew quand vous l’utilisez, à la consultation périodique des limites par votre Claude Code, à la recherche quotidienne de nouvelles versions sur GitHub, que vous pouvez désactiver, et à l’IP publique, seulement quand vous la demandez.
 
 À partir de la 1.18.1, l’application a une signature fixe afin que **les autorisations persistent entre les mises à jour**. Depuis une version antérieure, il faut les accorder une dernière fois : si l’une semble activée sans fonctionner, retirez AgentStats de la liste avec − puis ajoutez-le à nouveau.
 

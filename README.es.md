@@ -48,6 +48,7 @@
 - Disco por categorías, con los colores y las unidades de macOS. Se mide por carpetas al abrir la tarjeta, así que es aproximado.
 - Prueba de velocidad manual con Cloudflare: unos **32 MB por prueba**; las mediciones pueden recopilarse de forma agregada.
 - Wi-Fi: calidad de la señal, ruido, velocidad de enlace y canal. El nombre de la red solo aparece si das acceso a la Localización, que macOS exige para ello; la app no pide tu ubicación.
+- IP pública (solo cuando pulsas “Ver”, mediante Cloudflare) y VPN activa. Batería de AirPods, ratón, teclado y otros accesorios Bluetooth.
 - Aviso de versión nueva en el panel y por notificación, con el comando de Homebrew si la instalaste así. Consulta GitHub una vez al día y se desactiva en Ajustes.
 - No controla los ventiladores.
 
@@ -64,9 +65,11 @@
 ### Captura
 
 - Captura un área, una ventana o la pantalla, y graba la pantalla completa con micrófono y clics opcionales. Para grabar un área se abre la herramienta de macOS.
+- **Leer la pantalla:** copia el texto de un área (OCR), lee códigos QR y toma el color de cualquier punto en HEX o RGB. Todo en este Mac, sin red.
 
 ### Herramientas
 
+- **Atajos rápidos:** modo oscuro, ocultar los iconos del escritorio (el Finder se reinicia) y No molestar, que necesita un atajo con ese nombre en la app Atajos.
 - **Red:** ve los puertos a la escucha y cierra procesos tuyos, con confirmación, y vacía la caché de DNS (pide la contraseña de administrador en el diálogo de macOS).
 - **Discos:** expulsa discos externos, imágenes de disco y volúmenes de red, y dice qué app impide expulsarlos.
 - **Arranque:** lo que se abre solo (LaunchAgents y LaunchDaemons). Los tuyos se pueden desactivar y volver a activar; los demás solo se muestran.
@@ -80,6 +83,8 @@
 
 Barra de menús configurable, pestañas a tu elección (cuáles, en qué orden y cuál se abre), atajos ⌥⌘1 a ⌥⌘7 para cada una, límites de alerta con cualquier valor, atajo global, perfiles, tema, color, ancho, tamaño del texto, mantener el Mac activo (por tiempo o mientras haya agentes trabajando), inicio automático y compatibilidad con VoiceOver y “Reducir movimiento”.
 
+Se comporta como los demás iconos de la barra de menús: el botón derecho abre un menú con las pestañas, los atajos rápidos, Ajustes y Salir, y hacer clic fuera del panel, incluido el escritorio, lo cierra.
+
 ## Permisos y privacidad
 
 | Función | Permiso que puede pedir macOS |
@@ -92,8 +97,9 @@ Barra de menús configurable, pestañas a tu elección (cuáles, en qué orden y
 | Historial del portapapeles | Pegar desde otras apps (macOS 15.4+) |
 | Categorías del disco, medidas al abrir la tarjeta | Carpetas personales (Escritorio, Documentos, Descargas, Música, Imágenes) |
 | Nombre de la red Wi-Fi (opcional) | Localización |
+| Modo oscuro en los atajos rápidos | Automatización (System Events) |
 
-No hay cuenta ni telemetría. AgentStats lee los registros de los agentes en el Mac y no los envía. Solo usan la red la prueba de velocidad, Homebrew cuando lo utilizas, la consulta periódica de límites mediante tu Claude Code y la búsqueda diaria de versiones nuevas en GitHub, que puedes desactivar.
+No hay cuenta ni telemetría. AgentStats lee los registros de los agentes en el Mac y no los envía. Solo usan la red la prueba de velocidad, Homebrew cuando lo utilizas, la consulta periódica de límites mediante tu Claude Code, la búsqueda diaria de versiones nuevas en GitHub, que puedes desactivar, y la IP pública, solo cuando la pides.
 
 A partir de la 1.18.1 la app tiene una firma fija, para que **los permisos se mantengan entre actualizaciones**. Si vienes de una versión anterior debes concederlos una última vez: si alguno aparece activado y no funciona, quita AgentStats de esa lista con − y vuelve a añadirlo.
 

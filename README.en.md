@@ -48,6 +48,7 @@
 - Disk by category, with the colors and units macOS uses. It is measured by folder when the card opens, so it is approximate.
 - Manual speed test through Cloudflare: about **32 MB per test**; measurements may be collected in aggregate.
 - Wi-Fi: signal quality, noise, link speed, and channel. The network name appears only if you grant Location access, which macOS requires for it; the app never asks for your position.
+- Public IP (only when you click “Show”, through Cloudflare) and active VPN. Battery of AirPods, mouse, keyboard, and other Bluetooth accessories.
 - New version notice in the panel and as a notification, with the Homebrew command if you installed it that way. It checks GitHub once a day and can be turned off in Settings.
 - Does not control fans.
 
@@ -64,9 +65,11 @@
 ### Capture
 
 - Capture an area, a window, or the screen, and record the full screen with optional microphone and clicks. Area recording opens the macOS tool.
+- **Read the screen:** copy the text in an area (OCR), read QR codes, and pick the color of any point as HEX or RGB. All on this Mac, with no network.
 
 ### Tools
 
+- **Quick toggles:** dark mode, hide desktop icons (Finder restarts), and Do Not Disturb, which needs a shortcut with that name in the Shortcuts app.
 - **Network:** see listening ports and quit your own processes, with confirmation, and flush the DNS cache (asks for the administrator password in the macOS dialog).
 - **Disks:** eject external disks, disk images and network volumes, and see which app is blocking the eject.
 - **Startup:** what starts on its own (LaunchAgents and LaunchDaemons). Your own can be turned off and back on; the others are shown only.
@@ -80,6 +83,8 @@
 
 Configurable menu bar, tabs of your choice (which ones, in what order, and which one opens first), ⌥⌘1 to ⌥⌘7 shortcuts for each, alert limits with any value, global shortcut, profiles, theme, color, width, text size, keep awake (for a set time or while agents are working), launch at login, and support for VoiceOver and Reduce Motion.
 
+It behaves like other menu bar icons: right-click opens a menu with the tabs, quick toggles, Settings, and Quit, and clicking outside the panel, including on the desktop, closes it.
+
 ## Permissions and privacy
 
 | Feature | Permission macOS may request |
@@ -92,8 +97,9 @@ Configurable menu bar, tabs of your choice (which ones, in what order, and which
 | Clipboard history | Paste from other apps (macOS 15.4+) |
 | Disk categories, measured when the card opens | Personal folders (Desktop, Documents, Downloads, Music, Pictures) |
 | Wi-Fi network name (optional) | Location |
+| Dark mode in quick toggles | Automation (System Events) |
 
-There is no account and no telemetry. AgentStats reads agent logs on your Mac and does not send them. The network is used only by the speed test, by Homebrew when you use it, by the periodic limits check made through your Claude Code, and by the daily check for new versions on GitHub, which you can turn off.
+There is no account and no telemetry. AgentStats reads agent logs on your Mac and does not send them. The network is used only by the speed test, by Homebrew when you use it, by the periodic limits check made through your Claude Code, by the daily check for new versions on GitHub, which you can turn off, and by the public IP, only when you ask for it.
 
 Starting with 1.18.1 the app has a fixed signature, so **permissions persist across updates**. When coming from an earlier version you need to grant them one last time: if one looks enabled but does not work, remove AgentStats from that list with − and add it again.
 

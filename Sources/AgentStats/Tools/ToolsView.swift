@@ -23,6 +23,7 @@ struct ToolsView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: DS.md) {
+            QuickTogglesView(store: .shared)
             // Duas linhas: sete secções numa só ficavam ilegíveis na largura do painel.
             VStack(spacing: 2) {
                 ForEach([Array(ToolSection.allCases.prefix(4)), Array(ToolSection.allCases.dropFirst(4))], id: \.self) { line in

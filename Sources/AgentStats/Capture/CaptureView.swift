@@ -3,6 +3,7 @@ import AppKit
 
 struct CaptureView: View {
     @ObservedObject var store: CaptureStore
+    @ObservedObject private var reading = ScreenToolsStore.shared
     @AppStorage("capture.copy") private var copyAfter = true
     @AppStorage("capture.microphone") private var microphone = false
     @AppStorage("capture.clicks") private var clicks = false
@@ -11,6 +12,7 @@ struct CaptureView: View {
         VStack(alignment: .leading, spacing: DS.md) {
             if store.needsPermission { permissionCard }
             screenshotCard
+            readingCard
             recordingCard
             if let error = store.error {
                 Text(error).font(DS.meta).foregroundStyle(Color.waitingText).fixedSize(horizontal: false, vertical: true)
@@ -46,6 +48,60 @@ struct CaptureView: View {
             note("Guarda em Imagens → AgentStats. Esc cancela.")
         }
         .cardStyle()
+    }
+
+    private var readingCard: some View {
+        VStack(alignment: .leading, spacing: DS.sm) {
+            Text("Ler o ecrã").font(DS.body.weight(.medium))
+            HStack(spacing: DS.sm) {
+                action("Texto", "text.viewfinder") { closePanel(); Task { await reading.readText() } }
+                action("Código QR", "qrcode.viewfinder") { closePanel(); Task { await reading.readCode() } }
+                action("Cor", "eyedropper") { closePanel(); reading.pickColor() }
+            }
+            .disabled(reading.busy || store.phase != .idle)
+            HStack(spacing: DS.sm) {
+                Text("Cor em").font(DS.body)
+                Spacer(minLength: DS.sm)
+                Picker("", selection: $reading.colorFormat) { Text("HEX").tag("hex"); Text("RGB").tag("rgb") }
+                    .pickerStyle(.segmented).labelsHidden().frame(width: 110)
+            }
+            if let r = reading.result { readingResult(r) }
+            note("Seleciona uma área (ou um ponto, na cor) e o resultado vai para o clipboard. Tudo neste Mac, sem rede.")
+        }
+        .cardStyle()
+    }
+
+    @ViewBuilder private func readingResult(_ r: ScreenToolsStore.Result) -> some View {
+        switch r {
+        case .text(let t):
+            VStack(alignment: .leading, spacing: DS.xs) {
+                Text("Texto copiado").font(DS.meta).foregroundStyle(Color.text2)
+                Text(t).font(DS.meta).lineLimit(4).textSelection(.enabled)
+            }
+        case .codes(let codes):
+            ForEach(codes, id: \.self) { c in
+                HStack(spacing: DS.sm) {
+                    Text(c).font(DS.meta).lineLimit(2).truncationMode(.middle).textSelection(.enabled)
+                    Spacer(minLength: DS.sm)
+                    if let url = ScreenReading.webLink(c) {
+                        textLink("Abrir") { NSWorkspace.shared.open(url) }.help(url.absoluteString)
+                    }
+                    textLink("Copiar") { reading.copy(c) }
+                }
+            }
+        case .color(let hex, let rgb):
+            HStack(spacing: DS.sm) {
+                RoundedRectangle(cornerRadius: 4).fill(Color(hexString: hex)).frame(width: 20, height: 20)
+                    .overlay(RoundedRectangle(cornerRadius: 4).stroke(Color.primary.opacity(0.2)))
+                Text(hex).font(DS.body.monospaced()).textSelection(.enabled)
+                Text(rgb).font(DS.meta.monospaced()).foregroundStyle(Color.text2).lineLimit(1)
+                Spacer(minLength: DS.xs)
+                textLink("HEX") { reading.copy(hex) }
+                textLink("RGB") { reading.copy(rgb) }
+            }
+        case .nothing(let why):
+            note(why, color: .text2)
+        }
     }
 
     private var recordingCard: some View {

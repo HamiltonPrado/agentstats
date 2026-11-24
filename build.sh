@@ -42,6 +42,7 @@ cat > "$APP/Contents/Info.plist" <<PLIST
     <key>NSHighResolutionCapable</key><true/>
     <key>NSLocationUsageDescription</key><string>O macOS só mostra o nome da rede Wi-Fi a apps com acesso à Localização. O AgentStats não pede a tua posição.</string>
     <key>NSLocationWhenInUseUsageDescription</key><string>O macOS só mostra o nome da rede Wi-Fi a apps com acesso à Localização. O AgentStats não pede a tua posição.</string>
+    <key>NSAppleEventsUsageDescription</key><string>O AgentStats usa o System Events só para ligar e desligar o modo escuro quando carregas no atalho rápido.</string>
     <key>NSMicrophoneUsageDescription</key><string>O AgentStats só usa o microfone se escolheres gravá-lo numa gravação de ecrã.</string>
     <key>NSAudioCaptureUsageDescription</key><string>O AgentStats precisa de receber o som das apps que ajustares no mixer, para lhes mudar o volume. Nada é gravado nem enviado.</string>
 </dict>

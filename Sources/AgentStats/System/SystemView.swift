@@ -18,6 +18,8 @@ struct SystemView: View {
     @AppStorage("system.detail") private var selected: Metric = .cpu
     @ObservedObject private var speed = SpeedTestStore.shared
     @ObservedObject private var location = LocationAccess.shared
+    @ObservedObject private var extras = NetworkExtrasStore.shared
+    @ObservedObject private var accessories = AccessoryBatteryStore.shared
 
     var body: some View {
         VStack(spacing: DS.md) {
@@ -250,6 +252,7 @@ struct SystemView: View {
                 }
                 if let t = m.temps?.battery ?? b.temperature { StatRow(label: "Temperatura", value: Fmt.temp(t)) }
                 Divider().opacity(0.5)
+                accessoriesSection
                 energySection
                 sinceUnplugSection
                 Divider().opacity(0.5)
@@ -259,9 +262,40 @@ struct SystemView: View {
             Card(title: "Energia", icon: "powerplug") {
                 Text("Este Mac não tem bateria").font(DS.body).foregroundStyle(Color.text2)
                 Divider().opacity(0.5)
+                accessoriesSection
                 energySection
             }
         }
+    }
+
+    /// Acessórios Bluetooth com bateria. Só aparece quando há algum ligado.
+    @ViewBuilder private var accessoriesSection: some View {
+        Group {
+            if !accessories.accessories.isEmpty {
+                Text("Acessórios").font(DS.body.weight(.medium))
+                ForEach(accessories.accessories) { a in accessoryRow(a) }
+                Divider().opacity(0.5)
+            }
+        }
+        .task {
+            while !Task.isCancelled {
+                await accessories.refresh()
+                try? await Task.sleep(for: .seconds(60))
+            }
+        }
+    }
+
+    private func accessoryRow(_ a: AccessoryBattery) -> some View {
+        let low: Bool = a.lowest <= 20
+        let color: Color = low ? Color.attentionText : Color.primary
+        let text: String = a.parts.map { p in p.label.isEmpty ? "\(p.percent)%" : "\(p.label) \(p.percent)%" }.joined(separator: " · ")
+        return HStack(spacing: DS.sm) {
+            Image(systemName: a.symbol).font(DS.body).foregroundStyle(Color.text2).frame(width: 18)
+            Text(a.name).font(DS.body).lineLimit(1).truncationMode(.middle)
+            Spacer(minLength: DS.sm)
+            Text(text).font(DS.body.monospacedDigit()).foregroundStyle(color).lineLimit(1).minimumScaleFactor(0.8)
+        }
+        .accessibilityElement(children: .combine)
     }
 
     @ViewBuilder private var energySection: some View {
@@ -303,6 +337,36 @@ struct SystemView: View {
     nonisolated static func wattHours(_ joules: Double) -> String {
         let wh = joules / 3600
         return Fmt.num(wh, wh < 1 ? 2 : 1) + " Wh"
+    }
+
+    nonisolated static func ipText(_ ip: String, _ country: String?) -> String {
+        guard let country else { return ip }
+        return ip + " · " + country
+    }
+
+    private var vpnRow: some View {
+        let on: Bool = !extras.vpns.isEmpty
+        let value: String = on ? extras.vpns.joined(separator: ", ") : "Desligada"
+        let color: Color = on ? Color.accentColor : Color.primary
+        return StatRow(label: "VPN", value: value, valueColor: color)
+    }
+
+    @ViewBuilder private var publicIPRow: some View {
+        HStack(spacing: DS.sm) {
+            Text("IP público").font(DS.body).foregroundStyle(Color.text2)
+            Spacer(minLength: DS.sm)
+            if extras.fetchingIP {
+                ProgressView().controlSize(.small)
+            } else if let ip = extras.publicIP {
+                Text(Self.ipText(ip, extras.country)).font(DS.body.monospacedDigit()).textSelection(.enabled)
+                    .lineLimit(1).minimumScaleFactor(0.8)
+                IconButton(systemName: "arrow.clockwise", help: "Ver outra vez") { Task { await extras.fetchPublicIP() } }
+            } else {
+                textLink("Ver", color: .accentColor) { Task { await extras.fetchPublicIP() } }
+                    .help("Pergunta ao Cloudflare. Só quando carregas aqui.")
+            }
+        }
+        if let e = extras.ipError { note(e, color: .text2) }
     }
 
     @ViewBuilder private func wifiSection(_ w: WiFiInfo) -> some View {
@@ -348,6 +412,8 @@ struct SystemView: View {
             StatRow(label: "Recebido desde que a app abriu", value: Fmt.bytes(m.network.totalDown))
             StatRow(label: "Enviado desde que a app abriu", value: Fmt.bytes(m.network.totalUp))
             StatRow(label: "IP local", value: m.network.localIP)
+            publicIPRow
+            if extras.checkedVPN { vpnRow }
             if let w = m.network.wifi { wifiSection(w) }
             Divider().opacity(0.5)
             if let result = speed.result {
@@ -379,6 +445,12 @@ struct SystemView: View {
             .accessibilityHint("Envia aproximadamente 32 MB para medir a ligação através do Cloudflare")
             Text("Cloudflare · cerca de 32 MB por teste; medições podem ser recolhidas de forma agregada")
                 .font(DS.meta).foregroundStyle(Color.text3)
+        }
+        .task {
+            while !Task.isCancelled {
+                await extras.refreshVPN()
+                try? await Task.sleep(for: .seconds(15))
+            }
         }
     }
 
