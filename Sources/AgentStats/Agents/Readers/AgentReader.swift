@@ -414,7 +414,7 @@ final class AgentReader {
         let t = oneLine(raw)
         guard let r = t.range(of: #"hit your (.+?) limit"#, options: .regularExpression) else { return t }
         let kind = t[r].replacingOccurrences(of: "hit your ", with: "").replacingOccurrences(of: " limit", with: "")
-        let name = kind == "5-hour" ? "de 5 horas" : kind == "weekly" ? "semanal" : kind.hasPrefix("Opus") || kind.hasPrefix("Sonnet") ? String(localized: "semanal do \(kind.split(separator: " ").first!)") : kind
+        let name = kind == "5-hour" ? "de 5 horas" : kind == "weekly" ? "semanal" : kind.hasPrefix("Opus") || kind.hasPrefix("Sonnet") ? String(localized: "semanal do \(String(kind.split(separator: " ").first!))") : kind
         var out = String(localized: "Limite \(name) atingido")
         if let rr = t.range(of: #"resets [^(]+"#, options: .regularExpression) {
             let when = t[rr].dropFirst("resets ".count).trimmingCharacters(in: .whitespaces)
