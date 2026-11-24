@@ -12,22 +12,22 @@
 **[Descargar la última versión](https://github.com/HamiltonPrado/agentstats/releases/latest)** · [Sitio web](https://hamiltonprado.github.io/agentstats) · [Informar de un problema](https://github.com/HamiltonPrado/agentstats/issues)
 
 <p align="center">
-  <img src="Resources/screenshots/menubar.png" alt="Agentes y métricas en la barra de menús" width="600">
+  <img src="Resources/screenshots/en/menubar.png" alt="Agentes y métricas en la barra de menús" width="600">
 </p>
 
 <p align="center">
-  <img src="Resources/screenshots/agents-dark.png" alt="Agentes, límites y costes" width="260">
-  <img src="Resources/screenshots/system-dark.png" alt="Métricas del sistema" width="260">
-  <img src="Resources/screenshots/audio-dark.png" alt="Mezclador de volumen" width="260">
+  <img src="Resources/screenshots/en/agents-dark.png" alt="Agentes, límites y costes" width="260">
+  <img src="Resources/screenshots/en/system-dark.png" alt="Métricas del sistema" width="260">
+  <img src="Resources/screenshots/en/audio-dark.png" alt="Mezclador de volumen" width="260">
 </p>
 
 <p align="center">
-  <img src="Resources/screenshots/clipboard-dark.png" alt="Portapapeles y fragmentos" width="260">
-  <img src="Resources/screenshots/capture-dark.png" alt="Captura y grabación" width="260">
-  <img src="Resources/screenshots/tools-dark.png" alt="Herramientas" width="260">
+  <img src="Resources/screenshots/en/clipboard-dark.png" alt="Portapapeles y fragmentos" width="260">
+  <img src="Resources/screenshots/en/capture-dark.png" alt="Captura y grabación" width="260">
+  <img src="Resources/screenshots/en/tools-dark.png" alt="Herramientas" width="260">
 </p>
 
-<p align="center"><sub>Capturas con datos de demostración. La interfaz está en portugués.</sub></p>
+<p align="center"><sub>Capturas con datos de demostración.</sub></p>
 
 ## Qué puedes supervisar
 
@@ -88,7 +88,7 @@
 
 ### A tu medida
 
-Barra de menús configurable, pestañas a tu elección (cuáles, en qué orden y cuál se abre), atajos ⌥⌘1 a ⌥⌘8 para cada una, límites de alerta con cualquier valor, atajo global, perfiles, tema, color, ancho, tamaño del texto, mantener el Mac activo (por tiempo o mientras haya agentes trabajando), inicio automático y compatibilidad con VoiceOver y “Reducir movimiento”.
+Barra de menús configurable, pestañas a tu elección (cuáles, en qué orden y cuál se abre), atajos ⌥⌘1 a ⌥⌘8 para cada una, límites de alerta con cualquier valor, atajo global, perfiles, tema, color, ancho, tamaño del texto, mantener el Mac activo (por tiempo o mientras haya agentes trabajando), inicio automático y compatibilidad con VoiceOver y “Reducir movimiento”. La interfaz está en inglés y portugués: sigue el idioma del Mac, o elígelo en Ajustes → General.
 
 Se comporta como los demás iconos de la barra de menús: el botón derecho abre un menú con las pestañas, los atajos rápidos, Ajustes y Salir, y hacer clic fuera del panel, incluido el escritorio, lo cierra.
 

@@ -23,8 +23,8 @@ struct MenuBarLabel: View {
 
     private func cell(_ title: String, _ value: String) -> some View {
         VStack(alignment: .leading, spacing: -2) {
-            Text(title).font(.system(size: 7, weight: .semibold))
-            Text(value).font(.system(size: 10, weight: .semibold).monospacedDigit())
+            Text(L(title)).font(.system(size: 7, weight: .semibold))
+            Text(L(value)).font(.system(size: 10, weight: .semibold).monospacedDigit())
         }
         .frame(minWidth: 24, alignment: .leading)
     }

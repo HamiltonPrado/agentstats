@@ -116,7 +116,7 @@ enum AgentStatsApp {
         let base = agentR.sessions(processes: agents) + CodexReader().sessions(recentWindow: 7 * 86400) + AntigravityReader().sessions(processes: agents, recentWindow: 7 * 86400)
         let all = base + OtherAIsReader().sessions(processes: agents, existingSessions: base)
         for s in all {
-            print("  • [\(s.kind)] \(s.title) | \(s.state.label) | \(s.detail ?? "") | \(s.project) | \(s.model ?? "-") | pid \(s.process?.pid ?? 0)")
+            print("  • [\(s.kind)] \(s.title) | \(L(s.state.label)) | \(s.detail ?? "") | \(s.project) | \(s.model ?? "-") | pid \(s.process?.pid ?? 0)")
         }
     }
 

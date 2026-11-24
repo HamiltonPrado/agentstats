@@ -38,7 +38,7 @@ struct SystemView: View {
         switch metric {
         case .cpu:
             return Readout(title: "CPU", value: Fmt.pct(m.cpu.total),
-                           sub: "carga " + Fmt.num(m.cpu.load.0, 1), valueColor: heatOrPrimary(m.cpu.total))
+                           sub: String(localized: "carga \(Fmt.num(m.cpu.load.0, 1))"), valueColor: heatOrPrimary(m.cpu.total))
         case .memory:
             return Readout(title: "Memória", value: Fmt.pct(m.memory.usage),
                            sub: Fmt.bytesShort(m.memory.used),
@@ -51,7 +51,7 @@ struct SystemView: View {
             return Readout(title: "GPU", value: m.gpu.map(Fmt.pct) ?? "—", sub: "utilização")
         case .disk:
             return Readout(title: "Disco", value: Fmt.pct(m.disk.usage),
-                           sub: Fmt.diskShort(m.disk.free) + " livres", valueColor: heatOrPrimary(m.disk.usage))
+                           sub: String(localized: "\(Fmt.diskShort(m.disk.free)) livres"), valueColor: heatOrPrimary(m.disk.usage))
         case .battery:
             guard let b = m.battery else { return Readout(title: "Energia", value: "AC", sub: "sem bateria") }
             let sub = b.isCharging ? "a carregar" : b.externalPower ? "na corrente"
@@ -70,9 +70,9 @@ struct SystemView: View {
         let isSel = selected == metric
         return Button { withAnimation(Motion.ease(0.16)) { selected = metric } } label: {
             VStack(alignment: .leading, spacing: 2) {
-                Text(d.title).font(DS.meta).foregroundStyle(Color.text2).lineLimit(1).minimumScaleFactor(0.75)
-                Text(d.value).font(DS.figure).foregroundStyle(d.valueColor).lineLimit(1).minimumScaleFactor(0.8)
-                Text(d.sub).font(DS.meta.monospacedDigit()).foregroundStyle(Color.text3).lineLimit(1).minimumScaleFactor(0.75)
+                Text(L(d.title)).font(DS.meta).foregroundStyle(Color.text2).lineLimit(1).minimumScaleFactor(0.75)
+                Text(L(d.value)).font(DS.figure).foregroundStyle(d.valueColor).lineLimit(1).minimumScaleFactor(0.8)
+                Text(L(d.sub)).font(DS.meta.monospacedDigit()).foregroundStyle(Color.text3).lineLimit(1).minimumScaleFactor(0.75)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.horizontal, DS.md).padding(.vertical, DS.sm)
@@ -133,7 +133,7 @@ struct SystemView: View {
         Card(title: "CPU", icon: "cpu", trailing: Fmt.pct(m.cpu.total)) {
             Sparkline(values: m.cpuHistory.values, maxValue: 1).frame(height: 48)
                 .accessibilityLabel("Gráfico da CPU no último minuto")
-                .accessibilityValue("máximo " + Fmt.pct(m.cpuHistory.values.max() ?? 0))
+                .accessibilityValue(String(localized: "máximo \(Fmt.pct(m.cpuHistory.values.max() ?? 0))"))
             HStack(alignment: .bottom, spacing: DS.xs) {
                 ForEach(Array(m.cpu.cores.enumerated()), id: \.offset) { _, v in
                     VStack(spacing: 0) {
@@ -150,13 +150,13 @@ struct SystemView: View {
             .help("Utilização de cada núcleo")
             .accessibilityElement(children: .ignore)
             .accessibilityLabel("Utilização por núcleo")
-            .accessibilityValue(m.cpu.cores.map(Fmt.pct).joined(separator: ", "))
+            .accessibilityValue(L(m.cpu.cores.map(Fmt.pct).joined(separator: ", ")))
             Divider().opacity(0.5)
             StatRow(label: "Utilizador", value: Fmt.pct(m.cpu.user))
             StatRow(label: "Sistema", value: Fmt.pct(m.cpu.system))
             StatRow(label: "Carga média 1 · 5 · 15 min",
                     value: [m.cpu.load.0, m.cpu.load.1, m.cpu.load.2].map { Fmt.num($0, 2) }.joined(separator: " · "))
-            if let p = m.pCores, let e = m.eCores { StatRow(label: "Núcleos", value: "\(p) de desempenho, \(e) de eficiência") }
+            if let p = m.pCores, let e = m.eCores { StatRow(label: "Núcleos", value: String(localized: "\(p) de desempenho, \(e) de eficiência")) }
             Divider().opacity(0.5)
             DayChart(samples: m.day, value: { $0.cpu }, maxValue: 1, title: "CPU", format: Fmt.pct)
             StatRow(label: "Chip", value: m.machine.replacingOccurrences(of: "Apple ", with: ""))
@@ -167,7 +167,7 @@ struct SystemView: View {
     private var memoryDetail: some View {
         // Passos do mesmo neutro para as partes da memória (não quatro cores)
         let steps: [Color] = [.primary.opacity(0.7), .primary.opacity(0.45), .primary.opacity(0.25), .primary.opacity(0.12)]
-        return Card(title: "Memória", icon: "memorychip", trailing: "\(Fmt.bytes(m.memory.used)) de \(Fmt.bytes(m.memory.total))") {
+        return Card(title: "Memória", icon: "memorychip", trailing: String(localized: "\(Fmt.bytes(m.memory.used)) de \(Fmt.bytes(m.memory.total))")) {
             Sparkline(values: m.memHistory.values, maxValue: 1).frame(height: 48)
             GeometryReader { g in
                 let t = Double(max(m.memory.total, 1))
@@ -187,7 +187,7 @@ struct SystemView: View {
             StatRow(label: "Comprimida", value: Fmt.bytes(m.memory.compressed), swatch: steps[2])
             StatRow(label: "Em cache", value: Fmt.bytes(m.memory.cached), swatch: steps[3])
             Divider().opacity(0.5)
-            StatRow(label: "Swap", value: "\(Fmt.bytes(m.memory.swapUsed)) de \(Fmt.bytes(m.memory.swapTotal))")
+            StatRow(label: "Swap", value: String(localized: "\(Fmt.bytes(m.memory.swapUsed)) de \(Fmt.bytes(m.memory.swapTotal))"))
             StatRow(label: "Pressão", value: m.memory.pressure >= 4 ? "Crítica" : m.memory.pressure >= 2 ? "Elevada" : "Normal",
                     valueColor: m.memory.pressure >= 4 ? .attentionText : m.memory.pressure >= 2 ? .waitingText : .primary)
             Divider().opacity(0.5)
@@ -247,8 +247,8 @@ struct SystemView: View {
                 if let h = b.health { StatRow(label: "Saúde", value: Fmt.pct(h)) }
                 StatRow(label: "Ciclos", value: "\(b.cycles)")
                 if let c = BatteryHistory.change(m.batteryDays) {
-                    if let h = c.from.health { StatRow(label: "Saúde há \(c.days) dias", value: Fmt.pct(h)) }
-                    StatRow(label: "Ciclos em \(c.days) dias", value: "+\(max(0, c.to.cycles - c.from.cycles))")
+                    if let h = c.from.health { StatRow(label: String(localized: "Saúde há \(c.days) dias"), value: Fmt.pct(h)) }
+                    StatRow(label: String(localized: "Ciclos em \(c.days) dias"), value: "+\(max(0, c.to.cycles - c.from.cycles))")
                 }
                 if let t = m.temps?.battery ?? b.temperature { StatRow(label: "Temperatura", value: Fmt.temp(t)) }
                 Divider().opacity(0.5)
@@ -288,12 +288,12 @@ struct SystemView: View {
     private func accessoryRow(_ a: AccessoryBattery) -> some View {
         let low: Bool = a.lowest <= 20
         let color: Color = low ? Color.attentionText : Color.primary
-        let text: String = a.parts.map { p in p.label.isEmpty ? "\(p.percent)%" : "\(p.label) \(p.percent)%" }.joined(separator: " · ")
+        let text: String = a.parts.map { p in p.label.isEmpty ? "\(p.percent)%" : "\(L(p.label)) \(p.percent)%" }.joined(separator: " · ")
         return HStack(spacing: DS.sm) {
             Image(systemName: a.symbol).font(DS.body).foregroundStyle(Color.text2).frame(width: 18)
-            Text(a.name).font(DS.body).lineLimit(1).truncationMode(.middle)
+            Text(L(a.name)).font(DS.body).lineLimit(1).truncationMode(.middle)
             Spacer(minLength: DS.sm)
-            Text(text).font(DS.body.monospacedDigit()).foregroundStyle(color).lineLimit(1).minimumScaleFactor(0.8)
+            Text(L(text)).font(DS.body.monospacedDigit()).foregroundStyle(color).lineLimit(1).minimumScaleFactor(0.8)
         }
         .accessibilityElement(children: .combine)
     }
@@ -321,7 +321,7 @@ struct SystemView: View {
         let apps = e.top()
         if let since = e.since, !apps.isEmpty {
             Divider().opacity(0.5)
-            Text(e.onBattery ? "Desde que saiu da corrente" : "Na última vez na bateria").font(DS.body.weight(.medium))
+            Text(L(e.onBattery ? "Desde que saiu da corrente" : "Na última vez na bateria")).font(DS.body.weight(.medium))
             let most = max(apps[0].joules, 1)
             ForEach(apps) { app in
                 VStack(alignment: .leading, spacing: DS.xs) {
@@ -358,7 +358,7 @@ struct SystemView: View {
             if extras.fetchingIP {
                 ProgressView().controlSize(.small)
             } else if let ip = extras.publicIP {
-                Text(Self.ipText(ip, extras.country)).font(DS.body.monospacedDigit()).textSelection(.enabled)
+                Text(L(Self.ipText(ip, extras.country))).font(DS.body.monospacedDigit()).textSelection(.enabled)
                     .lineLimit(1).minimumScaleFactor(0.8)
                 IconButton(systemName: "arrow.clockwise", help: "Ver outra vez") { Task { await extras.fetchPublicIP() } }
             } else {
@@ -373,14 +373,14 @@ struct SystemView: View {
         Divider().opacity(0.5)
         HStack(spacing: DS.xs) {
             Image(systemName: Self.wifiSymbol(w.quality)).font(DS.body).foregroundStyle(Color.text2)
-            Text(w.ssid ?? "Wi-Fi").font(DS.body.weight(.medium)).lineLimit(1)
+            Text(L(w.ssid ?? "Wi-Fi")).font(DS.body.weight(.medium)).lineLimit(1)
             Spacer()
-            Text(w.quality.rawValue).font(DS.body)
+            Text(L(w.quality.rawValue)).font(DS.body)
                 .foregroundStyle(w.quality == .weak ? Color.attentionText : w.quality == .fair ? Color.waitingText : Color.primary)
         }
         .accessibilityElement(children: .combine)
-        StatRow(label: "Sinal", value: "\(w.rssi) dBm · ruído \(w.noise) dBm")
-        StatRow(label: "Velocidade da ligação", value: "\(Fmt.num(w.txRate, 0)) Mbps")
+        StatRow(label: "Sinal", value: String(localized: "\(w.rssi) dBm · ruído \(w.noise) dBm"))
+        StatRow(label: "Velocidade da ligação", value: String(localized: "\(Fmt.num(w.txRate, 0)) Mbps"))
         if let c = w.channel { StatRow(label: "Canal", value: w.band.map { "\(c) · \($0)" } ?? "\(c)") }
         if w.ssid == nil { wifiNameAccess }
     }
@@ -417,22 +417,22 @@ struct SystemView: View {
             if let w = m.network.wifi { wifiSection(w) }
             Divider().opacity(0.5)
             if let result = speed.result {
-                StatRow(label: "Velocidade de download", value: "\(Fmt.num(result.downloadMbps, 1)) Mbps", swatch: .accentColor)
-                StatRow(label: "Velocidade de upload", value: "\(Fmt.num(result.uploadMbps, 1)) Mbps", swatch: .secondary)
-                StatRow(label: "Latência", value: "\(Fmt.num(result.latencyMs, 0)) ms")
+                StatRow(label: "Velocidade de download", value: String(localized: "\(Fmt.num(result.downloadMbps, 1)) Mbps"), swatch: .accentColor)
+                StatRow(label: "Velocidade de upload", value: String(localized: "\(Fmt.num(result.uploadMbps, 1)) Mbps"), swatch: .secondary)
+                StatRow(label: "Latência", value: String(localized: "\(Fmt.num(result.latencyMs, 0)) ms"))
             }
             if let error = speed.error {
-                Text(error).font(DS.meta).foregroundStyle(Color.text2)
+                Text(L(error)).font(DS.meta).foregroundStyle(Color.text2)
             }
             Button {
                 speed.start()
             } label: {
                 HStack(spacing: DS.xs) {
                     if speed.running { ProgressView().controlSize(.small) }
-                    Text(speed.running ? "A testar…" : speed.result == nil ? "Testar velocidade" : "Repetir teste")
+                    Text(L(speed.running ? "A testar…" : speed.result == nil ? "Testar velocidade" : "Repetir teste"))
                     Spacer()
                     if let result = speed.result, !speed.running {
-                        Text(result.measuredAt.formatted(date: .omitted, time: .shortened))
+                        Text(L(result.measuredAt.formatted(date: .omitted, time: .shortened)))
                             .foregroundStyle(Color.text3)
                     }
                 }
@@ -456,7 +456,7 @@ struct SystemView: View {
 
     private func unavailable(_ title: String, _ icon: String, _ text: String) -> some View {
         Card(title: title, icon: icon) {
-            Text(text).font(DS.body).foregroundStyle(Color.text2)
+            Text(L(text)).font(DS.body).foregroundStyle(Color.text2)
         }
     }
 
@@ -512,7 +512,7 @@ struct TemperatureCard: View {
                 withAnimation(Motion.ease(0.2)) { expanded.value.toggle() }
             } label: {
                 HStack(spacing: DS.xs) {
-                    Text(expanded.value ? "Esconder sensores" : "Ver os \(t.sensors.count) sensores")
+                    Text(L(expanded.value ? "Esconder sensores" : String(localized: "Ver os \(t.sensors.count) sensores")))
                     Image(systemName: "chevron.down").rotationEffect(.degrees(expanded.value ? 180 : 0))
                 }
                 .font(DS.meta).modifier(AccentText())

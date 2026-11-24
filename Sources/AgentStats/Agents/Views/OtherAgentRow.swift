@@ -11,9 +11,9 @@ struct OtherAgentRow: View {
     private var subtitle: String {
         if agent.role == "app" {
             let n = m.sessions.filter { $0.kind == agent.kind && $0.state.isWorking }.count
-            return n > 0 ? "\(n) tarefa\(n == 1 ? "" : "s") em curso" : "Aberto, sem tarefas em curso"
+            return n > 0 ? String(localized: "\(n) tarefa\(n == 1 ? "" : "s") em curso") : "Aberto, sem tarefas em curso"
         }
-        return agent.cwd.map { ($0 as NSString).abbreviatingWithTildeInPath } ?? "PID \(String(agent.pid))"
+        return agent.cwd.map { ($0 as NSString).abbreviatingWithTildeInPath } ?? String(localized: "PID \(String(agent.pid))")
     }
 
     var body: some View {
@@ -23,13 +23,13 @@ struct OtherAgentRow: View {
                 .frame(width: 24, height: 24)
                 .background(RoundedRectangle(cornerRadius: DS.rSmall, style: .continuous).fill(DS.raised))
             VStack(alignment: .leading, spacing: 2) {
-                Text(title).font(DS.title)
-                Text(subtitle).font(DS.meta).foregroundStyle(Color.text2).lineLimit(1).truncationMode(.middle)
+                Text(L(title)).font(DS.title)
+                Text(L(subtitle)).font(DS.meta).foregroundStyle(Color.text2).lineLimit(1).truncationMode(.middle)
             }
             Spacer()
             VStack(alignment: .trailing, spacing: 2) {
-                Text(Fmt.num(agent.cpu, 0) + "% CPU").font(DS.body.monospacedDigit())
-                Text(Fmt.etime(agent.elapsed)).font(DS.meta.monospacedDigit()).foregroundStyle(Color.text3)
+                Text(L(Fmt.num(agent.cpu, 0) + "% CPU")).font(DS.body.monospacedDigit())
+                Text(L(Fmt.etime(agent.elapsed))).font(DS.meta.monospacedDigit()).foregroundStyle(Color.text3)
             }
         }
         .cardStyle()

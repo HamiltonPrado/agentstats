@@ -82,7 +82,7 @@ final class EnergyReader {
             let name = FileManager.default.displayName(atPath: path)
             return (path, name.hasSuffix(".app") ? String(name.dropLast(4)) : name)
         }
-        guard !own.isEmpty else { return ("pid:\(pid)", "Processo \(pid)") }
+        guard !own.isEmpty else { return ("pid:\(pid)", String(localized: "Processo \(pid)")) }
         return (own, (own as NSString).lastPathComponent)
     }
 }

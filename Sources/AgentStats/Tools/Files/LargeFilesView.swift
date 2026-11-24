@@ -26,7 +26,7 @@ struct LargeFilesView: View {
             } else if store.scanning {
                 note("A procurar… pode demorar um pouco.")
             } else if store.shown.isEmpty {
-                note("Nada com este tamanho\(store.onlyOld ? " sem uso há 6 meses" : "").")
+                note(String(localized: "Nada com este tamanho\(store.onlyOld ? " sem uso há 6 meses" : "")."))
             }
             ForEach(store.shown.prefix(30)) { f in row(f) }
             if let m = store.message { note(m, color: .text2) }
@@ -39,16 +39,16 @@ struct LargeFilesView: View {
             HStack(spacing: DS.sm) {
                 Image(nsImage: NSWorkspace.shared.icon(forFile: f.path)).resizable().frame(width: 20, height: 20)
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(f.name).font(DS.body).lineLimit(1).truncationMode(.middle)
-                    Text(detail(f)).font(DS.meta).foregroundStyle(Color.text3).lineLimit(1).truncationMode(.head)
+                    Text(L(f.name)).font(DS.body).lineLimit(1).truncationMode(.middle)
+                    Text(L(detail(f))).font(DS.meta).foregroundStyle(Color.text3).lineLimit(1).truncationMode(.head)
                 }
                 Spacer(minLength: DS.sm)
-                Text(Fmt.diskShort(f.size)).font(DS.body.monospacedDigit()).fixedSize()
+                Text(L(Fmt.diskShort(f.size))).font(DS.body.monospacedDigit()).fixedSize()
                 textLink("Lixo") { store.confirming = f.id }
                     .help("Mover para o Lixo")
             }
             if store.confirming == f.id {
-                ConfirmBar(text: "Mover \(f.name) (\(Fmt.disk(f.size))) para o Lixo? Podes recuperá-lo enquanto não o esvaziares.",
+                ConfirmBar(text: String(localized: "Mover \(f.name) (\(Fmt.disk(f.size))) para o Lixo? Podes recuperá-lo enquanto não o esvaziares."),
                            confirm: "Mover para o Lixo", cancel: { store.confirming = nil }, action: { store.trash(f) })
             }
         }
@@ -61,6 +61,6 @@ struct LargeFilesView: View {
 
     private func detail(_ f: BigFile) -> String {
         let folder = ((f.path as NSString).deletingLastPathComponent as NSString).abbreviatingWithTildeInPath
-        return "\(folder) · usado \(LargeFilesRules.age(f.lastTouched, now: store.now))"
+        return String(localized: "\(folder) · usado \(LargeFilesRules.age(f.lastTouched, now: store.now))")
     }
 }

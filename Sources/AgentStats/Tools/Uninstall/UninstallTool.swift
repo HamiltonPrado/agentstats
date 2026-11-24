@@ -53,8 +53,8 @@ enum UninstallRules {
     static func candidates(bundleID id: String, home: String) -> [String] {
         guard validBundleID(id) else { return [] }
         let relative = [
-            "Application Support/\(id)",
-            "Application Scripts/\(id)",
+            String(localized: "Application Support/\(id)"),
+            String(localized: "Application Scripts/\(id)"),
             "Caches/\(id)",
             "Containers/\(id)",
             "Cookies/\(id).binarycookies",
@@ -63,7 +63,7 @@ enum UninstallRules {
             "LaunchAgents/\(id).plist",
             "Logs/\(id)",
             "Preferences/\(id).plist",
-            "Saved Application State/\(id).savedState",
+            String(localized: "Saved Application State/\(id).savedState"),
             "WebKit/\(id)",
         ]
         return relative.map { "\(home)/Library/\($0)" }
@@ -169,18 +169,18 @@ final class UninstallStore: ObservableObject {
         guard UninstallRules.signature(app.path) == plan.bundle.signature,
               UninstallRules.bundleID(appPath: app.path) == app.bundleID else {
             cancel()
-            message = "\(app.name) mudou entretanto. Não removi nada."
+            message = String(localized: "\(app.name) mudou entretanto. Não removi nada.")
             return
         }
         guard !environment.isRunning(app.bundleID) else {
-            message = "Fecha \(app.name) primeiro. Não removi nada."
+            message = String(localized: "Fecha \(app.name) primeiro. Não removi nada.")
             return
         }
         do {
             try environment.trash(URL(fileURLWithPath: app.path))
         } catch {
             // Se a app fica, os dados dela também ficam.
-            message = "O macOS não me deixou mover \(app.name), por isso não mexi nos restos. Arrasta-a no Finder, que pede a password."
+            message = String(localized: "O macOS não me deixou mover \(app.name), por isso não mexi nos restos. Arrasta-a no Finder, que pede a password.")
             return
         }
 
@@ -196,8 +196,8 @@ final class UninstallStore: ObservableObject {
         all.removeAll { $0.path == app.path }
         cancel()
         message = failed.isEmpty
-            ? "\(app.name) está no Lixo. Se te enganaste, ainda a podes repor."
-            : "\(app.name) está no Lixo, mas \(failed.count == 1 ? "este resto ficou" : "estes restos ficaram"): "
+            ? String(localized: "\(app.name) está no Lixo. Se te enganaste, ainda a podes repor.")
+            : String(localized: "\(app.name) está no Lixo, mas \(L(failed.count == 1 ? "este resto ficou" : "estes restos ficaram")): ")
                 + failed.map(shortPath).joined(separator: ", ")
     }
 

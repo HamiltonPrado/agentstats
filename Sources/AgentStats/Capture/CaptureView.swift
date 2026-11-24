@@ -15,7 +15,7 @@ struct CaptureView: View {
             readingCard
             recordingCard
             if let error = store.error {
-                Text(error).font(DS.meta).foregroundStyle(Color.waitingText).fixedSize(horizontal: false, vertical: true)
+                Text(L(error)).font(DS.meta).foregroundStyle(Color.waitingText).fixedSize(horizontal: false, vertical: true)
             }
             if let last = store.last { lastCard(last) }
         }
@@ -76,15 +76,15 @@ struct CaptureView: View {
         case .text(let t):
             VStack(alignment: .leading, spacing: DS.xs) {
                 Text("Texto copiado").font(DS.meta).foregroundStyle(Color.text2)
-                Text(t).font(DS.meta).lineLimit(4).textSelection(.enabled)
+                Text(L(t)).font(DS.meta).lineLimit(4).textSelection(.enabled)
             }
         case .codes(let codes):
             ForEach(codes, id: \.self) { c in
                 HStack(spacing: DS.sm) {
-                    Text(c).font(DS.meta).lineLimit(2).truncationMode(.middle).textSelection(.enabled)
+                    Text(L(c)).font(DS.meta).lineLimit(2).truncationMode(.middle).textSelection(.enabled)
                     Spacer(minLength: DS.sm)
                     if let url = ScreenReading.webLink(c) {
-                        textLink("Abrir") { NSWorkspace.shared.open(url) }.help(url.absoluteString)
+                        textLink("Abrir") { NSWorkspace.shared.open(url) }.help(L(url.absoluteString))
                     }
                     textLink("Copiar") { reading.copy(c) }
                 }
@@ -93,8 +93,8 @@ struct CaptureView: View {
             HStack(spacing: DS.sm) {
                 RoundedRectangle(cornerRadius: 4).fill(Color(hexString: hex)).frame(width: 20, height: 20)
                     .overlay(RoundedRectangle(cornerRadius: 4).stroke(Color.primary.opacity(0.2)))
-                Text(hex).font(DS.body.monospaced()).textSelection(.enabled)
-                Text(rgb).font(DS.meta.monospaced()).foregroundStyle(Color.text2).lineLimit(1)
+                Text(L(hex)).font(DS.body.monospaced()).textSelection(.enabled)
+                Text(L(rgb)).font(DS.meta.monospaced()).foregroundStyle(Color.text2).lineLimit(1)
                 Spacer(minLength: DS.xs)
                 textLink("HEX") { reading.copy(hex) }
                 textLink("RGB") { reading.copy(rgb) }
@@ -134,7 +134,7 @@ struct CaptureView: View {
         HStack(spacing: 0) {
             VStack(alignment: .leading, spacing: 2) {
                 Text("Última").font(DS.meta).foregroundStyle(Color.text2)
-                Text(file.lastPathComponent).font(DS.body).lineLimit(1).truncationMode(.middle)
+                Text(L(file.lastPathComponent)).font(DS.body).lineLimit(1).truncationMode(.middle)
             }
             Spacer(minLength: DS.sm)
             IconButton(systemName: "eye", help: "Abrir") { NSWorkspace.shared.open(file) }
@@ -155,21 +155,21 @@ struct CaptureView: View {
                     .font(.system(size: 16 * TextSize.current.scale, weight: .medium))
                     .foregroundStyle(tint)
                     .frame(height: 20)
-                Text(title).font(DS.meta).lineLimit(1)
+                Text(L(title)).font(DS.meta).lineLimit(1)
             }
             .frame(maxWidth: .infinity).frame(height: 56)
             .background(RoundedRectangle(cornerRadius: DS.rControl, style: .continuous).fill(DS.raised))
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .accessibilityLabel(title)
+        .accessibilityLabel(L(title))
     }
 
     private func option(_ title: String, _ value: Binding<Bool>) -> some View {
         HStack(spacing: DS.sm) {
-            Text(title).font(DS.body)
+            Text(L(title)).font(DS.body)
             Spacer(minLength: DS.sm)
-            Toggle(title, isOn: value).toggleStyle(.switch).controlSize(.mini).labelsHidden()
+            Toggle(L(title), isOn: value).toggleStyle(.switch).controlSize(.mini).labelsHidden()
         }
     }
 

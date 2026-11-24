@@ -38,6 +38,8 @@ struct SettingsView: View {
     @StateObject private var loginErr = Box<String?>(nil)
     @StateObject private var savedProfile = Box<String?>(nil)
     @StateObject private var transferNote = Box<String?>(nil)
+    @StateObject private var language = Box(AppLanguage.current.rawValue)
+    @StateObject private var languageChanged = Box(false)
 
     var body: some View {
         VStack(alignment: .leading, spacing: DS.lg) {
@@ -90,7 +92,7 @@ struct SettingsView: View {
             ForEach(SettingsSection.allCases) { section in
                 let selected = sectionRaw == section.rawValue
                 Button { withAnimation(Motion.ease(0.16)) { sectionRaw = section.rawValue } } label: {
-                    Text(section.title)
+                    Text(L(section.title))
                         .font(DS.meta.weight(.medium)).lineLimit(1)
                         .foregroundStyle(selected ? Color.primary : Color.text2)
                         .frame(maxWidth: .infinity).frame(height: 24)
@@ -146,7 +148,7 @@ struct SettingsView: View {
                         Spacer()
                         Picker("", selection: $hotkey) {
                             Text("Desligado").tag("off")
-                            ForEach(GlobalHotKey.presets, id: \.key) { p in Text(p.combo.label).tag(p.key) }
+                            ForEach(GlobalHotKey.presets, id: \.key) { p in Text(L(p.combo.label)).tag(p.key) }
                         }
                         .labelsHidden().frame(width: 104)
                     }
@@ -158,12 +160,31 @@ struct SettingsView: View {
                                 login.value = on; loginErr.value = nil
                             } catch { loginErr.value = error.localizedDescription }
                         }))
-                    if let e = loginErr.value { Text(e).font(DS.meta).foregroundStyle(Color.attentionText) }
+                    if let e = loginErr.value { Text(L(e)).font(DS.meta).foregroundStyle(Color.attentionText) }
+                    HStack(spacing: DS.md) {
+                        icon("globe")
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Idioma").font(DS.body)
+                            if language.value != AppLanguage.current.rawValue || languageChanged.value {
+                                Button("Reabrir para aplicar") { AppLanguage.relaunch() }
+                                    .buttonStyle(.link).font(DS.meta)
+                            }
+                        }
+                        Spacer()
+                        Picker("Idioma", selection: Binding(get: { language.value }, set: {
+                            language.value = $0
+                            (AppLanguage(rawValue: $0) ?? .system).apply()
+                            languageChanged.value = true
+                        })) {
+                            ForEach(AppLanguage.allCases) { Text(L($0.title)).tag($0.rawValue) }
+                        }
+                        .labelsHidden().fixedSize()
+                    }
                     HStack(spacing: DS.md) {
                         icon("square.and.arrow.up.on.square")
                         VStack(alignment: .leading, spacing: 2) {
                             Text("Definições noutro Mac").font(DS.body)
-                            Text(transferNote.value ?? "Um ficheiro com as tuas escolhas, sem histórico").font(DS.meta).foregroundStyle(Color.text3)
+                            Text(L(transferNote.value ?? "Um ficheiro com as tuas escolhas, sem histórico")).font(DS.meta).foregroundStyle(Color.text3)
                         }
                         Spacer()
                         Button("Exportar…") { transferNote.value = SettingsFiles.exportSettings() }.controlSize(.small)
@@ -179,7 +200,7 @@ struct SettingsView: View {
                         icon("link")
                         VStack(alignment: .leading, spacing: 2) {
                             Text("Ligação ao Claude Code").font(DS.body)
-                            Text(hookSubtitle).font(DS.meta).foregroundStyle(hookNeedsAction ? Color.waitingText : Color.text3)
+                            Text(L(hookSubtitle)).font(DS.meta).foregroundStyle(hookNeedsAction ? Color.waitingText : Color.text3)
                                 .fixedSize(horizontal: false, vertical: true)
                         }
                         Spacer(minLength: DS.sm)
@@ -238,7 +259,7 @@ struct SettingsView: View {
                         // Mesma coluna de ícone (16 pt) e espaçamento das outras linhas, para alinhar
                         HStack(spacing: DS.md) {
                             icon(didSave ? "checkmark.circle" : "square.and.arrow.down")
-                            Text(didSave ? "Perfil guardado" : "Guardar alterações no perfil").font(DS.body)
+                            Text(L(didSave ? "Perfil guardado" : "Guardar alterações no perfil")).font(DS.body)
                             Spacer(minLength: 0)
                         }
                         .contentShape(Rectangle())
@@ -266,7 +287,7 @@ struct SettingsView: View {
                         Text("Estilo").font(DS.body)
                         Spacer(minLength: DS.xs)
                         Picker("Estilo", selection: $barStyle) {
-                            ForEach(MenuBarStyle.allCases) { Text($0.title).tag($0.rawValue) }
+                            ForEach(MenuBarStyle.allCases) { Text(L($0.title)).tag($0.rawValue) }
                         }
                         .labelsHidden().fixedSize()
                     }
@@ -276,9 +297,9 @@ struct SettingsView: View {
                         HStack(spacing: DS.md) {
                             icon(metric.icon)
                             VStack(alignment: .leading, spacing: 2) {
-                                Text(metric.title).font(DS.body)
+                                Text(L(metric.title)).font(DS.body)
                                 if let subtitle = metric.subtitle {
-                                    Text(subtitle).font(DS.meta).foregroundStyle(Color.text3)
+                                    Text(L(subtitle)).font(DS.meta).foregroundStyle(Color.text3)
                                 }
                             }
                             Spacer(minLength: DS.xs)
@@ -286,14 +307,14 @@ struct SettingsView: View {
                                 Image(systemName: "arrow.up").font(DS.meta)
                             }
                             .buttonStyle(.plain).disabled(index == 0)
-                            .help("Mover \(metric.title) para cima")
-                            .accessibilityLabel("Mover \(metric.title) para cima")
+                            .help("Mover \(L(metric.title)) para cima")
+                            .accessibilityLabel("Mover \(L(metric.title)) para cima")
                             Button { moveMetric(from: index, by: 1) } label: {
                                 Image(systemName: "arrow.down").font(DS.meta)
                             }
                             .buttonStyle(.plain).disabled(index == orderedMetrics.count - 1)
-                            .help("Mover \(metric.title) para baixo")
-                            .accessibilityLabel("Mover \(metric.title) para baixo")
+                            .help("Mover \(L(metric.title)) para baixo")
+                            .accessibilityLabel("Mover \(L(metric.title)) para baixo")
                             Toggle("", isOn: metric.isEnabled)
                                 .toggleStyle(.switch).controlSize(.mini).labelsHidden()
                         }
@@ -316,7 +337,7 @@ struct SettingsView: View {
                         Text("Largura").font(DS.body).lineLimit(1).fixedSize().layoutPriority(1)
                         Spacer(minLength: DS.xs)
                         Picker("Largura", selection: $panelWidth) {
-                            ForEach(PanelWidth.allCases) { Text($0.title).tag($0.rawValue) }
+                            ForEach(PanelWidth.allCases) { Text(L($0.title)).tag($0.rawValue) }
                         }
                         .pickerStyle(.segmented).labelsHidden().frame(maxWidth: 200)
                     }
@@ -325,7 +346,7 @@ struct SettingsView: View {
                         Text("Texto").font(DS.body).lineLimit(1).fixedSize().layoutPriority(1)
                         Spacer(minLength: DS.xs)
                         Picker("Tamanho do texto", selection: $textSize) {
-                            ForEach(TextSize.allCases) { Text($0.title).tag($0.rawValue) }
+                            ForEach(TextSize.allCases) { Text(L($0.title)).tag($0.rawValue) }
                         }
                         .pickerStyle(.segmented).labelsHidden().frame(maxWidth: 200)
                     }
@@ -336,7 +357,7 @@ struct SettingsView: View {
                         Spacer(minLength: DS.xs)
                         Picker("Densidade", selection: $densityRawValue) {
                             ForEach(PanelDensity.allCases) { density in
-                                Text(density.title).tag(density.rawValue)
+                                Text(L(density.title)).tag(density.rawValue)
                             }
                         }
                         .pickerStyle(.menu).labelsHidden().frame(width: 110, alignment: .trailing)
@@ -355,20 +376,20 @@ struct SettingsView: View {
                     ForEach(Array(all.enumerated()), id: \.element) { index, tab in
                         HStack(spacing: DS.md) {
                             icon(tab.icon)
-                            Text(tab.title).font(DS.body).lineLimit(1)
+                            Text(L(tab.title)).font(DS.body).lineLimit(1)
                                 .foregroundStyle(shown.contains(tab) ? Color.primary : Color.text3)
                             Spacer(minLength: DS.xs)
                             Button { tabOrder = TabLayout.moved(order: tabOrder, tab, by: -1) } label: {
                                 Image(systemName: "arrow.up").font(DS.meta)
                             }
                             .buttonStyle(.plain).disabled(index == 0)
-                            .help("Mover \(tab.title) para cima").accessibilityLabel("Mover \(tab.title) para cima")
+                            .help("Mover \(L(tab.title)) para cima").accessibilityLabel("Mover \(L(tab.title)) para cima")
                             Button { tabOrder = TabLayout.moved(order: tabOrder, tab, by: 1) } label: {
                                 Image(systemName: "arrow.down").font(DS.meta)
                             }
                             .buttonStyle(.plain).disabled(index == all.count - 1)
-                            .help("Mover \(tab.title) para baixo").accessibilityLabel("Mover \(tab.title) para baixo")
-                            Toggle(tab.title, isOn: Binding(
+                            .help("Mover \(L(tab.title)) para baixo").accessibilityLabel("Mover \(L(tab.title)) para baixo")
+                            Toggle(L(tab.title), isOn: Binding(
                                 get: { shown.contains(tab) },
                                 set: { _ in hiddenTabs = TabLayout.toggled(hidden: hiddenTabs, tab, order: tabOrder) }))
                                 .toggleStyle(.switch).controlSize(.mini).labelsHidden()
@@ -390,12 +411,12 @@ struct SettingsView: View {
                         Spacer(minLength: DS.xs)
                         Picker("Abrir em", selection: $startTab) {
                             Text("Último usado").tag(TabLayout.lastUsed)
-                            ForEach(shown) { Text($0.title).tag($0.rawValue) }
+                            ForEach(shown) { Text(L($0.title)).tag($0.rawValue) }
                         }
                         .labelsHidden().fixedSize()
                     }
                     row("command", "Atalhos para cada separador",
-                        "⌥⌘1 a ⌥⌘\(shown.count), pela ordem acima. Funcionam em qualquer app", $tabShortcuts)
+                        String(localized: "⌥⌘1 a ⌥⌘\(shown.count), pela ordem acima. Funcionam em qualquer app"), $tabShortcuts)
                 }
             }
         }
@@ -411,7 +432,7 @@ struct SettingsView: View {
                         Spacer(minLength: 0)
                         Picker("Tema", selection: $appearanceThemeRaw) {
                             ForEach(PanelTheme.allCases) { theme in
-                                Text(theme.title).tag(theme.rawValue)
+                                Text(L(theme.title)).tag(theme.rawValue)
                             }
                         }
                         .pickerStyle(.segmented).labelsHidden().frame(maxWidth: 186)
@@ -448,7 +469,7 @@ struct SettingsView: View {
                     if m.diskAlertEnabled {
                         // Guarda-se a fração usada; aqui escolhe-se o espaço livre, que é como se pensa.
                         limit("Espaço livre mínimo", Binding(get: { 1 - m.diskThreshold }, set: { m.diskThreshold = 1 - $0 }),
-                              in: 0.01...0.3, step: 0.01) { Fmt.pct($0) + " livre" }
+                              in: 0.01...0.3, step: 0.01) { String(localized: "\(Fmt.pct($0)) livre") }
                     }
                     row("battery.25", "Bateria fraca", "Só sem carregador ligado", bm.batteryAlertEnabled)
                     if m.batteryAlertEnabled {
@@ -465,7 +486,7 @@ struct SettingsView: View {
                             Text("Período").font(DS.body)
                             Spacer()
                             Picker("Período", selection: bm.budgetPeriod) {
-                                ForEach(Budget.Period.allCases) { Text($0.title).tag($0) }
+                                ForEach(Budget.Period.allCases) { Text(L($0.title)).tag($0) }
                             }
                             .pickerStyle(.segmented).labelsHidden().frame(width: 180)
                         }
@@ -485,7 +506,7 @@ struct SettingsView: View {
 
     private func group<C: View>(_ title: String, @ViewBuilder _ content: () -> C) -> some View {
         VStack(alignment: .leading, spacing: DS.sm) {
-            Text(title).font(DS.meta.weight(.medium)).foregroundStyle(Color.text2)
+            Text(L(title)).font(DS.meta.weight(.medium)).foregroundStyle(Color.text2)
                 .padding(.leading, DS.xs)
             content().cardStyle()
         }
@@ -588,9 +609,9 @@ struct SettingsView: View {
                                   set: { value.wrappedValue = min(max(($0 / step).rounded() * step, range.lowerBound), range.upperBound) }),
                    in: range)
                 .controlSize(.small)
-                .accessibilityLabel(title)
-                .accessibilityValue(format(value.wrappedValue))
-            Text(format(value.wrappedValue))
+                .accessibilityLabel(L(title))
+                .accessibilityValue(L(format(value.wrappedValue)))
+            Text(L(format(value.wrappedValue)))
                 .font(DS.body.monospacedDigit())
                 .lineLimit(1).fixedSize()
                 .frame(minWidth: 48, alignment: .trailing)
@@ -607,8 +628,8 @@ struct SettingsView: View {
         HStack(spacing: DS.md) {
             icon(iconName)
             VStack(alignment: .leading, spacing: 2) {
-                Text(title).font(DS.body).lineLimit(1)
-                if let sub { Text(sub).font(DS.meta).foregroundStyle(Color.text3).lineLimit(2) }
+                Text(L(title)).font(DS.body).lineLimit(1)
+                if let sub { Text(L(sub)).font(DS.meta).foregroundStyle(Color.text3).lineLimit(2) }
             }
             Spacer()
             Toggle("", isOn: binding).toggleStyle(.switch).controlSize(.mini).labelsHidden()

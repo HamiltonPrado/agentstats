@@ -34,7 +34,7 @@ struct ProcessesView: View {
 
     private func sortButton(_ title: String, selected: Bool, _ action: @escaping () -> Void) -> some View {
         Button(action: action) {
-            Text(title)
+            Text(L(title))
                 .font(DS.body.weight(.medium))
                 .foregroundStyle(selected ? Color.primary : Color.text2)
                 .frame(maxWidth: .infinity).frame(height: 24)
@@ -69,7 +69,7 @@ struct ProcRow: View {
             .frame(width: 16, height: 16)
 
             VStack(alignment: .leading, spacing: 2) {
-                Text(running.name ?? p.name).font(DS.body).lineLimit(1)
+                Text(L(running.name ?? p.name)).font(DS.body).lineLimit(1)
                 Text("PID \(String(p.pid)) · \(Fmt.etime(p.elapsed))")
                     .font(DS.meta.monospacedDigit()).foregroundStyle(Color.text3)
                     .lineLimit(1).minimumScaleFactor(0.8)
@@ -77,11 +77,11 @@ struct ProcRow: View {
             Spacer(minLength: DS.sm)
             VStack(alignment: .trailing, spacing: DS.xs) {
                 HStack(spacing: DS.xs) {
-                    Text(Fmt.num(p.cpu, 1) + "%")
+                    Text(L(Fmt.num(p.cpu, 1) + "%"))
                         .foregroundStyle(sortByMem ? Color.text2 : (p.cpu > 80 ? Color.attentionText : Color.primary))
                         .frame(width: 44, alignment: .trailing)
                         .lineLimit(1).minimumScaleFactor(0.75)
-                    Text(Fmt.bytesShort(p.rssKB * 1024))
+                    Text(L(Fmt.bytesShort(p.rssKB * 1024)))
                         .foregroundStyle(sortByMem ? Color.primary : Color.text2)
                         .frame(width: 56, alignment: .trailing)
                         .lineLimit(1).minimumScaleFactor(0.75)

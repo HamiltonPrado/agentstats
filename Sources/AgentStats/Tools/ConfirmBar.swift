@@ -10,11 +10,11 @@ struct ConfirmBar: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: DS.sm) {
-            Text(text).font(DS.meta).foregroundStyle(Color.primary).fixedSize(horizontal: false, vertical: true)
+            Text(L(text)).font(DS.meta).foregroundStyle(Color.primary).fixedSize(horizontal: false, vertical: true)
             HStack(spacing: DS.sm) {
                 Spacer(minLength: 0)
                 Button("Cancelar", action: cancel)
-                Button(confirm, role: .destructive, action: action)
+                Button(L(confirm), role: .destructive, action: action)
             }
             .controlSize(.small)
         }

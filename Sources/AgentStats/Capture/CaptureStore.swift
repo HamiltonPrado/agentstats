@@ -102,11 +102,11 @@ final class CaptureStore: ObservableObject {
                     last = file
                     if copy && !environment.copyImage(file) { error = "Guardei a captura, mas não consegui copiá-la." }
                 } else if kind == .screen {
-                    error = "O macOS não devolveu a captura (código \(status))."
+                    error = String(localized: "O macOS não devolveu a captura (código \(status)).")
                 }
                 // Área e janela sem ficheiro: foi o Esc, não é um erro.
             } catch {
-                self.error = "Não consegui captar: \(error.localizedDescription)"
+                self.error = String(localized: "Não consegui captar: \(error.localizedDescription)")
             }
             phase = .idle
         }
@@ -149,7 +149,7 @@ final class CaptureStore: ObservableObject {
                 let file = try newFile(prefix: "Gravação", ext: "mov", in: environment.recordings)
                 try launch(CaptureCommand.recording(display: display, microphone: microphone, clicks: clicks, file: file), file: file)
             } catch {
-                self.error = "Não consegui gravar: \(error.localizedDescription)"
+                self.error = String(localized: "Não consegui gravar: \(error.localizedDescription)")
                 phase = .idle
             }
         }
@@ -214,7 +214,7 @@ final class CaptureStore: ObservableObject {
         if size > 0 {
             last = file
         } else if error == nil {
-            error = "A gravação terminou sem vídeo (código \(status))."
+            error = String(localized: "A gravação terminou sem vídeo (código \(status)).")
         }
         phase = .idle
     }

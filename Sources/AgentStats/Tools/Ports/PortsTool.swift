@@ -102,7 +102,7 @@ final class PortsStore: ObservableObject {
         loaded = true
         // O lsof sai com 1 quando não encontra nada: não é erro.
         guard !result.timedOut, result.status == 0 || (result.status == 1 && result.err.isEmpty) else {
-            message = "Não consegui ler as portas. \(result.summary)"
+            message = String(localized: "Não consegui ler as portas. \(result.summary)")
             return
         }
         listeners = PortRules.parse(result.out).map { listener in
@@ -119,13 +119,13 @@ final class PortsStore: ObservableObject {
         confirming = nil
         guard !demo, let expected = listener.identity, PortRules.canTerminate(expected) else { return false }
         guard ProcessIdentity.read(listener.pid) == expected else {
-            message = "\(listener.name) já não é o mesmo processo. Não terminei nada."
+            message = String(localized: "\(listener.name) já não é o mesmo processo. Não terminei nada.")
             stubborn.remove(listener.pid)
             await refresh()
             return false
         }
         guard kill(listener.pid, force ? SIGKILL : SIGTERM) == 0 else {
-            message = "O macOS não deixou terminar \(listener.name)."
+            message = String(localized: "O macOS não deixou terminar \(listener.name).")
             return false
         }
         message = nil
@@ -135,10 +135,10 @@ final class PortsStore: ObservableObject {
         let gone = ProcessIdentity.read(listener.pid) != expected
         if gone {
             stubborn.remove(listener.pid)
-            message = "\(listener.name) terminou."
+            message = String(localized: "\(listener.name) terminou.")
         } else {
             stubborn.insert(listener.pid)
-            message = "\(listener.name) não fechou a bem. Podes forçar, mas perde o que não gravou."
+            message = String(localized: "\(listener.name) não fechou a bem. Podes forçar, mas perde o que não gravou.")
         }
         await refresh()
         return gone

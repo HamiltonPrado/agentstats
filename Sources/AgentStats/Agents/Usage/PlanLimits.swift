@@ -36,9 +36,9 @@ enum PlanLimitsParser {
         switch minutes {
         case 300: return "5 horas"
         case 10_080: return "Semana"
-        case let m where m % 1440 == 0: return "\(m / 1440) dias"
-        case let m where m % 60 == 0: return "\(m / 60) horas"
-        default: return "\(minutes) min"
+        case let m where m % 1440 == 0: return String(localized: "\(m / 1440) dias")
+        case let m where m % 60 == 0: return String(localized: "\(m / 60) horas")
+        default: return String(localized: "\(minutes) min")
         }
     }
 

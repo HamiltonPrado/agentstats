@@ -19,13 +19,13 @@ struct TimeView: View {
         VStack(alignment: .leading, spacing: DS.sm) {
             if let plan = timer.plan {
                 HStack(alignment: .firstTextBaseline) {
-                    Text(plan.title).font(DS.body.weight(.medium))
+                    Text(L(plan.title)).font(DS.body.weight(.medium))
                     if plan.phase != .timer {
                         Text("· \(plan.completedFocus) de \(TimerPlan.focusPerLongBreak)").font(DS.meta).foregroundStyle(Color.text3)
                     }
                     Spacer()
                 }
-                Text(TimerPlan.clock(timer.left)).font(.system(size: 40, weight: .light).monospacedDigit())
+                Text(L(TimerPlan.clock(timer.left))).font(.system(size: 40, weight: .light).monospacedDigit())
                     .frame(maxWidth: .infinity)
                     .accessibilityLabel("Faltam \(TimerPlan.clock(timer.left))")
                 Bar(value: 1 - timer.left / max(plan.duration, 1), color: plan.phase == .focus || plan.phase == .timer ? .accentColor : Palette.working, height: 4)
@@ -44,7 +44,7 @@ struct TimeView: View {
                     }
                 }
                 HStack(spacing: DS.sm) {
-                    Stepper("\(Int(minutes.value)) min", value: $minutes.value, in: 1...240, step: 1).font(DS.body)
+                    Stepper(String(localized: "\(Int(minutes.value)) min"), value: $minutes.value, in: 1...240, step: 1).font(DS.body)
                     Spacer()
                     Button("Começar") { timer.startTimer(minutes: minutes.value) }.controlSize(.small)
                 }
@@ -82,8 +82,8 @@ struct TimeView: View {
                     search.value = ""
                 } label: {
                     HStack {
-                        Text(WorldClock.city(z)).font(DS.body)
-                        Text(z.identifier).font(DS.meta).foregroundStyle(Color.text3)
+                        Text(L(WorldClock.city(z))).font(DS.body)
+                        Text(L(z.identifier)).font(DS.meta).foregroundStyle(Color.text3)
                         Spacer()
                         Image(systemName: "plus").font(DS.meta)
                     }
@@ -97,14 +97,14 @@ struct TimeView: View {
 
     private func zoneRow(_ z: TimeZone, at date: Date) -> some View {
         let note: String = [WorldClock.offset(z, from: .current, at: date), WorldClock.dayNote(z, local: .current, at: date)]
-            .compactMap { $0 }.joined(separator: " · ")
+            .compactMap { $0 }.map { L($0) }.joined(separator: " · ")
         return HStack(spacing: DS.sm) {
             VStack(alignment: .leading, spacing: 2) {
-                Text(WorldClock.city(z)).font(DS.body)
-                Text(note).font(DS.meta).foregroundStyle(Color.text3)
+                Text(L(WorldClock.city(z))).font(DS.body)
+                Text(L(note)).font(DS.meta).foregroundStyle(Color.text3)
             }
             Spacer()
-            Text(WorldClock.time(z, at: date)).font(.system(size: 20, weight: .regular).monospacedDigit())
+            Text(L(WorldClock.time(z, at: date))).font(.system(size: 20, weight: .regular).monospacedDigit())
         }
         .contextMenu {
             Button("Subir") { clock.move(z, by: -1) }

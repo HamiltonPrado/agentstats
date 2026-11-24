@@ -287,7 +287,7 @@ struct DiskBar: View {
     }
 
     private func label(_ text: String) -> some View {
-        Text(text)
+        Text(L(text))
             .font(DS.meta.weight(.medium).monospacedDigit())
             .foregroundStyle(Color.primary)
             .fixedSize()
@@ -307,19 +307,19 @@ struct DiskCard: View {
     var body: some View {
         let parts = DiskStorage.parts(total: disk.total, free: disk.free, measures: store.measures,
                                       finished: store.measuredAt != nil)
-        Card(title: "Disco", icon: "internaldrive", trailing: "\(Fmt.disk(disk.used)) de \(Fmt.disk(disk.total))") {
+        Card(title: "Disco", icon: "internaldrive", trailing: String(localized: "\(Fmt.disk(disk.used)) de \(Fmt.disk(disk.total))")) {
             DiskBar(parts: parts, usage: disk.usage)
             ForEach(parts) { legend($0) }
             if let current = store.current {
                 note(store.measuredAt == nil
-                     ? "A medir \(current.label). Se o macOS pedir acesso, é para isto. Continua se fechares o painel."
-                     : "A atualizar \(current.label)…")
+                     ? String(localized: "A medir \(current.label). Se o macOS pedir acesso, é para isto. Continua se fechares o painel.")
+                     : String(localized: "A atualizar \(current.label)…"))
             } else if let at = store.measuredAt {
-                note("Aproximado por pastas · medido \(Fmt.ago(at))")
+                note(String(localized: "Aproximado por pastas · medido \(Fmt.ago(at))"))
             }
             if !store.incomplete.isEmpty {
                 let names: String = store.incomplete.map(\.label).joined(separator: ", ")
-                note("Não consegui ler tudo em \(names). O que falta conta em Sistema e outros.", color: .waitingText)
+                note(String(localized: "Não consegui ler tudo em \(names). O que falta conta em Sistema e outros."), color: .waitingText)
             }
             if TabLayout.visible(order: tabOrder, hidden: hiddenTabs).contains(.tools) {
                 Button("Limpar caches…") {
@@ -353,9 +353,9 @@ struct DiskCard: View {
     private func legend(_ part: DiskStorage.Part) -> some View {
         HStack(spacing: DS.sm) {
             Circle().fill(part.category.color(usage: disk.usage)).overlay(Circle().strokeBorder(DS.hairline)).frame(width: 8, height: 8)
-            Text(part.category.label).foregroundStyle(Color.text2)
+            Text(L(part.category.label)).foregroundStyle(Color.text2)
             Spacer(minLength: DS.sm)
-            Text(Fmt.disk(part.bytes)).monospacedDigit().foregroundStyle(Color.primary)
+            Text(L(Fmt.disk(part.bytes))).monospacedDigit().foregroundStyle(Color.primary)
         }
         .font(DS.body)
         .accessibilityElement(children: .combine)

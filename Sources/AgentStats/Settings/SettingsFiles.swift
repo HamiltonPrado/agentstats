@@ -6,7 +6,7 @@ import UniformTypeIdentifiers
 enum SettingsFiles {
     static func exportSettings() -> String? {
         let panel = NSSavePanel()
-        panel.nameFieldStringValue = "AgentStats definições.plist"
+        panel.nameFieldStringValue = L("AgentStats definições.plist")
         panel.allowedContentTypes = [.propertyList]
         NSApp.activate(ignoringOtherApps: true)
         guard panel.runModal() == .OK, let url = panel.url else { return nil }
@@ -28,12 +28,12 @@ enum SettingsFiles {
         let keep = SettingsTransfer.filtered(dict)
         guard !keep.isEmpty else { return "Esse ficheiro não tem definições do AgentStats." }
         for (k, v) in keep { UserDefaults.standard.set(v, forKey: k) }
-        return "\(keep.count) definições importadas."
+        return String(localized: "\(keep.count) definições importadas.")
     }
 
     static func exportCSV(_ usage: UsageSnapshot) {
         let panel = NSSavePanel()
-        panel.nameFieldStringValue = "AgentStats uso \(Budget.day(Date(), .current)).csv"
+        panel.nameFieldStringValue = String(localized: "AgentStats uso \(Budget.day(Date(), .current)).csv")
         panel.allowedContentTypes = [.commaSeparatedText]
         NSApp.activate(ignoringOtherApps: true)
         guard panel.runModal() == .OK, let url = panel.url else { return }

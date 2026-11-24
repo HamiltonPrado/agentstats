@@ -122,7 +122,7 @@ struct PanelView: View {
 
             VStack(alignment: .leading, spacing: 2) {
                 // O nome do separador: a barra só tem ícones.
-                Text(tab.title).font(DS.title)
+                Text(L(tab.title)).font(DS.title)
                 statusLine
             }
             Spacer()
@@ -140,15 +140,15 @@ struct PanelView: View {
         let waiting = m.sessions.filter { $0.state == .waitingUser }.count
         let attention = m.needsAttentionCount
         let (text, kind): (String, StatusKind) =
-            attention > 0 ? ("\(attention) precisa\(attention == 1 ? "" : "m") de ti", .attention)
-            : working > 0 ? ("\(working) agente\(working == 1 ? "" : "s") a trabalhar", .working)
-            : waiting > 0 ? ("\(waiting) à tua espera", .waiting)
+            attention > 0 ? (String(localized: "\(attention) precisa\(attention == 1 ? "" : "m") de ti"), .attention)
+            : working > 0 ? (String(localized: "\(working) agente\(working == 1 ? "" : "s") a trabalhar"), .working)
+            : waiting > 0 ? (String(localized: "\(waiting) à tua espera"), .waiting)
             : ("Nenhum agente a trabalhar", .idle)
         var line = text + " · CPU " + Fmt.pct(m.cpu.total)
         if let t = m.temps?.cpuMax { line += " · " + Fmt.num(t, 0) + "°" }
         return HStack(spacing: DS.sm) {
             StatusDot(kind)
-            Text(line).font(DS.meta.monospacedDigit()).foregroundStyle(Color.text2).lineLimit(1)
+            Text(L(line)).font(DS.meta.monospacedDigit()).foregroundStyle(Color.text2).lineLimit(1)
         }
     }
 
@@ -208,8 +208,8 @@ struct PanelView: View {
                 }
                 .buttonStyle(.plain)
                 // Sem texto visível, o nome tem de vir na dica e no VoiceOver.
-                .help(t.title + (TabLayout.visible(order: tabOrder, hidden: hiddenTabs).firstIndex(of: t).map { $0 < 9 ? "  ⌘\($0 + 1)" : "" } ?? ""))
-                .accessibilityLabel(t.title)
+                .help(L(t.title + (TabLayout.visible(order: tabOrder, hidden: hiddenTabs).firstIndex(of: t).map { $0 < 9 ? "  ⌘\($0 + 1)" : "" } ?? "")))
+                .accessibilityLabel(L(t.title))
                 .accessibilityValue(t == .agents ? agentsBadgeDescription : "")
                 .accessibilityAddTraits(tab == t ? .isSelected : [])
             }
@@ -235,7 +235,7 @@ struct PanelView: View {
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Versão \(r.version) disponível").font(DS.body.weight(.medium))
                     if UpdateCheck.installedWithHomebrew {
-                        Text(UpdateCheck.brewCommand).font(DS.meta.monospaced()).foregroundStyle(Color.text2)
+                        Text(L(UpdateCheck.brewCommand)).font(DS.meta.monospaced()).foregroundStyle(Color.text2)
                             .lineLimit(1).truncationMode(.middle).textSelection(.enabled)
                     }
                 }
@@ -286,10 +286,10 @@ struct AlertBanner: View {
                         .font(DS.body.weight(.medium))
                         .fixedSize().layoutPriority(1)   // o valor nunca quebra; o processo é que encolhe
                     if let d = a.detail {
-                        Text(d).font(DS.meta).foregroundStyle(Color.text2).lineLimit(1).truncationMode(.tail)
+                        Text(L(d)).font(DS.meta).foregroundStyle(Color.text2).lineLimit(1).truncationMode(.tail)
                     }
                     Spacer(minLength: 0)
-                    Text(Fmt.ago(a.since).replacingOccurrences(of: "há ", with: ""))
+                    Text(L(Fmt.ago(a.since).replacingOccurrences(of: "há ", with: "")))
                         .font(DS.meta.monospacedDigit()).foregroundStyle(Color.text3)
                 }
             }

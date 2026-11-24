@@ -88,7 +88,7 @@ final class QuickTogglesStore: ObservableObject {
         busy = true
         message = nil
         let r = await ToolRunner.run("/usr/bin/shortcuts", ["run", name], timeout: 30)
-        if !r.ok { message = "O atalho “\(name)” não correu. Abre-o na app Atalhos para ver o que falta." }
+        if !r.ok { message = String(localized: "O atalho “\(name)” não correu. Abre-o na app Atalhos para ver o que falta.") }
         busy = false
     }
 
@@ -121,7 +121,7 @@ struct QuickTogglesView: View {
                     Task { await store.toggleDesktopIcons() }
                 }
                 pill("Foco", "moon.zzz", on: false,
-                     help: store.focusShortcut.map { "Não incomodar: corre o atalho “\($0)”" } ?? "Não incomodar: precisa de um atalho na app Atalhos") {
+                     help: store.focusShortcut.map { String(localized: "Não incomodar: corre o atalho “\($0)”") } ?? "Não incomodar: precisa de um atalho na app Atalhos") {
                     Task { await store.toggleFocus() }
                 }
             }
@@ -144,7 +144,7 @@ struct QuickTogglesView: View {
         Button(action: action) {
             HStack(spacing: DS.xs) {
                 Image(systemName: symbol).font(DS.meta.weight(.medium))
-                Text(title).font(DS.meta).lineLimit(1)
+                Text(L(title)).font(DS.meta).lineLimit(1)
             }
             .foregroundStyle(on ? Color.accentColor : Color.primary)
             .frame(maxWidth: .infinity).frame(height: 26)
@@ -152,7 +152,7 @@ struct QuickTogglesView: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .help(help)
-        .accessibilityLabel(help)
+        .help(L(help))
+        .accessibilityLabel(L(help))
     }
 }

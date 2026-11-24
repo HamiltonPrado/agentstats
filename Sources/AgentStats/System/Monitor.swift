@@ -343,15 +343,16 @@ final class Monitor {
             guard let old = previousStates[s.id] else { continue }
             let content = UNMutableNotificationContent()
             if s.state.needsAttention && !old.needsAttention {
-                content.title = s.state == .needsAnswer ? "Agente tem uma pergunta · \(s.project)" : "Agente precisa de aprovação · \(s.project)"
-                content.body = s.detail ?? s.title
+                content.title = L(s.state == .needsAnswer ? String(localized: "Agente tem uma pergunta · \(s.project)") : String(localized: "Agente precisa de aprovação · \(s.project)"))
+                content.body = L(s.detail ?? s.title)
                 content.interruptionLevel = .timeSensitive
             } else if (old.isWorking || old.needsAttention), s.state == .waitingUser,
                       let done = finished[s.id], done.duration >= finishMinMinutes * 60 {
-                content.title = "Agente terminou · \(s.project)"
-                var summary = "Trabalhou " + (done.duration < 60 ? "\(Int(done.duration)) s" : Fmt.duration(done.duration))
+                content.title = L(String(localized: "Agente terminou · \(s.project)"))
+                let worked = done.duration < 60 ? "\(Int(done.duration)) s" : Fmt.duration(done.duration)
+                var summary = String(localized: "Trabalhou \(worked)")
                 if let c = done.cost { summary += " · ~" + Fmt.usd(c) }
-                content.body = summary + "\n" + (s.detail ?? s.title)
+                content.body = L(summary + "\n" + (s.detail ?? s.title))
             } else { continue }
             content.userInfo = ["session": s.id]   // clicar na notificação abre o agente
             content.sound = .default
@@ -386,8 +387,8 @@ final class Monitor {
             if let level = r.level {
                 d.set(r.notified, forKey: Budget.notifiedKey)
                 let c = UNMutableNotificationContent()
-                c.title = level >= 100 ? "Orçamento esgotado" : "Orçamento a \(Int(level))%"
-                c.body = "~\(Fmt.usd(budgetSpent)) de \(Fmt.usd(budgetAmount)) \(budgetPeriod.short), estimado a preços de API."
+                c.title = L(level >= 100 ? "Orçamento esgotado" : String(localized: "Orçamento a \(Int(level))%"))
+                c.body = L(String(localized: "~\(Fmt.usd(budgetSpent)) de \(Fmt.usd(budgetAmount)) \(budgetPeriod.short), estimado a preços de API."))
                 c.sound = .default
                 UNUserNotificationCenter.current().add(UNNotificationRequest(identifier: "budget-\(UUID().uuidString)", content: c, trigger: nil))
             }
@@ -414,15 +415,15 @@ final class Monitor {
             let content = UNMutableNotificationContent()
             switch event {
             case .reached(let provider, let w, _, let runsOut):
-                content.title = "\(provider.rawValue) · \(w.label) a \(Fmt.num(w.usedPercent, 0))%"
+                content.title = L("\(provider.rawValue) · \(w.label) a \(Fmt.num(w.usedPercent, 0))%")
                 var lines: [String] = []
-                if let r = w.resetsAt { lines.append("Renova " + PlanLimitsCard.resetText(r, now: now) + ".") }
-                if let end = runsOut { lines.append("A este ritmo acaba " + PlanLimitsCard.resetText(end, now: now) + ".") }
-                content.body = lines.isEmpty ? "Limite do plano" : lines.joined(separator: " ")
+                if let r = w.resetsAt { lines.append(String(localized: "Renova \(PlanLimitsCard.resetText(r, now: now)).")) }
+                if let end = runsOut { lines.append(String(localized: "A este ritmo acaba \(PlanLimitsCard.resetText(end, now: now)).")) }
+                content.body = L(lines.isEmpty ? "Limite do plano" : lines.joined(separator: " "))
                 if w.usedPercent >= LimitWatch.lastLevel { content.interruptionLevel = .timeSensitive }
             case .renewed(let provider, let label):
-                content.title = "\(provider.rawValue) · \(label) renovou"
-                content.body = "Podes voltar a usar à vontade."
+                content.title = L(String(localized: "\(provider.rawValue) · \(label) renovou"))
+                content.body = L("Podes voltar a usar à vontade.")
             }
             content.sound = .default
             UNUserNotificationCenter.current().add(
@@ -443,11 +444,11 @@ final class Monitor {
 
             let content = UNMutableNotificationContent()
             content.title = session.state.needsAttention
-                ? "Agente continua a precisar de ti · \(session.project)"
-                : "Agente continua à tua espera · \(session.project)"
+                ? String(localized: "Agente continua a precisar de ti · \(session.project)")
+                : String(localized: "Agente continua à tua espera · \(session.project)")
             content.body = session.state.needsAttention
-                ? (session.detail ?? "O pedido continua pendente há \(Int(waitingAlertMinutes)) min.")
-                : "Sem nova atividade há \(Int(waitingAlertMinutes)) min. \(session.detail ?? session.title)"
+                ? (session.detail ?? String(localized: "O pedido continua pendente há \(Int(waitingAlertMinutes)) min."))
+                : String(localized: "Sem nova atividade há \(Int(waitingAlertMinutes)) min. \(session.detail ?? session.title)")
             content.userInfo = ["session": session.id]
             content.sound = .default
             UNUserNotificationCenter.current().add(
@@ -481,7 +482,7 @@ final class Monitor {
         }
         if let a = evaluate(.disk, enabled: diskAlertEnabled, value: disk.usage,
                             on: diskThreshold, off: diskThreshold - 0.02, now: now) {
-            alerts.append(SystemAlert(kind: .disk, value: Fmt.diskShort(disk.free) + " livres", since: a, detail: nil))
+            alerts.append(SystemAlert(kind: .disk, value: String(localized: "\(Fmt.diskShort(disk.free)) livres"), since: a, detail: nil))
         }
         // Bateria: só conta na bateria. Ligado à corrente, a contagem recomeça. (Enquanto se espera
         // pelos 20 s, `evaluate` devolve nil e não se pode apagar a contagem, senão nunca chega lá.)
@@ -499,13 +500,13 @@ final class Monitor {
             lastNotified[alert.kind] = now
             let content = UNMutableNotificationContent()
             content.title = switch alert.kind {
-            case .cpu: "CPU alta: \(alert.value)"
-            case .temp: "Temperatura alta: \(alert.value)"
-            case .memory: "Memória alta: \(alert.value)"
-            case .disk: "Pouco espaço em disco: \(alert.value)"
-            case .battery: "Bateria fraca: \(alert.value)"
+            case .cpu: String(localized: "CPU alta: \(alert.value)")
+            case .temp: String(localized: "Temperatura alta: \(alert.value)")
+            case .memory: String(localized: "Memória alta: \(alert.value)")
+            case .disk: String(localized: "Pouco espaço em disco: \(alert.value)")
+            case .battery: String(localized: "Bateria fraca: \(alert.value)")
             }
-            content.body = alert.detail.map { "Processo mais pesado: \($0)" } ?? "Há mais de \(Int(Self.alertSustain)) s acima do limite."
+            content.body = L(alert.detail.map { String(localized: "Processo mais pesado: \($0)") } ?? String(localized: "Há mais de \(Int(Self.alertSustain)) s acima do limite."))
             content.sound = .default
             UNUserNotificationCenter.current().add(
                 UNNotificationRequest(identifier: "alert-\(alert.kind.rawValue)", content: content, trigger: nil))

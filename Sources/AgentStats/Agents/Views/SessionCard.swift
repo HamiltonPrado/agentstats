@@ -39,7 +39,7 @@ struct SessionCard: View {
             if let c = m.usage.perSessionCost[session.id], c >= 0.01 { t += " ~" + Fmt.usd(c) }
             parts.append(t)
         }
-        if session.subagents > 0 { parts.append("\(session.subagents) subagente\(session.subagents == 1 ? "" : "s")") }
+        if session.subagents > 0 { parts.append(String(localized: "\(session.subagents) subagente\(session.subagents == 1 ? "" : "s")")) }
         // Por último: se a linha não couber, é o CPU que fica cortado.
         if let p = session.process, p.cpu >= 5 { parts.append(Fmt.num(p.cpu, 0) + "% CPU") }
         return parts.joined(separator: " · ")
@@ -50,23 +50,23 @@ struct SessionCard: View {
             StateIcon(state: session.state)
             VStack(alignment: .leading, spacing: density == .detailed ? DS.sm : DS.xs) {
                 HStack(alignment: .firstTextBaseline, spacing: DS.sm) {
-                    Text(session.title).font(DS.title).lineLimit(1)
+                    Text(L(session.title)).font(DS.title).lineLimit(1)
                         // Terminada: recua no título, sem tirar contraste ao resto do cartão.
                         .foregroundStyle(session.state == .finished ? Color.text2 : Color.primary)
                     Spacer(minLength: DS.xs)
                     if hover.value { actions } else {
-                        Text(Fmt.ago(session.lastActivity)).font(DS.meta.monospacedDigit()).foregroundStyle(Color.text3)
+                        Text(L(Fmt.ago(session.lastActivity))).font(DS.meta.monospacedDigit()).foregroundStyle(Color.text3)
                     }
                 }
 
                 if density == .compact {
-                    Text("\(session.state.label) · \(session.kind == "Claude Code" ? "Claude" : session.kind) · \(session.project)")
+                    Text("\(L(session.state.label)) · \(session.kind == "Claude Code" ? "Claude" : session.kind) · \(session.project)")
                         .font(DS.meta)
                         .foregroundStyle(session.state.needsAttention ? AnyShapeStyle(Color.attentionText) : AnyShapeStyle(Color.text2))
                         .lineLimit(1).truncationMode(.middle)
                 } else {
                     HStack(spacing: DS.xs) {
-                        Text(session.state.label)
+                        Text(L(session.state.label))
                             .foregroundStyle(session.state.needsAttention ? AnyShapeStyle(Color.attentionText) : AnyShapeStyle(Color.text2))
                         Text("· " + (session.kind == "Claude Code" ? "Claude" : session.kind)).foregroundStyle(Color.text3)
                     }
@@ -82,16 +82,16 @@ struct SessionCard: View {
                                 .frame(maxWidth: .infinity, alignment: .leading)
                                 .background(RoundedRectangle(cornerRadius: DS.rSmall, style: .continuous).fill(DS.raised))
                         } else {
-                            Text(d).font(DS.body).foregroundStyle(Color.text2)
+                            Text(L(d)).font(DS.body).foregroundStyle(Color.text2)
                                 .lineLimit(density == .detailed ? 5 : 2)
                         }
                     }
 
-                    Text(meta)
+                    Text(L(meta))
                         .font(DS.meta.monospacedDigit()).foregroundStyle(Color.text3)
                         .lineLimit(density == .detailed ? 3 : 1).truncationMode(.tail)
                         .help(m.usage.perSession[session.id].map { u in
-                            "Tokens nesta sessão: \(Fmt.tokens(u.total)) · saída \(Fmt.tokens(u.output)) · entrada \(Fmt.tokens(u.input)) · cache lida \(Fmt.tokens(u.cacheRead)) · cache escrita \(Fmt.tokens(u.cacheWrite))"
+                            String(localized: "Tokens nesta sessão: \(Fmt.tokens(u.total)) · saída \(Fmt.tokens(u.output)) · entrada \(Fmt.tokens(u.input)) · cache lida \(Fmt.tokens(u.cacheRead)) · cache escrita \(Fmt.tokens(u.cacheWrite))")
                         } ?? "")
 
                     if let p = session.process, !p.children.isEmpty, session.state.isWorking {
@@ -110,7 +110,7 @@ struct SessionCard: View {
         .onHover { hover.value = $0 }
         // VoiceOver: o cartão é um só elemento, com tudo dito por extenso e as ações do menu
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel(accessibilityText)
+        .accessibilityLabel(L(accessibilityText))
         .accessibilityHint("Abre a app onde o agente corre")
         .accessibilityAddTraits(.isButton)
         .accessibilityAction { AppState.controller?.open(session) }
@@ -126,8 +126,8 @@ struct SessionCard: View {
     }
 
     private var accessibilityText: String {
-        var parts = [session.title, session.state.label, session.kind]
-        if let d = session.detail { parts.append(isCommand ? "comando: " + d : d) }
+        var parts = [session.title, L(session.state.label), session.kind]
+        if let d = session.detail { parts.append(isCommand ? String(localized: "comando: \(d)") : L(d)) }
         parts.append(meta)
         parts.append(Fmt.ago(session.lastActivity))
         return parts.joined(separator: ", ")
@@ -148,7 +148,7 @@ struct SessionCard: View {
         Button(action: action) {
             Image(systemName: icon).font(DS.meta).foregroundStyle(Color.text2).frame(width: 20, height: 16)
         }
-        .buttonStyle(.plain).help(help)
+        .buttonStyle(.plain).help(L(help))
     }
 
     @ViewBuilder private var menu: some View {

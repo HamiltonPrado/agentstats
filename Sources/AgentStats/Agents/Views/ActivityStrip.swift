@@ -16,7 +16,7 @@ struct ActivityStrip: View {
             HStack(alignment: .firstTextBaseline) {
                 Text("Últimas 24 h").font(DS.body).foregroundStyle(Color.text2)
                 Spacer()
-                Text(active > 0 ? "agentes ativos " + Fmt.minutes(active) : "sem atividade")
+                Text(active > 0 ? String(localized: "agentes ativos \(Fmt.minutes(active))") : L("sem atividade"))
                     .font(DS.meta.monospacedDigit()).foregroundStyle(Color.text3)
             }
             HStack(alignment: .bottom, spacing: 1) {
@@ -32,7 +32,7 @@ struct ActivityStrip: View {
             .frame(height: 20)
             .accessibilityHidden(true)
             HStack {
-                Text(DayChart.hour(buckets.first?.start ?? Date().timeIntervalSince1970)).font(DS.meta.monospacedDigit())
+                Text(L(DayChart.hour(buckets.first?.start ?? Date().timeIntervalSince1970))).font(DS.meta.monospacedDigit())
                 Spacer()
                 Text("agora").font(DS.meta)
             }
@@ -41,6 +41,7 @@ struct ActivityStrip: View {
         }
         .cardStyle()
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("Atividade dos agentes nas últimas 24 horas: " + (active > 0 ? Fmt.minutes(active) + " com agentes a trabalhar" : "sem atividade"))
+        .accessibilityLabel(active > 0 ? String(localized: "Atividade dos agentes nas últimas 24 horas: \(Fmt.minutes(active)) com agentes a trabalhar")
+                                : L("Atividade dos agentes nas últimas 24 horas: sem atividade"))
     }
 }

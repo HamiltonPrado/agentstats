@@ -30,7 +30,7 @@ enum DiskRules {
 
     static func blockedMessage(_ names: [String]) -> String {
         names.isEmpty ? "O disco está em uso. Fecha o que estiver a usá-lo e tenta outra vez."
-            : "Em uso por \(names.prefix(4).joined(separator: ", "))\(names.count > 4 ? " e mais \(names.count - 4)" : ""). Fecha e tenta outra vez."
+            : String(localized: "Em uso por \(names.prefix(4).joined(separator: ", "))\(names.count > 4 ? " e mais \(names.count - 4)" : ""). Fecha e tenta outra vez.")
     }
 }
 

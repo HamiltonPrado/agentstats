@@ -29,8 +29,8 @@ struct PortsView: View {
         VStack(alignment: .leading, spacing: DS.xs) {
             HStack(spacing: DS.sm) {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(listener.name).font(DS.body).lineLimit(1).truncationMode(.middle)
-                    Text(detail(listener)).font(DS.meta.monospacedDigit()).foregroundStyle(Color.text3).lineLimit(2)
+                    Text(L(listener.name)).font(DS.body).lineLimit(1).truncationMode(.middle)
+                    Text(L(detail(listener))).font(DS.meta.monospacedDigit()).foregroundStyle(Color.text3).lineLimit(2)
                 }
                 Spacer(minLength: DS.sm)
                 if store.stopping.contains(listener.pid) {
@@ -46,7 +46,7 @@ struct PortsView: View {
             }
             if store.confirming == listener.pid {
                 let force = store.stubborn.contains(listener.pid)
-                ConfirmBar(text: "\(force ? "Forçar o fim de" : "Terminar") \(listener.name) (PID \(String(listener.pid)))? O que não tiver gravado pode perder-se.",
+                ConfirmBar(text: String(localized: "\(L(force ? "Forçar o fim de" : "Terminar")) \(listener.name) (PID \(String(listener.pid)))? O que não tiver gravado pode perder-se."),
                            confirm: force ? "Forçar" : "Terminar",
                            cancel: { store.confirming = nil },
                            action: { Task { await store.terminate(listener, force: force) } })

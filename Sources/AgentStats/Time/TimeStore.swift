@@ -75,8 +75,8 @@ final class TimerStore: ObservableObject {
         NSSound(named: "Glass")?.play()
         let next = plan.next()
         let c = UNMutableNotificationContent()
-        c.title = plan.phase == .timer ? "Tempo!" : "\(plan.title) terminou"
-        c.body = next.map { "A seguir: \($0.title.lowercased()), \(Int($0.duration / 60)) min." } ?? "O temporizador chegou ao fim."
+        c.title = L(plan.phase == .timer ? "Tempo!" : String(localized: "\(plan.title) terminou"))
+        c.body = L(next.map { String(localized: "A seguir: \($0.title.lowercased()), \(Int($0.duration / 60)) min.") } ?? "O temporizador chegou ao fim.")
         UNUserNotificationCenter.current().add(UNNotificationRequest(identifier: "timer-\(UUID().uuidString)", content: c, trigger: nil))
         if let next { start(next) } else { stop() }
     }

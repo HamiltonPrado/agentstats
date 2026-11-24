@@ -10,8 +10,8 @@ struct ActivityHistoryRow: View {
     }
 
     private var timeRange: String {
-        let start = "Início \(Fmt.ago(record.firstSeen))"
-        return start + (record.endedAt.map { " · fim \(Fmt.ago($0))" } ?? " · em curso")
+        let start = String(localized: "Início \(Fmt.ago(record.firstSeen))")
+        return start + (record.endedAt.map { String(localized: " · fim \(Fmt.ago($0))") } ?? " · em curso")
     }
 
     var body: some View {
@@ -20,18 +20,18 @@ struct ActivityHistoryRow: View {
                 .font(DS.body).foregroundStyle(record.phase.shouldRemind ? Color.attentionText : Color.text2)
                 .frame(width: 20, height: 20)
             VStack(alignment: .leading, spacing: 3) {
-                Text(record.title).font(DS.body.weight(.medium)).lineLimit(1)
+                Text(L(record.title)).font(DS.body.weight(.medium)).lineLimit(1)
                 Text("\(record.kind) · \(record.project) · \(record.phase.title)")
                     .font(DS.meta).foregroundStyle(Color.text2).lineLimit(1)
-                Text(timeRange).font(DS.meta).foregroundStyle(Color.text3).lineLimit(1)
+                Text(L(timeRange)).font(DS.meta).foregroundStyle(Color.text3).lineLimit(1)
                 if record.events.count > 1 {
-                    Text(eventSummary).font(DS.meta).foregroundStyle(Color.text3).lineLimit(1)
+                    Text(L(eventSummary)).font(DS.meta).foregroundStyle(Color.text3).lineLimit(1)
                 }
             }
             Spacer(minLength: DS.xs)
             VStack(alignment: .trailing, spacing: 3) {
-                Text(Fmt.duration(record.duration())).font(DS.meta.monospacedDigit())
-                Text(record.tokens > 0 ? Fmt.tokens(record.tokens) + " tokens" : "sem tokens")
+                Text(L(Fmt.duration(record.duration()))).font(DS.meta.monospacedDigit())
+                Text(record.tokens > 0 ? Fmt.tokens(record.tokens) + " tokens" : L("sem tokens"))
                     .font(DS.meta.monospacedDigit()).foregroundStyle(Color.text3)
             }
         }

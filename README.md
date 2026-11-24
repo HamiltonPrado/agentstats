@@ -88,7 +88,7 @@
 
 ### À tua medida
 
-Barra de menus configurável, separadores à tua escolha (quais, por que ordem e em qual abre), atalhos ⌥⌘1 a ⌥⌘8 para cada um, limites de alerta com qualquer valor, atalho global, perfis, tema, cor, largura, tamanho do texto, manter o Mac acordado (por tempo ou enquanto houver agentes a trabalhar), início de sessão automático e suporte a VoiceOver e “Reduzir movimento”. A interface está em português.
+Barra de menus configurável, separadores à tua escolha (quais, por que ordem e em qual abre), atalhos ⌥⌘1 a ⌥⌘8 para cada um, limites de alerta com qualquer valor, atalho global, perfis, tema, cor, largura, tamanho do texto, manter o Mac acordado (por tempo ou enquanto houver agentes a trabalhar), início de sessão automático e suporte a VoiceOver e “Reduzir movimento”. A interface está em português e em inglês: segue o idioma do Mac, ou escolhe-o nas Definições → Geral.
 
 Comporta-se como os outros ícones da barra de menus: o botão direito abre um menu com os separadores, os atalhos rápidos, as Definições e Sair, e clicar fora do painel, incluindo na secretária, fecha-o.
 

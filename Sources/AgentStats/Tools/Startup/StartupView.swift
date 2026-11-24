@@ -18,7 +18,7 @@ struct StartupView: View {
             }
             ForEach(Array(store.items.enumerated()), id: \.element.id) { i, item in
                 if i == 0 || store.items[i - 1].scope != item.scope {
-                    Text(heading(item.scope)).font(DS.meta.weight(.medium)).foregroundStyle(Color.text2).padding(.top, DS.xs)
+                    Text(L(heading(item.scope))).font(DS.meta.weight(.medium)).foregroundStyle(Color.text2).padding(.top, DS.xs)
                 }
                 row(item)
             }
@@ -43,9 +43,9 @@ struct StartupView: View {
             HStack(spacing: DS.sm) {
                 StatusDot(item.running && !item.disabled ? .working : .idle)
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(item.title).font(DS.body).lineLimit(1).truncationMode(.middle)
+                    Text(L(item.title)).font(DS.body).lineLimit(1).truncationMode(.middle)
                         .foregroundStyle(item.disabled ? Color.text2 : Color.primary)
-                    Text(detail(item)).font(DS.meta).foregroundStyle(Color.text3).lineLimit(1).truncationMode(.middle)
+                    Text(L(detail(item))).font(DS.meta).foregroundStyle(Color.text3).lineLimit(1).truncationMode(.middle)
                 }
                 Spacer(minLength: DS.sm)
                 if store.busy.contains(item.id) {
@@ -57,13 +57,13 @@ struct StartupView: View {
                 }
             }
             if store.confirming == item.id {
-                ConfirmBar(text: "Desligar \(item.title)? Para agora e deixa de arrancar sozinho. Podes voltar a ligá-lo aqui.",
+                ConfirmBar(text: String(localized: "Desligar \(item.title)? Para agora e deixa de arrancar sozinho. Podes voltar a ligá-lo aqui."),
                            confirm: "Desligar", cancel: { store.confirming = nil },
                            action: { Task { await store.set(item, enabled: false) } })
             }
         }
         .padding(.vertical, 2)
-        .help(item.program ?? item.label)
+        .help(L(item.program ?? item.label))
         .contextMenu {
             Button("Mostrar no Finder") { store.reveal(item) }
             Button("Copiar label") {
@@ -78,6 +78,6 @@ struct StartupView: View {
         if item.disabled { parts.append("desligado") } else if item.running { parts.append("a correr") }
         if item.keepAlive { parts.append("sempre ativo") } else if item.runAtLoad { parts.append("ao arrancar") }
         if item.appName != nil { parts.append(item.label) }
-        return parts.joined(separator: " · ")
+        return parts.map { L($0) }.joined(separator: " · ")
     }
 }

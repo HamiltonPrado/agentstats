@@ -29,7 +29,7 @@ struct TodayUsage: View {
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
-            .accessibilityLabel("Hoje, \(Fmt.tokens(t.total)) tokens" + (usage.todayCost >= 0.01 ? ", cerca de \(Fmt.usd(usage.todayCost)) em API" : ""))
+            .accessibilityLabel(String(localized: "Hoje, \(Fmt.tokens(t.total)) tokens") + (usage.todayCost >= 0.01 ? String(localized: ", cerca de \(Fmt.usd(usage.todayCost)) em API") : ""))
             .accessibilityHint(expanded ? "Esconde a semana" : "Mostra os últimos 7 dias e os projetos")
 
             if let b = budget { budgetRow(b) }
@@ -50,13 +50,13 @@ struct TodayUsage: View {
     private func budgetRow(_ b: (spent: Double, amount: Double, period: Budget.Period)) -> some View {
         let fraction: Double = b.amount > 0 ? b.spent / b.amount : 0
         let color: Color = fraction >= 1 ? Palette.attention : fraction >= 0.8 ? Palette.waiting : Color.accentColor
-        let label: String = "Orçamento \(b.period.short)"
+        let label: String = String(localized: "Orçamento \(b.period.short)")
         let value: String = "~" + Fmt.usd(b.spent) + " de " + Fmt.usd(b.amount)
         return VStack(alignment: .leading, spacing: DS.xs) {
             HStack {
-                Text(label).font(DS.meta).foregroundStyle(Color.text2)
+                Text(L(label)).font(DS.meta).foregroundStyle(Color.text2)
                 Spacer()
-                Text(value).font(DS.meta.monospacedDigit()).foregroundStyle(fraction >= 1 ? Color.attentionText : Color.text2)
+                Text(L(value)).font(DS.meta.monospacedDigit()).foregroundStyle(fraction >= 1 ? Color.attentionText : Color.text2)
             }
             Bar(value: min(fraction, 1), color: color, height: 3)
         }
@@ -77,13 +77,13 @@ struct TodayUsage: View {
                 ForEach(Array(usage.week.enumerated()), id: \.offset) { i, d in
                     let isToday = i == usage.week.count - 1
                     VStack(spacing: DS.xs) {
-                        Text(d.total.isEmpty ? "" : Fmt.tokens(d.total.total))
+                        Text(L(d.total.isEmpty ? "" : Fmt.tokens(d.total.total)))
                             .font(.system(size: 9).monospacedDigit()).foregroundStyle(Color.text3)
                             .lineLimit(1).minimumScaleFactor(0.7)
                         RoundedRectangle(cornerRadius: 2)
                             .fill(isToday ? Color.accentColor : Color.secondary.opacity(0.45))
                             .frame(height: max(2, 40 * Double(d.total.total) / Double(maxTotal)))
-                        Text(Self.weekday(d.day)).font(DS.meta).foregroundStyle(isToday ? Color.primary : Color.text3)
+                        Text(L(Self.weekday(d.day))).font(DS.meta).foregroundStyle(isToday ? Color.primary : Color.text3)
                     }
                     .frame(maxWidth: .infinity)
                     .accessibilityElement(children: .ignore)
@@ -103,9 +103,9 @@ struct TodayUsage: View {
             ForEach(top, id: \.name) { p in
                 VStack(alignment: .leading, spacing: DS.xs) {
                     HStack {
-                        Text(p.name.trimmingCharacters(in: .whitespaces)).font(DS.body).lineLimit(1).truncationMode(.middle)
+                        Text(L(p.name.trimmingCharacters(in: .whitespaces))).font(DS.body).lineLimit(1).truncationMode(.middle)
                         Spacer(minLength: DS.sm)
-                        Text(Fmt.tokens(p.usage.total)).font(DS.body.monospacedDigit()).foregroundStyle(Color.text2)
+                        Text(L(Fmt.tokens(p.usage.total))).font(DS.body.monospacedDigit()).foregroundStyle(Color.text2)
                         if p.cost >= 0.01 {
                             Text("~" + Fmt.usd(p.cost)).font(DS.body.monospacedDigit()).foregroundStyle(Color.text3)
                                 .frame(minWidth: 56, alignment: .trailing)

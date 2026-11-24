@@ -12,22 +12,22 @@
 **[Télécharger la dernière version](https://github.com/HamiltonPrado/agentstats/releases/latest)** · [Site web](https://hamiltonprado.github.io/agentstats) · [Signaler un problème](https://github.com/HamiltonPrado/agentstats/issues)
 
 <p align="center">
-  <img src="Resources/screenshots/menubar.png" alt="Agents et indicateurs dans la barre des menus" width="600">
+  <img src="Resources/screenshots/en/menubar.png" alt="Agents et indicateurs dans la barre des menus" width="600">
 </p>
 
 <p align="center">
-  <img src="Resources/screenshots/agents-dark.png" alt="Agents, limites et coûts" width="260">
-  <img src="Resources/screenshots/system-dark.png" alt="Indicateurs système" width="260">
-  <img src="Resources/screenshots/audio-dark.png" alt="Mixeur de volume" width="260">
+  <img src="Resources/screenshots/en/agents-dark.png" alt="Agents, limites et coûts" width="260">
+  <img src="Resources/screenshots/en/system-dark.png" alt="Indicateurs système" width="260">
+  <img src="Resources/screenshots/en/audio-dark.png" alt="Mixeur de volume" width="260">
 </p>
 
 <p align="center">
-  <img src="Resources/screenshots/clipboard-dark.png" alt="Presse-papiers et extraits" width="260">
-  <img src="Resources/screenshots/capture-dark.png" alt="Capture et enregistrement" width="260">
-  <img src="Resources/screenshots/tools-dark.png" alt="Outils" width="260">
+  <img src="Resources/screenshots/en/clipboard-dark.png" alt="Presse-papiers et extraits" width="260">
+  <img src="Resources/screenshots/en/capture-dark.png" alt="Capture et enregistrement" width="260">
+  <img src="Resources/screenshots/en/tools-dark.png" alt="Outils" width="260">
 </p>
 
-<p align="center"><sub>Captures avec des données de démonstration. L’interface est en portugais.</sub></p>
+<p align="center"><sub>Captures avec des données de démonstration.</sub></p>
 
 ## Ce que vous pouvez surveiller
 
@@ -88,7 +88,7 @@
 
 ### À votre mesure
 
-Barre des menus configurable, onglets au choix (lesquels, dans quel ordre et lequel s’ouvre), raccourcis ⌥⌘1 à ⌥⌘8 pour chacun, seuils d’alerte à n’importe quelle valeur, raccourci global, profils, thème, couleur, largeur, taille du texte, maintien en éveil (pour une durée ou tant que des agents travaillent), lancement automatique et prise en charge de VoiceOver et de « Réduire les animations ».
+Barre des menus configurable, onglets au choix (lesquels, dans quel ordre et lequel s’ouvre), raccourcis ⌥⌘1 à ⌥⌘8 pour chacun, seuils d’alerte à n’importe quelle valeur, raccourci global, profils, thème, couleur, largeur, taille du texte, maintien en éveil (pour une durée ou tant que des agents travaillent), lancement automatique et prise en charge de VoiceOver et de « Réduire les animations ». L’interface est en anglais et en portugais : elle suit la langue du Mac, ou choisissez-la dans Réglages → Général.
 
 Il se comporte comme les autres icônes de la barre des menus : le clic droit ouvre un menu avec les onglets, les raccourcis rapides, les Réglages et Quitter, et cliquer hors du panneau, y compris sur le bureau, le ferme.
 

@@ -12,10 +12,10 @@ struct PlanLimitsCard: View {
                 if i > 0 { Divider().opacity(0.5) }
                 VStack(alignment: .leading, spacing: DS.sm) {
                     HStack(spacing: DS.xs) {
-                        Text(l.provider.rawValue).font(DS.body.weight(.medium))
+                        Text(L(l.provider.rawValue)).font(DS.body.weight(.medium))
                         if let plan = l.plan { Text("· " + plan).font(DS.body).foregroundStyle(Color.text2) }
                         Spacer(minLength: DS.xs)
-                        Text(Fmt.ago(l.observedAt)).font(DS.meta).foregroundStyle(Color.text3)
+                        Text(L(Fmt.ago(l.observedAt))).font(DS.meta).foregroundStyle(Color.text3)
                             .help("Última leitura dos limites")
                     }
                     ForEach(l.windows) { w in row(w) }
@@ -23,7 +23,7 @@ struct PlanLimitsCard: View {
             }
             if let hint {
                 if !limits.isEmpty { Divider().opacity(0.5) }
-                Label(hint, systemImage: "info.circle").font(DS.meta).foregroundStyle(Color.text2)
+                Label(L(hint), systemImage: "info.circle").font(DS.meta).foregroundStyle(Color.text2)
                     .fixedSize(horizontal: false, vertical: true)
             }
         }
@@ -38,28 +38,28 @@ struct PlanLimitsCard: View {
         let runsOut: Date? = LimitForecast.runsOut(w, now: now)
         return VStack(alignment: .leading, spacing: DS.xs) {
             HStack(alignment: .firstTextBaseline, spacing: DS.xs) {
-                Text(w.label).font(DS.body)
+                Text(L(w.label)).font(DS.body)
                 if let r = w.resetsAt {
-                    Text("· renova " + Self.resetText(r, now: Date())).font(DS.meta).foregroundStyle(Color.text3).lineLimit(1)
+                    Text(String(localized: "· renova \(Self.resetText(r, now: Date()))")).font(DS.meta).foregroundStyle(Color.text3).lineLimit(1)
                 }
                 Spacer(minLength: DS.sm)
-                Text(Fmt.num(w.usedPercent, 0) + "%").font(DS.body.monospacedDigit())
+                Text(L(Fmt.num(w.usedPercent, 0) + "%")).font(DS.body.monospacedDigit())
                     .foregroundStyle(textColor)
             }
             Bar(value: fraction, color: color, height: 4)
             if let end = runsOut {
-                Text("A este ritmo acaba " + Self.resetText(end, now: now) + ", antes de renovar")
+                Text(String(localized: "A este ritmo acaba \(Self.resetText(end, now: now)), antes de renovar"))
                     .font(DS.meta).foregroundStyle(Color.waitingText).lineLimit(2).fixedSize(horizontal: false, vertical: true)
             }
         }
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel(Self.spoken(w, runsOut: runsOut, now: now))
+        .accessibilityLabel(L(Self.spoken(w, runsOut: runsOut, now: now)))
     }
 
     private static func spoken(_ w: LimitWindow, runsOut: Date?, now: Date) -> String {
-        var text = "\(w.label): \(Fmt.num(w.usedPercent, 0))% usado"
-        if let r = w.resetsAt { text += ", renova " + resetText(r, now: now) }
-        if let end = runsOut { text += ", a este ritmo acaba " + resetText(end, now: now) }
+        var text = String(localized: "\(w.label): \(Fmt.num(w.usedPercent, 0))% usado")
+        if let r = w.resetsAt { text += String(localized: ", renova \(resetText(r, now: now))") }
+        if let end = runsOut { text += String(localized: ", a este ritmo acaba \(resetText(end, now: now))") }
         return text
     }
 
@@ -68,13 +68,14 @@ struct PlanLimitsCard: View {
         let cal = Calendar.current
         let hm = DateFormatter()
         hm.dateFormat = "HH:mm"
-        if cal.isDate(d, inSameDayAs: now) { return "às " + hm.string(from: d) }
-        if let t = cal.date(byAdding: .day, value: 1, to: now), cal.isDate(d, inSameDayAs: t) { return "amanhã às " + hm.string(from: d) }
+        let time = hm.string(from: d)
+        if cal.isDate(d, inSameDayAs: now) { return String(localized: "às \(time)") }
+        if let t = cal.date(byAdding: .day, value: 1, to: now), cal.isDate(d, inSameDayAs: t) { return String(localized: "amanhã às \(time)") }
         if d.timeIntervalSince(now) < 6 * 86_400 {
             let names = ["dom", "seg", "ter", "qua", "qui", "sex", "sáb"]
-            return names[cal.component(.weekday, from: d) - 1] + " " + hm.string(from: d)
+            return L(names[cal.component(.weekday, from: d) - 1]) + " " + time
         }
         let months = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"]
-        return "\(cal.component(.day, from: d)) \(months[cal.component(.month, from: d) - 1])"
+        return "\(cal.component(.day, from: d)) \(L(months[cal.component(.month, from: d) - 1]))"
     }
 }

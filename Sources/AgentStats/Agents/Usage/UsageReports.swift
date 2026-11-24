@@ -71,13 +71,13 @@ enum WeeklySummary {
     static func text(_ u: UsageSnapshot) -> (title: String, body: String)? {
         let total = u.weekTotal.total
         guard total > 0 else { return nil }
-        var parts = ["\(Fmt.tokens(total)) tokens"]
+        var parts = [String(localized: "\(Fmt.tokens(total)) tokens")]
         if u.weekCost >= 0.01 { parts.append("~" + Fmt.usd(u.weekCost) + " em API") }
         if let top = u.projects.first, top.usage.total > 0 {
-            parts.append("mais em \(top.name) (\(Int((Double(top.usage.total) / Double(total) * 100).rounded()))%)")
+            parts.append(String(localized: "mais em \(top.name) (\(Int((Double(top.usage.total) / Double(total) * 100).rounded()))%)"))
         }
         if let busiest = u.week.max(by: { $0.total.total < $1.total.total }), busiest.total.total > 0 {
-            parts.append("dia mais ativo: \(TodayUsage.weekday(busiest.day))")
+            parts.append(String(localized: "dia mais ativo: \(TodayUsage.weekday(busiest.day))"))
         }
         return ("A tua semana com os agentes", parts.joined(separator: " · "))
     }

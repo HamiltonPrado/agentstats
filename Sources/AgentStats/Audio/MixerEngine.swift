@@ -266,7 +266,7 @@ final class MixerEngine: @unchecked Sendable {
                 failures[key] = nil
             } catch {
                 let failure = error as? MixerFailure
-                let message = "Não deu para \(failure?.step ?? "ligar") (erro \(failure?.status ?? 0))"
+                let message = String(localized: "Não deu para \(failure?.step ?? "ligar") (erro \(failure?.status ?? 0))")
                 mixerLog.error("\(message, privacy: .public)")
                 failures[key] = (message, now.addingTimeInterval(3))
                 return .failed(message)

@@ -50,18 +50,18 @@ struct AudioControlsCard: View {
                 // O título fica inteiro e encolhe o seletor, que tem a largura do nome mais comprido da lista.
                 ZStack(alignment: .leading) {
                     Text("Microfone").hidden().accessibilityHidden(true)   // a mesma coluna nas duas secções
-                    Text(title)
+                    Text(L(title))
                 }
                 .font(DS.body.weight(.medium)).fixedSize().layoutPriority(1)
                 Spacer(minLength: 0)
                 if devices.isEmpty {
                     Text("Indisponível").font(DS.meta).foregroundStyle(Color.text3)
                 } else {
-                    Picker(title, selection: selection) {
-                        ForEach(devices) { device in Text(device.name).tag(device.id) }
+                    Picker(L(title), selection: selection) {
+                        ForEach(devices) { device in Text(L(device.name)).tag(device.id) }
                     }
                     .labelsHidden()
-                    .help(devices.first { $0.id == selection.wrappedValue }?.name ?? title)
+                    .help(L(devices.first { $0.id == selection.wrappedValue }?.name ?? title))
                 }
             }
             // Linha 2: silenciar (na coluna do ícone) + volume + percentagem
@@ -78,7 +78,7 @@ struct AudioControlsCard: View {
                 .accessibilityLabel(muted.wrappedValue ? "Ativar som" : "Silenciar")
                 Slider(value: volume, in: 0...1)
                     .controlSize(.small)
-                    .disabled(!canSet).accessibilityLabel(volumeLabel)
+                    .disabled(!canSet).accessibilityLabel(L(volumeLabel))
                 Text("\(Int((volume.wrappedValue * 100).rounded()))%")
                     .font(DS.meta.monospacedDigit()).foregroundStyle(Color.text2)
                     .frame(width: 36, alignment: .trailing)

@@ -85,14 +85,14 @@ final class StatusController: NSObject, NSPopoverDelegate {
     /// O que o VoiceOver diz sobre o ícone da barra de menus.
     private func spokenSummary() -> String {
         let m = monitor
-        if let recording = CaptureStore.shared.menuBarText { return "AgentStats, a gravar o ecrã, \(recording). Clicar para parar" }
+        if let recording = CaptureStore.shared.menuBarText { return String(localized: "AgentStats, a gravar o ecrã, \(recording). Clicar para parar") }
         var parts = ["AgentStats"]
-        if m.needsAttentionCount > 0 { parts.append("\(m.needsAttentionCount) agente\(m.needsAttentionCount == 1 ? "" : "s") precisa\(m.needsAttentionCount == 1 ? "" : "m") de ti") }
-        parts.append("\(m.workingCount) de \(m.liveAgentCount) agentes a trabalhar")
+        if m.needsAttentionCount > 0 { parts.append(String(localized: "\(m.needsAttentionCount) agente\(m.needsAttentionCount == 1 ? "" : "s") precisa\(m.needsAttentionCount == 1 ? "" : "m") de ti")) }
+        parts.append(String(localized: "\(m.workingCount) de \(m.liveAgentCount) agentes a trabalhar"))
         if !m.activeAlerts.isEmpty { parts.append(m.activeAlerts.map(\.kind.label).joined(separator: " e ")) }
-        parts.append("CPU \(Fmt.pct(m.cpu.total))")
-        parts.append("memória \(Fmt.pct(m.memory.usage))")
-        if let t = m.temps?.cpuMax { parts.append("temperatura \(Fmt.num(t, 0)) graus") }
+        parts.append(String(localized: "CPU \(Fmt.pct(m.cpu.total))"))
+        parts.append(String(localized: "memória \(Fmt.pct(m.memory.usage))"))
+        if let t = m.temps?.cpuMax { parts.append(String(localized: "temperatura \(Fmt.num(t, 0)) graus")) }
         return parts.joined(separator: ", ")
     }
 
@@ -172,7 +172,7 @@ final class StatusController: NSObject, NSPopoverDelegate {
         if settingsWindow == nil {
             let w = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 460, height: 680),
                              styleMask: [.titled, .closable, .miniaturizable, .resizable], backing: .buffered, defer: false)
-            w.title = "Definições do AgentStats"
+            w.title = L("Definições do AgentStats")
             w.isReleasedWhenClosed = false
             w.contentMinSize = NSSize(width: 420, height: 420)
             w.contentViewController = NSHostingController(rootView: SettingsWindowContent().environment(monitor))
@@ -203,7 +203,7 @@ final class StatusController: NSObject, NSPopoverDelegate {
         if popover.isShown { popover.performClose(nil) }
         let menu = NSMenu()
         func add(_ title: String, _ key: String = "", _ action: @escaping () -> Void) {
-            let i = NSMenuItem(title: title, action: #selector(MenuAction.run), keyEquivalent: key)
+            let i = NSMenuItem(title: L(title), action: #selector(MenuAction.run), keyEquivalent: key)
             let target = MenuAction(action)
             i.target = target
             i.representedObject = target   // o NSMenuItem não guarda o target: fica vivo assim

@@ -27,14 +27,14 @@ struct DisksView: View {
             HStack(spacing: DS.sm) {
                 Image(nsImage: NSWorkspace.shared.icon(forFile: v.path)).resizable().frame(width: 20, height: 20)
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(v.name).font(DS.body).lineLimit(1).truncationMode(.middle)
-                    Text(detail(v)).font(DS.meta.monospacedDigit()).foregroundStyle(Color.text3).lineLimit(1)
+                    Text(L(v.name)).font(DS.body).lineLimit(1).truncationMode(.middle)
+                    Text(L(detail(v))).font(DS.meta.monospacedDigit()).foregroundStyle(Color.text3).lineLimit(1)
                 }
                 Spacer(minLength: DS.sm)
                 if store.ejecting.contains(v.path) {
                     ProgressView().controlSize(.small)
                 } else {
-                    IconButton(systemName: "eject", help: "Ejetar \(v.name)") { Task { await store.eject(v) } }
+                    IconButton(systemName: "eject", help: String(localized: "Ejetar \(v.name)")) { Task { await store.eject(v) } }
                 }
             }
             if let m = store.messages[v.path] { note(m, color: .attentionText) }
@@ -47,7 +47,7 @@ struct DisksView: View {
 
     private func detail(_ v: Volume) -> String {
         var parts: [String] = []
-        if let free = v.free, let total = v.total, total > 0 { parts.append("\(Fmt.disk(free)) livres de \(Fmt.disk(total))") }
+        if let free = v.free, let total = v.total, total > 0 { parts.append(String(localized: "\(Fmt.disk(free)) livres de \(Fmt.disk(total))")) }
         if v.network { parts.append("rede") }
         return parts.isEmpty ? v.path : parts.joined(separator: " · ")
     }

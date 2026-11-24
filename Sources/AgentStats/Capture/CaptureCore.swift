@@ -50,7 +50,7 @@ enum CaptureCommand {
         let time = DateFormatter()
         time.locale = Locale(identifier: "en_US_POSIX")
         time.dateFormat = "HH.mm.ss"
-        let base = "\(prefix) \(day.string(from: date)) às \(time.string(from: date))"
+        let base = String(localized: "\(prefix) \(day.string(from: date)) às \(time.string(from: date))")
         var url = directory.appendingPathComponent("\(base).\(ext)")
         var n = 2
         while exists(url) {

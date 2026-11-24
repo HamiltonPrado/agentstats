@@ -34,7 +34,7 @@ struct UninstallView: View {
                 Button { store.choose(app) } label: {
                     HStack(spacing: DS.sm) {
                         Image(nsImage: NSWorkspace.shared.icon(forFile: app.path)).resizable().frame(width: 16, height: 16)
-                        Text(app.name).font(DS.body).lineLimit(1)
+                        Text(L(app.name)).font(DS.body).lineLimit(1)
                         Spacer(minLength: DS.sm)
                         Image(systemName: "chevron.right").font(DS.meta).foregroundStyle(Color.text3)
                     }
@@ -51,14 +51,14 @@ struct UninstallView: View {
         HStack(spacing: DS.sm) {
             IconButton(systemName: "chevron.left", help: "Voltar às apps") { store.cancel() }
             VStack(alignment: .leading, spacing: 2) {
-                Text(plan.app.name).font(DS.body.weight(.medium)).lineLimit(1)
-                Text(plan.app.bundleID).font(DS.meta).foregroundStyle(Color.text3).lineLimit(1).truncationMode(.middle)
+                Text(L(plan.app.name)).font(DS.body.weight(.medium)).lineLimit(1)
+                Text(L(plan.app.bundleID)).font(DS.meta).foregroundStyle(Color.text3).lineLimit(1).truncationMode(.middle)
             }
             Spacer(minLength: 0)
         }
         HStack(spacing: DS.sm) {
             Image(systemName: "checkmark.square.fill").foregroundStyle(Color.text2).frame(width: 16)
-            Text(store.shortPath(plan.app.path)).lineLimit(1).truncationMode(.middle)
+            Text(L(store.shortPath(plan.app.path))).lineLimit(1).truncationMode(.middle)
         }
         .font(DS.body)
 
@@ -84,7 +84,7 @@ struct UninstallView: View {
 
         if let message = store.message { note(message, color: .waitingText) }
         if store.confirming {
-            ConfirmBar(text: "Mover \(plan.app.name)\(selectionText) para o Lixo?", confirm: "Mover para o Lixo",
+            ConfirmBar(text: String(localized: "Mover \(plan.app.name)\(selectionText) para o Lixo?"), confirm: "Mover para o Lixo",
                        cancel: { store.confirming = false }, action: { store.moveToTrash() })
         } else {
             Button("Mover para o Lixo…") { store.confirming = true }.controlSize(.small)
@@ -95,7 +95,7 @@ struct UninstallView: View {
         switch store.selected.count {
         case 0: ", sem os restos,"
         case 1: " e 1 resto"
-        case let n: " e \(n) restos"
+        case let n: String(localized: " e \(n) restos")
         }
     }
 
@@ -108,7 +108,7 @@ struct UninstallView: View {
             HStack(spacing: DS.sm) {
                 Image(systemName: on ? "checkmark.square.fill" : "square")
                     .foregroundStyle(on ? AnyShapeStyle(.tint) : AnyShapeStyle(Color.text2)).frame(width: 16)
-                Text(store.shortPath(entry.path)).lineLimit(1).truncationMode(.middle)
+                Text(L(store.shortPath(entry.path))).lineLimit(1).truncationMode(.middle)
                 Spacer(minLength: 0)
             }
             .font(DS.meta)
@@ -116,7 +116,7 @@ struct UninstallView: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .help(entry.path)
+        .help(L(entry.path))
         .accessibilityValue(on ? "Selecionado" : "Não selecionado")
     }
 }

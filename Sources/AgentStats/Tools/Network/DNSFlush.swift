@@ -4,7 +4,7 @@ import SwiftUI
 enum DNSFlush {
     static let shellCommand = "/usr/bin/dscacheutil -flushcache; /usr/bin/killall -HUP mDNSResponder"
     static var script: String {
-        "do shell script \"\(shellCommand)\" with administrator privileges with prompt \"O AgentStats quer limpar a cache de DNS.\""
+        String(localized: "do shell script \"\(shellCommand)\" with administrator privileges with prompt \"O AgentStats quer limpar a cache de DNS.\"")
     }
 
     enum Outcome: Equatable { case done, cancelled, failed }

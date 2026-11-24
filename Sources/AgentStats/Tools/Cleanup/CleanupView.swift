@@ -29,7 +29,7 @@ struct CleanupView: View {
 
     @ViewBuilder private func group(_ title: String, _ entries: [CleanupEntry]) -> some View {
         if !entries.isEmpty {
-            Text(title).font(DS.meta.weight(.medium)).foregroundStyle(Color.text2).padding(.top, DS.xs)
+            Text(L(title)).font(DS.meta.weight(.medium)).foregroundStyle(Color.text2).padding(.top, DS.xs)
             ForEach(entries) { entry in row(entry) }
         }
     }
@@ -41,12 +41,12 @@ struct CleanupView: View {
                 box(entry, on: on).font(DS.body).frame(width: 16)
                 VStack(alignment: .leading, spacing: 2) {
                     HStack(spacing: DS.sm) {
-                        Text(entry.target.name).font(DS.body).foregroundStyle(entry.block == nil ? Color.primary : Color.text2)
+                        Text(L(entry.target.name)).font(DS.body).foregroundStyle(entry.block == nil ? Color.primary : Color.text2)
                         Spacer(minLength: DS.sm)
-                        Text((entry.complete ? "" : "pelo menos ") + Fmt.disk(entry.bytes))
+                        Text(L((entry.complete ? "" : "pelo menos ") + Fmt.disk(entry.bytes)))
                             .font(DS.body.monospacedDigit()).foregroundStyle(Color.text2).lineLimit(1)
                     }
-                    Text(entry.block?.text ?? entry.target.detail)
+                    Text(L(entry.block?.text ?? entry.target.detail))
                         .font(DS.meta)
                         .foregroundStyle(entry.block == nil ? Color.text3 : Color.waitingText)
                         .multilineTextAlignment(.leading)
@@ -59,7 +59,7 @@ struct CleanupView: View {
         .buttonStyle(.plain)
         // Sem .disabled: esbatia o motivo, que é o que se precisa de ler.
         .allowsHitTesting(entry.block == nil && !store.busy)
-        .help(store.shortPath(entry))
+        .help(L(store.shortPath(entry)))
         .accessibilityValue(entry.block != nil ? "Não disponível" : on ? "Selecionado" : "Não selecionado")
     }
 
@@ -84,7 +84,7 @@ struct CleanupView: View {
         } else if store.scanning && !store.entries.isEmpty {
             note("A confirmar tamanhos e o que está em uso…")
         } else if let pending = store.pending {
-            ConfirmBar(text: "Mover \(size(pending)) para o Lixo? \(pending.map(\.target.name).joined(separator: ", ")). Nada é apagado de vez.",
+            ConfirmBar(text: String(localized: "Mover \(size(pending)) para o Lixo? \(pending.map(\.target.name).joined(separator: ", ")). Nada é apagado de vez."),
                        confirm: "Mover para o Lixo",
                        cancel: { store.cancel() },
                        action: { Task { await store.moveToTrash() } })

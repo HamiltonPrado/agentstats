@@ -165,10 +165,10 @@ private struct MixerRowView: View {
         VStack(alignment: .leading, spacing: DS.xs) {
             HStack(spacing: DS.sm) {
                 appIcon.frame(width: 16, height: 16).accessibilityHidden(true)
-                Text(row.name).font(DS.body).lineLimit(1).truncationMode(.middle)
+                Text(L(row.name)).font(DS.body).lineLimit(1).truncationMode(.middle)
                 Spacer(minLength: DS.sm)
                 if let state = stateText {
-                    Text(state).font(DS.meta).lineLimit(1).help(state)
+                    Text(L(state)).font(DS.meta).lineLimit(1).help(L(state))
                         .foregroundStyle(isProblem ? AnyShapeStyle(Color.waitingText) : AnyShapeStyle(Color.text3))
                 }
             }
@@ -182,7 +182,7 @@ private struct MixerRowView: View {
                 }
                 .buttonStyle(.plain)
                 .help(row.muted ? "Ativar som" : "Silenciar")
-                .accessibilityLabel("\(row.muted ? "Ativar som de" : "Silenciar") \(row.name)")
+                .accessibilityLabel("\(L(row.muted ? "Ativar som de" : "Silenciar")) \(row.name)")
                 Slider(value: Binding(get: { row.level }, set: { mixer.setLevel(row.id, $0) }),
                        in: 0...Double(MixerMath.maxGain))
                     .controlSize(.small)

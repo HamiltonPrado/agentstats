@@ -45,8 +45,8 @@ enum CleanupBlock: Sendable, Equatable {
     var text: String {
         switch self {
         case .unknown: "Não consegui confirmar se está em uso, por isso não mexo."
-        case .app(let name): "Fecha o \(name) primeiro."
-        case .tool(let tool): "\(tool.name) está a correr."
+        case .app(let name): String(localized: "Fecha o \(name) primeiro.")
+        case .tool(let tool): String(localized: "\(tool.name) está a correr.")
         case .inUse: "Está em uso agora."
         }
     }
@@ -319,7 +319,7 @@ final class CleanupStore: ObservableObject {
         } else {
             let total: UInt64 = moved.reduce(UInt64(0)) { $0 + $1.bytes }
             let names: String = moved.map(\.target.name).joined(separator: ", ")
-            message = "\(Fmt.disk(total)) no Lixo (\(names)). O espaço só fica livre quando o esvaziares."
+            message = String(localized: "\(Fmt.disk(total)) no Lixo (\(names)). O espaço só fica livre quando o esvaziares.")
         }
         problems = failed
         moving = false

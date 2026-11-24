@@ -118,8 +118,8 @@ final class UpdateStore: ObservableObject {
         guard UserDefaults.standard.string(forKey: UpdateCheck.notifiedKey) != r.version else { return }
         UserDefaults.standard.set(r.version, forKey: UpdateCheck.notifiedKey)
         let content = UNMutableNotificationContent()
-        content.title = "AgentStats \(r.version) disponível"
-        content.body = UpdateCheck.installedWithHomebrew ? "Atualiza com: \(UpdateCheck.brewCommand)" : "Abre o painel para ver as novidades."
+        content.title = L(String(localized: "AgentStats \(r.version) disponível"))
+        content.body = L(UpdateCheck.installedWithHomebrew ? String(localized: "Atualiza com: \(UpdateCheck.brewCommand)") : "Abre o painel para ver as novidades.")
         UNUserNotificationCenter.current().add(UNNotificationRequest(identifier: "update-\(r.version)", content: content, trigger: nil))
     }
 

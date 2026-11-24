@@ -13,9 +13,9 @@ enum AgentState: Equatable {
 
     var label: String {
         switch self {
-        case .runningTool(let t): return "A executar \(t)"
+        case .runningTool(let t): return String(localized: "A executar \(t)")
         case .thinking: return "A pensar…"
-        case .needsApproval(let t): return "Precisa de aprovação · \(t)"
+        case .needsApproval(let t): return String(localized: "Precisa de aprovação · \(t)")
         case .needsAnswer: return "Tem uma pergunta para ti"
         case .waitingUser: return "À tua espera"
         case .finished: return "Terminada"
@@ -414,10 +414,11 @@ final class AgentReader {
         let t = oneLine(raw)
         guard let r = t.range(of: #"hit your (.+?) limit"#, options: .regularExpression) else { return t }
         let kind = t[r].replacingOccurrences(of: "hit your ", with: "").replacingOccurrences(of: " limit", with: "")
-        let name = kind == "5-hour" ? "de 5 horas" : kind == "weekly" ? "semanal" : kind.hasPrefix("Opus") || kind.hasPrefix("Sonnet") ? "semanal do \(kind.split(separator: " ").first!)" : kind
-        var out = "Limite \(name) atingido"
+        let name = kind == "5-hour" ? "de 5 horas" : kind == "weekly" ? "semanal" : kind.hasPrefix("Opus") || kind.hasPrefix("Sonnet") ? String(localized: "semanal do \(kind.split(separator: " ").first!)") : kind
+        var out = String(localized: "Limite \(name) atingido")
         if let rr = t.range(of: #"resets [^(]+"#, options: .regularExpression) {
-            out += " · renova " + t[rr].dropFirst("resets ".count).trimmingCharacters(in: .whitespaces)
+            let when = t[rr].dropFirst("resets ".count).trimmingCharacters(in: .whitespaces)
+            out += String(localized: " · renova \(when)")
         }
         return out
     }

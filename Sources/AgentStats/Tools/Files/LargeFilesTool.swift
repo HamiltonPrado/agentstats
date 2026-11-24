@@ -32,9 +32,9 @@ enum LargeFilesRules {
     /// "hoje", "há 3 dias", "há 5 meses", "há 2 anos".
     static func age(_ d: Date, now: Date) -> String {
         let c = Calendar.current.dateComponents([.year, .month, .day], from: d, to: now)
-        if let y = c.year, y > 0 { return y == 1 ? "há 1 ano" : "há \(y) anos" }
-        if let m = c.month, m > 0 { return m == 1 ? "há 1 mês" : "há \(m) meses" }
-        if let dd = c.day, dd > 0 { return dd == 1 ? "ontem" : "há \(dd) dias" }
+        if let y = c.year, y > 0 { return y == 1 ? "há 1 ano" : String(localized: "há \(y) anos") }
+        if let m = c.month, m > 0 { return m == 1 ? "há 1 mês" : String(localized: "há \(m) meses") }
+        if let dd = c.day, dd > 0 { return dd == 1 ? "ontem" : String(localized: "há \(dd) dias") }
         return "hoje"
     }
 
@@ -107,9 +107,9 @@ final class LargeFilesStore: ObservableObject {
         do {
             try FileManager.default.trashItem(at: URL(fileURLWithPath: f.path), resultingItemURL: nil)
             files.removeAll { $0.id == f.id }
-            message = "\(f.name) foi para o Lixo. O espaço fica livre quando o esvaziares."
+            message = String(localized: "\(f.name) foi para o Lixo. O espaço fica livre quando o esvaziares.")
         } catch {
-            message = "Não consegui mover \(f.name) para o Lixo."
+            message = String(localized: "Não consegui mover \(f.name) para o Lixo.")
         }
     }
 

@@ -130,7 +130,7 @@ final class StartupStore: ObservableObject {
             _ = await ToolRunner.run("/bin/launchctl", ["bootout", domain, item.plist], timeout: 15)      // pode não estar a correr
             ok = await ToolRunner.run("/bin/launchctl", ["disable", "\(domain)/\(item.label)"], timeout: 15).ok
         }
-        if !ok { message = "Não consegui \(enabled ? "ligar" : "desligar") \(item.title)." }
+        if !ok { message = String(localized: "Não consegui \(L(enabled ? "ligar" : "desligar")) \(item.title).") }
         busy.remove(item.id)
         await refresh()
     }

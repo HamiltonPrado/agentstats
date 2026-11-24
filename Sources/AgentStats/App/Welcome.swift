@@ -19,7 +19,7 @@ final class WelcomeWindow {
     static func show() {
         let w = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 460, height: 560), styleMask: [.titled, .closable],
                          backing: .buffered, defer: false)
-        w.title = "Bem-vindo ao AgentStats"
+        w.title = L("Bem-vindo ao AgentStats")
         w.isReleasedWhenClosed = false
         w.contentViewController = NSHostingController(rootView: WelcomeView {
             UserDefaults.standard.set(true, forKey: Welcome.shownKey)
@@ -72,8 +72,8 @@ struct WelcomeView: View {
         HStack(alignment: .top, spacing: DS.md) {
             Image(systemName: symbol).font(.title3).foregroundStyle(Color.accentColor).frame(width: 28)
             VStack(alignment: .leading, spacing: 2) {
-                Text(title).font(DS.body.weight(.medium))
-                Text(text).font(DS.meta).foregroundStyle(Color.text2).fixedSize(horizontal: false, vertical: true)
+                Text(L(title)).font(DS.body.weight(.medium))
+                Text(L(text)).font(DS.meta).foregroundStyle(Color.text2).fixedSize(horizontal: false, vertical: true)
             }
         }
     }

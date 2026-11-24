@@ -49,7 +49,7 @@ enum ScreenReading {
 
     static func rgbText(_ c: NSColor) -> String {
         let (r, g, b) = rgb(c)
-        return "rgb(\(r), \(g), \(b))"
+        return String(localized: "rgb(\(r), \(g), \(b))")
     }
 
     static func rgb(_ c: NSColor) -> (Int, Int, Int) {
@@ -103,7 +103,7 @@ final class ScreenToolsStore: ObservableObject {
             copy(text)
             result = .text(text)
             let lines = text.split(separator: "\n").count
-            notify("Texto copiado", lines == 1 ? text : "\(lines) linhas: " + text.prefix(80))
+            notify("Texto copiado", lines == 1 ? text : String(localized: "\(lines) linhas: ") + text.prefix(80))
         }
     }
 
@@ -145,8 +145,8 @@ final class ScreenToolsStore: ObservableObject {
 
     private func notify(_ title: String, _ body: String) {
         let c = UNMutableNotificationContent()
-        c.title = title
-        c.body = String(body.prefix(200))
+        c.title = L(title)
+        c.body = L(String(L(body).prefix(200)))
         UNUserNotificationCenter.current().add(UNNotificationRequest(identifier: "screen-\(UUID().uuidString)", content: c, trigger: nil))
     }
 

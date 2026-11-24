@@ -77,18 +77,18 @@ struct DayChart: View {
         let vals = Self.downsampled(samples.compactMap(value))
         VStack(alignment: .leading, spacing: DS.xs) {
             HStack {
-                Text(samples.count > 1440 ? "Últimos 7 dias" : "Histórico · até 7 dias").font(DS.meta).foregroundStyle(Color.text2)
+                Text(L(samples.count > 1440 ? "Últimos 7 dias" : "Histórico · até 7 dias")).font(DS.meta).foregroundStyle(Color.text2)
                 Spacer()
                 if let mx = vals.max() {
-                    Text("máximo " + format(mx)).font(DS.meta.monospacedDigit()).foregroundStyle(Color.text3)
+                    Text(String(localized: "máximo \(format(mx))")).font(DS.meta.monospacedDigit()).foregroundStyle(Color.text3)
                 }
             }
             if vals.count > 1 {
                 Sparkline(values: vals, maxValue: maxValue, color: .secondary).frame(height: 32)
                     .accessibilityLabel("\(title) no histórico de até sete dias")
-                    .accessibilityValue(vals.max().map { "máximo " + format($0) } ?? "")
+                    .accessibilityValue(vals.max().map { String(localized: "máximo \(format($0))") } ?? "")
                 HStack {
-                    Text(samples.first.map { Self.hour($0.t) } ?? "").font(DS.meta.monospacedDigit()).foregroundStyle(Color.text3)
+                    Text(L(samples.first.map { Self.hour($0.t) } ?? "")).font(DS.meta.monospacedDigit()).foregroundStyle(Color.text3)
                     Spacer()
                     Text("agora").font(DS.meta).foregroundStyle(Color.text3)
                 }

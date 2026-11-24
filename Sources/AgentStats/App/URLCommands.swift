@@ -48,9 +48,9 @@ enum URLCommand: Equatable {
 
     /// "Hoje: 2,8M tokens, ~$3,39 · semana: 14M tokens, ~$21" — vai para o clipboard, onde um atalho o lê.
     static func usageText(_ u: UsageSnapshot) -> String {
-        var today = "Hoje: \(Fmt.tokens(u.todayTotal.total)) tokens"
+        var today = String(localized: "Hoje: \(Fmt.tokens(u.todayTotal.total)) tokens")
         if u.todayCost >= 0.01 { today += ", ~" + Fmt.usd(u.todayCost) }
-        var week = "semana: \(Fmt.tokens(u.weekTotal.total)) tokens"
+        var week = String(localized: "semana: \(Fmt.tokens(u.weekTotal.total)) tokens")
         if u.weekCost >= 0.01 { week += ", ~" + Fmt.usd(u.weekCost) }
         return today + " · " + week
     }

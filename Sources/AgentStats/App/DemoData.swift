@@ -105,7 +105,7 @@ enum DemoData {
         temps.chipAvg = 45.1
         temps.ssd = 36.4
         temps.battery = 30.2
-        for i in 1...24 { temps.sensors.append((name: "Sensor \(i)", value: 40 + Double(i) / 2)) }
+        for i in 1...24 { temps.sensors.append((name: String(localized: "Sensor \(i)"), value: 40 + Double(i) / 2)) }
         m.temps = temps
 
         var battery = BatterySample()

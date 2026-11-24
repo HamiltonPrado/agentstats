@@ -17,7 +17,7 @@ struct ClipboardView: View {
         VStack(alignment: .leading, spacing: DS.md) {
             if store.items.count + store.snippets.count > 5 || !search.value.isEmpty { searchField }
             if let error = store.storageError {
-                Text(error).font(DS.meta).foregroundStyle(Color.waitingText).fixedSize(horizontal: false, vertical: true)
+                Text(L(error)).font(DS.meta).foregroundStyle(Color.waitingText).fixedSize(horizontal: false, vertical: true)
             }
             historyCard
             snippetsCard
@@ -128,7 +128,7 @@ struct ClipboardView: View {
             note("1–9 ou ↑↓ e Enter colam na app onde estavas.")
             HStack(spacing: DS.sm) {
                 if ordered.count > Self.shortList && search.value.isEmpty {
-                    textLink(showAll.value ? "Mostrar menos" : "Mostrar os \(ordered.count)") { showAll.value.toggle() }
+                    textLink(showAll.value ? "Mostrar menos" : String(localized: "Mostrar os \(ordered.count)")) { showAll.value.toggle() }
                 }
                 Spacer(minLength: 0)
                 if confirmClear.value {
@@ -149,12 +149,12 @@ struct ClipboardView: View {
 
     private func historyRow(_ item: ClipItem, number: Int?) -> some View {
         HStack(spacing: 0) {
-            Text(number.map(String.init) ?? "").font(DS.meta.monospacedDigit()).foregroundStyle(Color.text3)
+            Text(L(number.map(String.init) ?? "")).font(DS.meta.monospacedDigit()).foregroundStyle(Color.text3)
                 .frame(width: 14, alignment: .leading)
             copyButton(id: item.id, text: item.text) {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(ClipboardRules.preview(item.text)).font(DS.body).lineLimit(1).truncationMode(.tail)
-                    Text(copied.value == item.id ? "Copiado" : Fmt.ago(item.date))
+                    Text(L(ClipboardRules.preview(item.text))).font(DS.body).lineLimit(1).truncationMode(.tail)
+                    Text(L(copied.value == item.id ? "Copiado" : Fmt.ago(item.date)))
                         .font(DS.meta)
                         .foregroundStyle(copied.value == item.id ? AnyShapeStyle(Color.workingText) : AnyShapeStyle(Color.text3))
                 }
@@ -197,8 +197,8 @@ struct ClipboardView: View {
         HStack(spacing: 0) {
             copyButton(id: snippet.id, text: snippet.text) {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(snippet.name).font(DS.body).lineLimit(1)
-                    Text(copied.value == snippet.id ? "Copiado" : ClipboardRules.preview(snippet.text))
+                    Text(L(snippet.name)).font(DS.body).lineLimit(1)
+                    Text(L(copied.value == snippet.id ? "Copiado" : ClipboardRules.preview(snippet.text)))
                         .font(DS.meta).lineLimit(1)
                         .foregroundStyle(copied.value == snippet.id ? AnyShapeStyle(Color.workingText) : AnyShapeStyle(Color.text3))
                 }

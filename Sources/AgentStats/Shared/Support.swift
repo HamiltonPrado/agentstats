@@ -34,12 +34,12 @@ enum ProcessKiller {
     static func confirmAndTerminate(pid: Int, name: String, force: Bool = false) {
         let alert = NSAlert()
         alert.alertStyle = .warning
-        alert.messageText = force ? "Forçar a terminação de \(name)?" : "Terminar \(name)?"
+        alert.messageText = L(force ? String(localized: "Forçar a terminação de \(name)?") : String(localized: "Terminar \(name)?"))
         alert.informativeText = force
-            ? "O processo (PID \(pid)) é terminado de imediato. O trabalho que não estiver guardado perde-se."
-            : "É pedido ao processo (PID \(pid)) que termine. O trabalho que não estiver guardado pode perder-se."
-        alert.addButton(withTitle: force ? "Forçar" : "Terminar")
-        alert.addButton(withTitle: "Cancelar")
+            ? String(localized: "O processo (PID \(pid)) é terminado de imediato. O trabalho que não estiver guardado perde-se.")
+            : String(localized: "É pedido ao processo (PID \(pid)) que termine. O trabalho que não estiver guardado pode perder-se.")
+        alert.addButton(withTitle: L(force ? "Forçar" : "Terminar"))
+        alert.addButton(withTitle: L("Cancelar"))
         NSApp.activate(ignoringOtherApps: true)
         guard alert.runModal() == .alertFirstButtonReturn else { return }
         if kill(pid_t(pid), force ? SIGKILL : SIGTERM) != 0 {

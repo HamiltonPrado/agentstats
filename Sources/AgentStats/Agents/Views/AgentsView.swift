@@ -107,7 +107,7 @@ struct AgentsView: View {
             Button { isFilterPopoverShown.value.toggle() } label: {
                 HStack(spacing: DS.xs) {
                     Image(systemName: "line.3.horizontal.decrease")
-                    Text((AgentSessionFilter(rawValue: selectedFilter.value) ?? .all).title)
+                    Text(L((AgentSessionFilter(rawValue: selectedFilter.value) ?? .all).title))
                 }
                 .font(DS.meta)
                 .foregroundStyle(selectedFilter.value == AgentSessionFilter.all.rawValue ? Color.text2 : Color.primary)
@@ -128,7 +128,7 @@ struct AgentsView: View {
                             isFilterPopoverShown.value = false
                         } label: {
                             HStack {
-                                Text(filter.title)
+                                Text(L(filter.title))
                                 Spacer(minLength: DS.md)
                                 if filter.rawValue == selectedFilter.value {
                                     Image(systemName: "checkmark").foregroundStyle(Color.text2)

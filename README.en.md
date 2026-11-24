@@ -12,22 +12,22 @@
 **[Download the latest release](https://github.com/HamiltonPrado/agentstats/releases/latest)** · [Website](https://hamiltonprado.github.io/agentstats) · [Report an issue](https://github.com/HamiltonPrado/agentstats/issues)
 
 <p align="center">
-  <img src="Resources/screenshots/menubar.png" alt="Agents and metrics in the menu bar" width="600">
+  <img src="Resources/screenshots/en/menubar.png" alt="Agents and metrics in the menu bar" width="600">
 </p>
 
 <p align="center">
-  <img src="Resources/screenshots/agents-dark.png" alt="Agents, limits and costs" width="260">
-  <img src="Resources/screenshots/system-dark.png" alt="System metrics" width="260">
-  <img src="Resources/screenshots/audio-dark.png" alt="Volume mixer" width="260">
+  <img src="Resources/screenshots/en/agents-dark.png" alt="Agents, limits and costs" width="260">
+  <img src="Resources/screenshots/en/system-dark.png" alt="System metrics" width="260">
+  <img src="Resources/screenshots/en/audio-dark.png" alt="Volume mixer" width="260">
 </p>
 
 <p align="center">
-  <img src="Resources/screenshots/clipboard-dark.png" alt="Clipboard and snippets" width="260">
-  <img src="Resources/screenshots/capture-dark.png" alt="Capture and recording" width="260">
-  <img src="Resources/screenshots/tools-dark.png" alt="Tools" width="260">
+  <img src="Resources/screenshots/en/clipboard-dark.png" alt="Clipboard and snippets" width="260">
+  <img src="Resources/screenshots/en/capture-dark.png" alt="Capture and recording" width="260">
+  <img src="Resources/screenshots/en/tools-dark.png" alt="Tools" width="260">
 </p>
 
-<p align="center"><sub>Screenshots use demo data. The interface is in Portuguese.</sub></p>
+<p align="center"><sub>Screenshots use demo data.</sub></p>
 
 ## What you can monitor
 
@@ -88,7 +88,7 @@
 
 ### Make it yours
 
-Configurable menu bar, tabs of your choice (which ones, in what order, and which one opens first), ⌥⌘1 to ⌥⌘8 shortcuts for each, alert limits with any value, global shortcut, profiles, theme, color, width, text size, keep awake (for a set time or while agents are working), launch at login, and support for VoiceOver and Reduce Motion.
+Configurable menu bar, tabs of your choice (which ones, in what order, and which one opens first), ⌥⌘1 to ⌥⌘8 shortcuts for each, alert limits with any value, global shortcut, profiles, theme, color, width, text size, keep awake (for a set time or while agents are working), launch at login, and support for VoiceOver and Reduce Motion. The interface is in English and Portuguese: it follows your Mac's language, or choose one in Settings → General.
 
 It behaves like other menu bar icons: right-click opens a menu with the tabs, quick toggles, Settings, and Quit, and clicking outside the panel, including on the desktop, closes it.
 

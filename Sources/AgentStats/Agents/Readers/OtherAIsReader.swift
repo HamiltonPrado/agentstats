@@ -96,7 +96,7 @@ final class OtherAIsReader {
         let isBusy = process.cpu > 1.5 || !process.children.isEmpty
         let state: AgentState = isBusy ? (process.children.first.map { .runningTool($0) } ?? .thinking) : .waitingUser
 
-        let title = info.title ?? "Sessão Aider (\((cwd as NSString).lastPathComponent))"
+        let title = info.title ?? String(localized: "Sessão Aider (\((cwd as NSString).lastPathComponent))")
         let detail = isBusy ? (process.children.first ?? "A editar código") : (info.detail ?? "À tua espera")
 
         return AgentSession(
@@ -181,7 +181,7 @@ final class OtherAIsReader {
         let isBusy = process.cpu > 1.5 || !process.children.isEmpty
         let state: AgentState = isBusy ? (process.children.first.map { .runningTool($0) } ?? .thinking) : .waitingUser
         let project = process.cwd.map { ($0 as NSString).lastPathComponent } ?? "Goose"
-        let title = latestTitle.map { "\($0) (\(project))" } ?? "Goose (\(project))"
+        let title = latestTitle.map { "\($0) (\(project))" } ?? String(localized: "Goose (\(project))")
 
         return AgentSession(
             id: gooseDb,
@@ -208,7 +208,7 @@ final class OtherAIsReader {
         return AgentSession(
             id: "gemini-cli-\(process.pid)",
             kind: "Gemini CLI",
-            title: "Gemini CLI (\(project))",
+            title: String(localized: "Gemini CLI (\(project))"),
             cwd: process.cwd,
             model: "Gemini",
             state: state,

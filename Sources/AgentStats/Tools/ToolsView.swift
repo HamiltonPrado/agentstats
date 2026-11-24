@@ -53,7 +53,7 @@ struct ToolsView: View {
 
     private func sectionButton(_ item: ToolSection) -> some View {
         Button { section = item } label: {
-            Text(item.title)
+            Text(L(item.title))
                 .font(DS.body.weight(.medium)).lineLimit(1).minimumScaleFactor(0.75)
                 .padding(.horizontal, DS.xs)
                 .foregroundStyle(section == item ? Color.primary : Color.text2)

@@ -120,7 +120,7 @@ struct CleaningScreen: View {
                     .font(.system(size: 22, weight: .medium)).foregroundStyle(Color(white: 0.8))
                 if let end = store.endsAt {
                     TimelineView(.periodic(from: .now, by: 1)) { context in
-                        Text("Sai sozinho em " + Self.clock(end.timeIntervalSince(context.date)))
+                        Text(String(localized: "Sai sozinho em \(Self.clock(end.timeIntervalSince(context.date)))"))
                             .font(.system(size: 14).monospacedDigit()).foregroundStyle(Color(white: 0.6))
                     }
                 }
