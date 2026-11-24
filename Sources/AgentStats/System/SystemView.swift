@@ -157,6 +157,7 @@ struct SystemView: View {
             Divider().opacity(0.5)
             DayChart(samples: m.day, value: { $0.cpu }, maxValue: 1, title: "CPU", format: Fmt.pct)
             StatRow(label: "Chip", value: m.machine.replacingOccurrences(of: "Apple ", with: ""))
+            topProcesses(byMemory: false)
         }
     }
 
@@ -188,6 +189,22 @@ struct SystemView: View {
                     valueColor: m.memory.pressure >= 4 ? .attentionText : m.memory.pressure >= 2 ? .waitingText : .primary)
             Divider().opacity(0.5)
             DayChart(samples: m.day, value: { $0.mem }, maxValue: 1, title: "Memória", format: Fmt.pct)
+            topProcesses(byMemory: true)
+        }
+    }
+
+    /// Os 5 que mais gastam, com o mesmo menu do separador Processos (terminar, forçar, copiar PID).
+    @ViewBuilder private func topProcesses(byMemory: Bool) -> some View {
+        let list = Array((byMemory ? m.topMemory : m.topProcesses).prefix(5))
+        if let first = list.first {
+            let maxValue = max(byMemory ? Double(first.rssKB) : first.cpu, 1)
+            Divider().opacity(0.5)
+            Text("Os que mais gastam").font(DS.body.weight(.medium))
+            VStack(spacing: 0) {
+                ForEach(list) { p in ProcRow(p: p, sortByMem: byMemory, maxValue: maxValue) }
+            }
+            .padding(.horizontal, -DS.sm)
+            Text("Botão direito num processo para o terminar").font(DS.meta).foregroundStyle(Color.text3)
         }
     }
 
@@ -226,9 +243,14 @@ struct SystemView: View {
                 if let w = b.watts, w > 0.1, b.isCharging { StatRow(label: "Potência de carga", value: Fmt.num(w, 1) + " W") }
                 if let h = b.health { StatRow(label: "Saúde", value: Fmt.pct(h)) }
                 StatRow(label: "Ciclos", value: "\(b.cycles)")
+                if let c = BatteryHistory.change(m.batteryDays) {
+                    if let h = c.from.health { StatRow(label: "Saúde há \(c.days) dias", value: Fmt.pct(h)) }
+                    StatRow(label: "Ciclos em \(c.days) dias", value: "+\(max(0, c.to.cycles - c.from.cycles))")
+                }
                 if let t = m.temps?.battery ?? b.temperature { StatRow(label: "Temperatura", value: Fmt.temp(t)) }
                 Divider().opacity(0.5)
                 energySection
+                sinceUnplugSection
                 Divider().opacity(0.5)
                 DayChart(samples: m.day, value: { $0.battery }, maxValue: 1, title: "Bateria", format: Fmt.pct)
             }
@@ -245,7 +267,7 @@ struct SystemView: View {
         Text("Apps que gastam mais").font(DS.body.weight(.medium))
         if let apps = m.energyApps {
             let most = max(apps.first?.watts ?? 0, 0.01)
-            ForEach(apps) { app in
+            ForEach(apps.prefix(5)) { app in
                 VStack(alignment: .leading, spacing: DS.xs) {
                     StatRow(label: app.name, value: Fmt.num(app.watts, 2) + " W")
                     Bar(value: app.watts / most, color: .secondary.opacity(0.5), height: 2)
@@ -257,6 +279,29 @@ struct SystemView: View {
         } else {
             Text("A medir…").font(DS.meta).foregroundStyle(Color.text3)
         }
+    }
+
+    @ViewBuilder private var sinceUnplugSection: some View {
+        let e = m.energySinceUnplug
+        let apps = e.top()
+        if let since = e.since, !apps.isEmpty {
+            Divider().opacity(0.5)
+            Text(e.onBattery ? "Desde que saiu da corrente" : "Na última vez na bateria").font(DS.body.weight(.medium))
+            let most = max(apps[0].joules, 1)
+            ForEach(apps) { app in
+                VStack(alignment: .leading, spacing: DS.xs) {
+                    StatRow(label: app.name, value: Self.wattHours(app.joules))
+                    Bar(value: app.joules / most, color: .secondary.opacity(0.5), height: 2)
+                }
+            }
+            Text("Na bateria desde \(since.formatted(date: .omitted, time: .shortened)). Só conta com o AgentStats aberto.")
+                .font(DS.meta).foregroundStyle(Color.text3).fixedSize(horizontal: false, vertical: true)
+        }
+    }
+
+    nonisolated static func wattHours(_ joules: Double) -> String {
+        let wh = joules / 3600
+        return Fmt.num(wh, wh < 1 ? 2 : 1) + " Wh"
     }
 
     private var networkDetail: some View {

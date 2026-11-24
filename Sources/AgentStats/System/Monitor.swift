@@ -34,6 +34,9 @@ final class Monitor {
     var usage = UsageSnapshot()
     /// As apps que mais gastaram energia na última leitura (nil até haver duas leituras).
     var energyApps: [AppEnergy]?
+    var energySinceUnplug = EnergySinceUnplug()
+    var batteryDays: [BatteryDay] = []
+    @ObservationIgnored private var demoMode = false
     /// Limites do plano do Claude (pelo Claude Code ou, em alternativa, pela app Claude).
     var claudeLimits: PlanLimits?
     var claudeLimitsStatus: ClaudeLimitsFetcher.Outcome?
@@ -140,7 +143,9 @@ final class Monitor {
 
     /// `demo`: não lê o Mac, não carrega nem grava históricos e não pede permissões (ver `DemoData`).
     init(demo: Bool = false) {
+        demoMode = demo
         guard !demo else { return }
+        batteryDays = BatteryHistory.load()
         day = History24h.load()
         activityHistory = AgentActivityHistoryStore.load()
         keepAwakeController.onTimeout = { [weak self] in self?.keepAwake = false }
@@ -214,6 +219,15 @@ final class Monitor {
         return l
     }
 
+    /// Uma leitura por dia, gravada só quando muda.
+    private func recordBatteryDay(_ b: BatterySample) {
+        guard !demoMode, b.cycles > 0 || b.health != nil else { return }
+        let next = BatteryHistory.recording(batteryDays, health: b.health.map { ($0 * 1000).rounded() / 1000 }, cycles: b.cycles, now: Date())
+        guard next != batteryDays else { return }
+        batteryDays = next
+        BatteryHistory.save(next)
+    }
+
     private func apply(_ s: Sample) {
         cpu = s.cpu
         memory = s.memory
@@ -222,9 +236,16 @@ final class Monitor {
         gpu = s.gpu
         if let t = s.temps { temps = t }
         if let t = temps?.cpuMax { tempHistory.push(t) }
-        if let b = s.battery { battery = b }
+        if let b = s.battery {
+            battery = b
+            recordBatteryDay(b)
+        }
         if let u = s.usage { usage = u }
-        if let e = s.energy { energyApps = e }
+        if let e = s.energy {
+            energyApps = e
+            let onBattery = battery.map { !$0.externalPower && !$0.isCharging } ?? false
+            energySinceUnplug.add(e, onBattery: onBattery, now: Date())
+        }
         if let a = s.agents {
             topProcesses = a.topCPU
             topMemory = a.topMemory

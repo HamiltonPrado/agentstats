@@ -5,6 +5,8 @@ struct AppEnergy: Sendable, Equatable, Identifiable {
     var id: String
     var name: String
     var watts: Double
+    /// Energia gasta no intervalo da leitura.
+    var joules: Double = 0
 }
 
 /// Energia gasta por app, pelo contador que o macOS mantém em cada processo (`ri_energy_nj`).
@@ -48,7 +50,9 @@ final class EnergyReader {
         for (key, energy) in current {
             guard let old = previous[key], energy > old else { continue }
             let (id, name) = app(key)
-            totals[id, default: AppEnergy(id: id, name: name, watts: 0)].watts += Double(energy - old) / 1e9 / seconds
+            let joules = Double(energy - old) / 1e9
+            totals[id, default: AppEnergy(id: id, name: name, watts: 0)].watts += joules / seconds
+            totals[id]!.joules += joules
         }
         let visible = totals.values.filter { $0.watts >= 0.01 }
         return Array(visible.sorted { $0.watts > $1.watts }.prefix(limit))

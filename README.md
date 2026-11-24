@@ -43,6 +43,7 @@
 ### Sistema e processos
 
 - CPU, memória, GPU, temperaturas, rede, disco e bateria, com histórico até 7 dias e alertas.
+- Os 5 processos que mais gastam CPU e memória, que se terminam com o botão direito. Na bateria: as apps que mais gastaram desde que saiu da corrente, e a saúde e os ciclos ao longo dos meses.
 - Apps que gastam mais energia, processos mais pesados e pastas que ocupam mais espaço.
 - Disco por categorias, com as cores e as unidades do macOS. Mede-se por pastas ao abrir o cartão, por isso é aproximado.
 - Teste de velocidade manual pelo Cloudflare: cerca de **32 MB por teste**; as medições podem ser recolhidas de forma agregada.

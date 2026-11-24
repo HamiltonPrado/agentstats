@@ -110,6 +110,13 @@ enum DemoData {
             AppEnergy(id: "node", name: "node", watts: 0.86),
             AppEnergy(id: "music", name: "Music", watts: 0.21),
         ]
+        m.energySinceUnplug = .demo(since: now.addingTimeInterval(-2.5 * 3600), apps: [
+            AppEnergy(id: "safari", name: "Safari", watts: 0, joules: 14_400),
+            AppEnergy(id: "node", name: "node", watts: 0, joules: 8_300),
+            AppEnergy(id: "music", name: "Music", watts: 0, joules: 1_900),
+        ])
+        m.batteryDays = [BatteryDay(day: BatteryHistory.dayString(now.addingTimeInterval(-90 * 86_400)), health: 0.98, cycles: 96),
+                         BatteryDay(day: BatteryHistory.dayString(now), health: 0.96, cycles: 120)]
 
         m.cpuHistory = wave(0.23, 0.07, 0.31)
         m.memHistory = wave(0.54, 0.02, 0.12)

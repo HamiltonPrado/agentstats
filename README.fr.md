@@ -43,6 +43,7 @@
 ### Système et processus
 
 - Processeur, mémoire, GPU, températures, réseau, disque et batterie, avec historique jusqu’à 7 jours et alertes.
+- Les 5 processus qui consomment le plus de processeur et de mémoire, à quitter d’un clic droit. Sur batterie : les apps qui ont le plus consommé depuis le débranchement, et la santé et les cycles au fil des mois.
 - Applications les plus énergivores, processus les plus lourds et dossiers les plus volumineux.
 - Disque par catégories, avec les couleurs et les unités de macOS. Il est mesuré par dossiers à l’ouverture de la carte, donc approximatif.
 - Test de débit manuel via Cloudflare : environ **32 Mo par test** ; les mesures peuvent être collectées sous forme agrégée.

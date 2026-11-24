@@ -85,7 +85,7 @@ actor Sampler {
                 sessions: sessions)
         }
         if r.usage { s.usage = usageTracker.update() }
-        if r.energy { s.energy = energyReader.read() }
+        if r.energy { s.energy = energyReader.read(limit: 40) }   // todas as que contam, para somar desde a última carga
         return s
     }
 }

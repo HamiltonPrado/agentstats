@@ -43,6 +43,7 @@
 ### System and processes
 
 - CPU, memory, GPU, temperatures, network, disk, and battery, with up to 7 days of history and alerts.
+- The top 5 processes by CPU and memory, which you can quit with a right-click. On battery: the apps that used the most energy since unplugging, and battery health and cycles over the months.
 - Apps using the most energy, heaviest processes, and largest folders.
 - Disk by category, with the colors and units macOS uses. It is measured by folder when the card opens, so it is approximate.
 - Manual speed test through Cloudflare: about **32 MB per test**; measurements may be collected in aggregate.
