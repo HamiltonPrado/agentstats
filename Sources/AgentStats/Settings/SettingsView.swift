@@ -37,6 +37,7 @@ struct SettingsView: View {
     @StateObject private var login = Box(SMAppService.mainApp.status == .enabled)
     @StateObject private var loginErr = Box<String?>(nil)
     @StateObject private var savedProfile = Box<String?>(nil)
+    @StateObject private var transferNote = Box<String?>(nil)
 
     var body: some View {
         VStack(alignment: .leading, spacing: DS.lg) {
@@ -158,6 +159,16 @@ struct SettingsView: View {
                             } catch { loginErr.value = error.localizedDescription }
                         }))
                     if let e = loginErr.value { Text(e).font(DS.meta).foregroundStyle(Color.attentionText) }
+                    HStack(spacing: DS.md) {
+                        icon("square.and.arrow.up.on.square")
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Definições noutro Mac").font(DS.body)
+                            Text(transferNote.value ?? "Um ficheiro com as tuas escolhas, sem histórico").font(DS.meta).foregroundStyle(Color.text3)
+                        }
+                        Spacer()
+                        Button("Exportar…") { transferNote.value = SettingsFiles.exportSettings() }.controlSize(.small)
+                        Button("Importar…") { transferNote.value = SettingsFiles.importSettings() }.controlSize(.small)
+                    }
                     row("arrow.down.circle", "Procurar versões novas", "Uma vez por dia, no GitHub", Binding(
                         get: { updates.enabled }, set: { updates.enabled = $0 }))
                 }
@@ -286,7 +297,11 @@ struct SettingsView: View {
                             Toggle("", isOn: metric.isEnabled)
                                 .toggleStyle(.switch).controlSize(.mini).labelsHidden()
                         }
+                        .contentShape(Rectangle())
+                        .draggable(metric.id)
+                        .dropDestination(for: String.self) { items, _ in moveMetric(items.first, to: metric.id) }
                     }
+                    note("Arrasta para mudar a ordem.")
                 }
             }
         }
@@ -359,7 +374,15 @@ struct SettingsView: View {
                                 .toggleStyle(.switch).controlSize(.mini).labelsHidden()
                                 .disabled(shown == [tab])   // fica sempre pelo menos um
                         }
+                        .contentShape(Rectangle())
+                        .draggable(tab.rawValue)
+                        .dropDestination(for: String.self) { items, _ in
+                            guard let raw = items.first, let dragged = Tab(rawValue: raw) else { return false }
+                            tabOrder = TabLayout.moving(order: tabOrder, dragged, to: tab)
+                            return true
+                        }
                     }
+                    note("Arrasta para mudar a ordem.")
                     Divider().opacity(0.5)
                     HStack(spacing: DS.md) {
                         icon("arrow.right.square")
@@ -436,6 +459,20 @@ struct SettingsView: View {
                     if m.limitAlertsEnabled {
                         limit("Avisar aos", bm.limitAlertLevel, in: 50...95, step: 5) { Fmt.num($0, 0) + "%" }
                     }
+                    row("dollarsign.circle", "Orçamento de custo", "Estimado a preços de API; avisa aos 80% e aos 100%", bm.budgetEnabled)
+                    if m.budgetEnabled {
+                        HStack(spacing: DS.md) {
+                            Text("Período").font(DS.body)
+                            Spacer()
+                            Picker("Período", selection: bm.budgetPeriod) {
+                                ForEach(Budget.Period.allCases) { Text($0.title).tag($0) }
+                            }
+                            .pickerStyle(.segmented).labelsHidden().frame(width: 180)
+                        }
+                        .padding(.leading, 28)
+                        limit("Orçamento", bm.budgetAmount, in: 1...200, step: 1) { "$" + Fmt.num($0, 0) }
+                    }
+                    row("calendar", "Resumo semanal", "Tokens, custo e projetos da semana, numa notificação", bm.weeklySummaryEnabled)
                     row("hourglass", "Lembretes de espera", "Avisa se um agente continuar à espera", bm.waitingAlertEnabled)
                     if m.waitingAlertEnabled {
                         limit("Lembrar após", bm.waitingAlertMinutes, in: 1...60, step: 1) { Fmt.num($0, 0) + " min" }
@@ -523,6 +560,15 @@ struct SettingsView: View {
         densityRawValue = snapshot.density
         appearanceThemeRaw = snapshot.theme
         accentHex = snapshot.accentHex
+    }
+
+    private func moveMetric(_ dragged: String?, to target: String) -> Bool {
+        var ids = orderedMetrics.map(\.id)
+        guard let dragged, dragged != target, let from = ids.firstIndex(of: dragged), let to = ids.firstIndex(of: target) else { return false }
+        ids.remove(at: from)
+        ids.insert(dragged, at: to)
+        barOrder = ids.joined(separator: ",")
+        return true
     }
 
     private func moveMetric(from index: Int, by offset: Int) {

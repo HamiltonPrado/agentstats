@@ -8,6 +8,8 @@ struct ClipboardView: View {
     @StateObject private var showAll = Box(false)
     @StateObject private var confirmClear = Box(false)
     @StateObject private var confirmDelete = Box<UUID?>(nil)
+    @StateObject private var selected = Box<Int?>(nil)
+    @StateObject private var pasteNote = Box<String?>(nil)
 
     private static let shortList = 8
 
@@ -20,6 +22,20 @@ struct ClipboardView: View {
             historyCard
             snippetsCard
         }
+        .focusable()
+        .focusEffectDisabled()
+        .onKeyPress(.downArrow) { move(1) }
+        .onKeyPress(.upArrow) { move(-1) }
+        .onKeyPress(.return) {
+            guard let i = selected.value, visibleItems.indices.contains(i) else { return .ignored }
+            paste(visibleItems[i].text)
+            return .handled
+        }
+        .onKeyPress(characters: CharacterSet(charactersIn: "123456789")) { press in
+            guard let n = Int(press.characters), visibleItems.indices.contains(n - 1) else { return .ignored }
+            paste(visibleItems[n - 1].text)
+            return .handled
+        }
         .onAppear {
             store.refreshAccess()
             store.prune()
@@ -30,6 +46,26 @@ struct ClipboardView: View {
         TextField("Procurar", text: $search.value)
             .textFieldStyle(.roundedBorder).font(DS.body)
             .accessibilityLabel("Procurar no histórico e nos snippets")
+    }
+
+    /// A lista que se vê, pela mesma ordem: as teclas apontam para estes.
+    private var visibleItems: [ClipItem] {
+        let found = store.items.filter { matches($0.text) }
+        let ordered = found.filter(\.pinned) + found.filter { !$0.pinned }
+        return showAll.value || !search.value.isEmpty ? ordered : Array(ordered.prefix(Self.shortList))
+    }
+
+    private func move(_ by: Int) -> KeyPress.Result {
+        let count = visibleItems.count
+        guard count > 0 else { return .ignored }
+        selected.value = min(max((selected.value ?? (by > 0 ? -1 : count)) + by, 0), count - 1)
+        return .handled
+    }
+
+    private func paste(_ text: String) {
+        if QuickPaste.paste(text, store: store) == .copiedOnly {
+            pasteNote.value = "Copiado. Para colar logo na app onde estavas, dá ao AgentStats acesso à Acessibilidade."
+        }
     }
 
     private func matches(_ text: String) -> Bool {
@@ -80,11 +116,16 @@ struct ClipboardView: View {
     @ViewBuilder private var historyList: some View {
         let found = store.items.filter { matches($0.text) }
         let ordered = found.filter(\.pinned) + found.filter { !$0.pinned }
-        let visible = showAll.value || !search.value.isEmpty ? ordered : Array(ordered.prefix(Self.shortList))
+        let visible = visibleItems
         if !visible.isEmpty {
             VStack(spacing: 0) {
-                ForEach(visible) { item in historyRow(item) }
+                ForEach(Array(visible.enumerated()), id: \.element.id) { i, item in
+                    historyRow(item, number: i < 9 ? i + 1 : nil)
+                        .background(RoundedRectangle(cornerRadius: DS.rSmall).fill(selected.value == i ? DS.raised : .clear))
+                }
             }
+            if let n = pasteNote.value { note(n, color: .text2) }
+            note("1–9 ou ↑↓ e Enter colam na app onde estavas.")
             HStack(spacing: DS.sm) {
                 if ordered.count > Self.shortList && search.value.isEmpty {
                     textLink(showAll.value ? "Mostrar menos" : "Mostrar os \(ordered.count)") { showAll.value.toggle() }
@@ -106,8 +147,10 @@ struct ClipboardView: View {
         }
     }
 
-    private func historyRow(_ item: ClipItem) -> some View {
+    private func historyRow(_ item: ClipItem, number: Int?) -> some View {
         HStack(spacing: 0) {
+            Text(number.map(String.init) ?? "").font(DS.meta.monospacedDigit()).foregroundStyle(Color.text3)
+                .frame(width: 14, alignment: .leading)
             copyButton(id: item.id, text: item.text) {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(ClipboardRules.preview(item.text)).font(DS.body).lineLimit(1).truncationMode(.tail)

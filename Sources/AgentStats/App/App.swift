@@ -130,6 +130,14 @@ enum AgentStatsApp {
 final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelegate {
     private var controller: StatusController?
 
+    /// `agentstats://…` (app Atalhos, Terminal, links).
+    func application(_ application: NSApplication, open urls: [URL]) {
+        MainActor.assumeIsolated {
+            guard let monitor = AppState.controller?.monitorForCommands else { return }
+            for url in urls { URLCommand.parse(url)?.run(monitor: monitor) }
+        }
+    }
+
     func applicationDidFinishLaunching(_ notification: Notification) {
         UNUserNotificationCenter.current().delegate = self
         MainActor.assumeIsolated {
@@ -148,6 +156,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
                 }
             }
             // Diagnóstico: abre o painel ao arrancar (para medir o consumo com o painel aberto)
+            if Welcome.shouldShow() { WelcomeWindow.show() }
             if ProcessInfo.processInfo.environment["AGENTSTATS_OPEN_PANEL"] != nil {
                 DispatchQueue.main.asyncAfter(deadline: .now() + 3) { [weak self] in self?.controller?.openPanel() }
             }

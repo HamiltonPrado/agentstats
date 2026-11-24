@@ -265,6 +265,7 @@ final class Monitor {
         upHistory.push(s.network.upPerSec)
         checkAlerts()
         checkLimitAlerts()
+        checkBudgetAndSummary()
         updateAgentAwake()
         recordMinute()
         onUpdate?()
@@ -365,6 +366,41 @@ final class Monitor {
         let hold = keepAwakeForAgents && AgentAwake.shouldHold(working: workingCount, lastWorking: lastWorking, now: now)
         if hold != agentAwakeController.isHolding { agentAwakeController.setEnabled(hold, minutes: 0) }
         if holdingForAgents != hold { holdingForAgents = hold }
+    }
+
+    var budgetEnabled: Bool = Pref.bool(Budget.enabledKey, false) { didSet { Pref.set(budgetEnabled, Budget.enabledKey) } }
+    var budgetAmount: Double = Pref.double(Budget.amountKey, 20) { didSet { Pref.set(budgetAmount, Budget.amountKey) } }
+    var budgetPeriod: Budget.Period = Budget.Period(rawValue: Pref.string(Budget.periodKey) ?? "") ?? .day {
+        didSet { Pref.set(budgetPeriod.rawValue, Budget.periodKey) }
+    }
+    var weeklySummaryEnabled: Bool = Pref.bool(WeeklySummary.enabledKey, true) { didSet { Pref.set(weeklySummaryEnabled, WeeklySummary.enabledKey) } }
+
+    var budgetSpent: Double { Budget.spent(usage.week, period: budgetPeriod, now: Date()) }
+
+    private func checkBudgetAndSummary(now: Date = Date()) {
+        guard !usage.week.isEmpty else { return }   // ainda sem a primeira leitura dos tokens
+        let d = UserDefaults.standard
+        if budgetEnabled {
+            let id = Budget.periodID(budgetPeriod, now: now)
+            let r = Budget.evaluate(spent: budgetSpent, amount: budgetAmount, period: id, notified: d.string(forKey: Budget.notifiedKey))
+            if let level = r.level {
+                d.set(r.notified, forKey: Budget.notifiedKey)
+                let c = UNMutableNotificationContent()
+                c.title = level >= 100 ? "Orçamento esgotado" : "Orçamento a \(Int(level))%"
+                c.body = "~\(Fmt.usd(budgetSpent)) de \(Fmt.usd(budgetAmount)) \(budgetPeriod.short), estimado a preços de API."
+                c.sound = .default
+                UNUserNotificationCenter.current().add(UNNotificationRequest(identifier: "budget-\(UUID().uuidString)", content: c, trigger: nil))
+            }
+        }
+        if weeklySummaryEnabled, let week = WeeklySummary.due(now: now, last: d.string(forKey: WeeklySummary.lastKey)) {
+            d.set(week, forKey: WeeklySummary.lastKey)
+            if let t = WeeklySummary.text(usage) {
+                let c = UNMutableNotificationContent()
+                c.title = t.title
+                c.body = t.body
+                UNUserNotificationCenter.current().add(UNNotificationRequest(identifier: "summary-\(week)", content: c, trigger: nil))
+            }
+        }
     }
 
     private func checkLimitAlerts(now: Date = Date()) {

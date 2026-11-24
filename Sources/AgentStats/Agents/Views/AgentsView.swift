@@ -31,8 +31,14 @@ struct AgentsView: View {
 
         VStack(alignment: .leading, spacing: DS.lg) {
             searchAndFilters
+            // O que precisa de ti vem antes de tudo: é a razão de abrir o painel.
+            if !attention.isEmpty {
+                group("Precisa de ti", attention.count, .attention) { ForEach(attention) { SessionCard(session: $0) } }
+            }
             if showLimits && (!m.planLimits.isEmpty || m.claudeLimitsHint != nil) { PlanLimitsCard(limits: m.planLimits, hint: m.claudeLimitsHint) }
-            if showUsage && !m.usage.todayTotal.isEmpty { TodayUsage(usage: m.usage) }
+            if showUsage && !m.usage.todayTotal.isEmpty {
+                TodayUsage(usage: m.usage, budget: m.budgetEnabled ? (m.budgetSpent, m.budgetAmount, m.budgetPeriod) : nil)
+            }
             if showActivity && !m.day.isEmpty { ActivityStrip(day: m.day) }
             if !hasAnyAgent {
                 EmptyAgents()
@@ -40,9 +46,6 @@ struct AgentsView: View {
                 Text("Nenhuma sessão neste filtro")
                     .font(DS.body).foregroundStyle(Color.text2)
                     .frame(maxWidth: .infinity).padding(.vertical, DS.md)
-            }
-            if !attention.isEmpty {
-                group("Precisa de ti", attention.count, .attention) { ForEach(attention) { SessionCard(session: $0) } }
             }
             if !working.isEmpty {
                 group("A trabalhar", working.count, .working) { ForEach(working) { SessionCard(session: $0) } }
@@ -89,6 +92,8 @@ struct AgentsView: View {
             }
         }
         .frame(maxWidth: .infinity, alignment: .topLeading)
+        // Uma sessão que muda de estado desliza para o grupo novo em vez de saltar.
+        .animation(Motion.ease(0.25), value: sessions.map { "\($0.id)|\($0.state)" })
     }
 
     @StateObject private var showHistory = Box(false)

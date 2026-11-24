@@ -39,6 +39,7 @@
 - **Ligação ao Claude Code num clique** (Definições → Geral): os pedidos de aprovação chegam logo, em vez de serem adivinhados pelos processos.
 - **Tokens e custo estimado em API** por sessão, dia e projeto, para Claude Code, Codex, Copilot e OpenCode. O custo só aparece para modelos com preço conhecido e não é o que pagas com um plano.
 - Aviso quando uma tarefa longa termina ou um agente precisa de ti, com lembretes se continuar à espera.
+- **Orçamento de custo** por dia ou por semana, com aviso aos 80% e aos 100%, **resumo semanal** por notificação e **exportar o uso para CSV**.
 
 ### Sistema e processos
 
@@ -61,11 +62,17 @@
 
 - Histórico de texto, **desligado até o ligares**: 100 itens, 7 dias, com itens fixos e snippets.
 - Ignora o que os gestores de passwords marcam como secreto e formatos conhecidos de chaves de API. O histórico fica neste Mac, **sem cifra**.
+- **Colar rápido:** 1–9, ou ↑↓ e Enter, colam um item na app onde estavas (precisa da Acessibilidade; sem ela, fica copiado).
 
 ### Captura
 
 - Captura uma área, uma janela ou o ecrã, e grava o ecrã inteiro com microfone e cliques opcionais. Para gravar uma área abre a ferramenta do macOS.
 - **Ler o ecrã:** copia o texto de uma área (OCR), lê códigos QR e apanha a cor de qualquer ponto em HEX ou RGB. Tudo neste Mac, sem rede.
+
+### Tempo
+
+- Temporizador e **Pomodoro** (25 + 5 min, pausa longa a cada 4), com o tempo na barra de menus e aviso no fim.
+- **Relógio mundial** com as cidades que escolheres, a diferença horária e se lá já é amanhã.
 
 ### Ferramentas
 
@@ -81,9 +88,24 @@
 
 ### À tua medida
 
-Barra de menus configurável, separadores à tua escolha (quais, por que ordem e em qual abre), atalhos ⌥⌘1 a ⌥⌘7 para cada um, limites de alerta com qualquer valor, atalho global, perfis, tema, cor, largura, tamanho do texto, manter o Mac acordado (por tempo ou enquanto houver agentes a trabalhar), início de sessão automático e suporte a VoiceOver e “Reduzir movimento”. A interface está em português.
+Barra de menus configurável, separadores à tua escolha (quais, por que ordem e em qual abre), atalhos ⌥⌘1 a ⌥⌘8 para cada um, limites de alerta com qualquer valor, atalho global, perfis, tema, cor, largura, tamanho do texto, manter o Mac acordado (por tempo ou enquanto houver agentes a trabalhar), início de sessão automático e suporte a VoiceOver e “Reduzir movimento”. A interface está em português.
 
 Comporta-se como os outros ícones da barra de menus: o botão direito abre um menu com os separadores, os atalhos rápidos, as Definições e Sair, e clicar fora do painel, incluindo na secretária, fecha-o.
+
+Dentro do painel: ⌘1–8 mudam de separador, ⌘[ e ⌘] vão para o anterior e o seguinte, ⌘, abre as Definições (numa janela própria, com exportar e importar para outro Mac) e ⌘W fecha.
+
+### Comandos `agentstats://`
+
+Para a app Atalhos (ação “Abrir URL”) ou o Terminal (`open "agentstats://…"`):
+
+| Comando | Faz |
+| --- | --- |
+| `agentstats://open/system` | Abre o painel num separador (`agents`, `system`, `processes`, `audio`, `clipboard`, `capture`, `time`, `tools`) |
+| `agentstats://settings` | Abre as Definições |
+| `agentstats://timer?minutes=25` · `agentstats://pomodoro` · `agentstats://timer/stop` | Temporizador |
+| `agentstats://read/text` · `read/qr` · `read/color` | Ler o ecrã |
+| `agentstats://toggle/dark-mode` · `toggle/desktop-icons` | Atalhos rápidos |
+| `agentstats://usage/copy` | Copia os tokens e o custo de hoje e da semana |
 
 ## Permissões e privacidade
 

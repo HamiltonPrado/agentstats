@@ -2,7 +2,7 @@ import SwiftUI
 import AppKit
 
 enum Tab: String, CaseIterable, Identifiable {
-    case agents, system, processes, audio, clipboard, capture, tools, settings
+    case agents, system, processes, audio, clipboard, capture, time, tools, settings
     var id: String { rawValue }
     var title: String {
         switch self {
@@ -12,6 +12,7 @@ enum Tab: String, CaseIterable, Identifiable {
         case .audio: return "Áudio"
         case .clipboard: return "Clipboard"
         case .capture: return "Captura"
+        case .time: return "Tempo"
         case .tools: return "Ferramentas"
         case .settings: return "Definições"
         }
@@ -24,11 +25,12 @@ enum Tab: String, CaseIterable, Identifiable {
         case .audio: return "speaker.wave.2"
         case .clipboard: return "list.clipboard"
         case .capture: return "camera.viewfinder"
+        case .time: return "timer"
         case .tools: return "wrench.and.screwdriver"
         case .settings: return "gearshape"
         }
     }
-    static let main: [Tab] = [.agents, .system, .processes, .audio, .clipboard, .capture, .tools]
+    static let main: [Tab] = [.agents, .system, .processes, .audio, .clipboard, .capture, .time, .tools]
 }
 
 struct PanelView: View {
@@ -56,6 +58,7 @@ struct PanelView: View {
     var body: some View {
         VStack(spacing: 0) {
             header
+                .background { keyboardShortcuts }
             if !m.activeAlerts.isEmpty { AlertBanner(alerts: m.activeAlerts).padding(.horizontal, DS.md).padding(.bottom, DS.sm) }
             if tab != .settings { tabBar.padding(.horizontal, DS.md).padding(.bottom, DS.md) }
             Divider().opacity(0.6)
@@ -105,6 +108,7 @@ struct PanelView: View {
         case .audio: AudioView()
         case .clipboard: ClipboardView(store: .shared)
         case .capture: CaptureView(store: .shared)
+        case .time: TimeView(timer: .shared, clock: .shared)
         case .tools: ToolsView()
         case .settings: SettingsView()
         }
@@ -117,14 +121,15 @@ struct PanelView: View {
             AppLogo().frame(width: 28, height: 28)
 
             VStack(alignment: .leading, spacing: 2) {
-                Text(tab == .settings ? "Definições" : "AgentStats").font(DS.title)
+                // O nome do separador: a barra só tem ícones.
+                Text(tab.title).font(DS.title)
                 statusLine
             }
             Spacer()
             if tab == .settings {
                 IconButton(systemName: "xmark", help: "Fechar definições") { storedTab = .agents }
             } else {
-                IconButton(systemName: "gearshape", help: "Definições") { storedTab = .settings }
+                IconButton(systemName: "gearshape", help: "Definições  ⌘,") { AppState.controller?.openSettings() }
             }
         }
         .padding(.horizontal, DS.md).padding(.top, DS.md).padding(.bottom, DS.md)
@@ -145,6 +150,35 @@ struct PanelView: View {
             StatusDot(kind)
             Text(line).font(DS.meta.monospacedDigit()).foregroundStyle(Color.text2).lineLimit(1)
         }
+    }
+
+    // MARK: Teclado
+
+    /// Atalhos dentro do painel, como numa janela do macOS. Botões invisíveis: só servem o teclado.
+    @ViewBuilder private var keyboardShortcuts: some View {
+        let tabs = TabLayout.visible(order: tabOrder, hidden: hiddenTabs)
+        ZStack {
+            ForEach(Array(tabs.prefix(9).enumerated()), id: \.offset) { i, t in
+                Button("") { select(t) }.keyboardShortcut(KeyEquivalent(Character(String(i + 1))), modifiers: .command)
+            }
+            Button("") { step(tabs, by: -1) }.keyboardShortcut("[", modifiers: .command)
+            Button("") { step(tabs, by: 1) }.keyboardShortcut("]", modifiers: .command)
+            Button("") { AppState.controller?.openSettings() }.keyboardShortcut(",", modifiers: .command)
+            Button("") { AppState.controller?.closePanel() }.keyboardShortcut("w", modifiers: .command)
+            Button("") { NSApp.terminate(nil) }.keyboardShortcut("q", modifiers: .command)
+        }
+        .buttonStyle(.plain)
+        .frame(width: 0, height: 0)
+        .opacity(0)
+        .accessibilityHidden(true)
+    }
+
+    private func select(_ t: Tab) { withAnimation(Motion.ease(0.16)) { storedTab = t } }
+
+    private func step(_ tabs: [Tab], by offset: Int) {
+        guard !tabs.isEmpty else { return }
+        let i = tabs.firstIndex(of: tab) ?? 0
+        select(tabs[(i + offset + tabs.count) % tabs.count])
     }
 
     // MARK: Separadores
@@ -174,7 +208,7 @@ struct PanelView: View {
                 }
                 .buttonStyle(.plain)
                 // Sem texto visível, o nome tem de vir na dica e no VoiceOver.
-                .help(t.title)
+                .help(t.title + (TabLayout.visible(order: tabOrder, hidden: hiddenTabs).firstIndex(of: t).map { $0 < 9 ? "  ⌘\($0 + 1)" : "" } ?? ""))
                 .accessibilityLabel(t.title)
                 .accessibilityValue(t == .agents ? agentsBadgeDescription : "")
                 .accessibilityAddTraits(tab == t ? .isSelected : [])

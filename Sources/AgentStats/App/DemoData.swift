@@ -26,6 +26,8 @@ enum DemoData {
         UninstallStore.shared.loadDemo()
         CleanupStore.shared.loadDemo()
         DisksStore.shared.loadDemo()
+        TimerStore.shared.loadDemo(now: now)
+        WorldClockStore.shared.loadDemo()
         NetworkExtrasStore.shared.loadDemo()
         AccessoryBatteryStore.shared.loadDemo()
         QuickTogglesStore.shared.loadDemo()

@@ -41,6 +41,7 @@ final class StatusController: NSObject, NSPopoverDelegate {
         // Atualiza o ícone quando há novas amostras ou quando as definições mudam
         monitor.onUpdate = { [weak self] in self?.updateIcon() }
         CaptureStore.shared.onChange = { [weak self] in self?.updateIcon() }
+        TimerStore.shared.onChange = { [weak self] in self?.updateIcon() }
         NotificationCenter.default.publisher(for: UserDefaults.didChangeNotification)
             .debounce(for: .milliseconds(60), scheduler: RunLoop.main)
             .sink { [weak self] _ in
@@ -105,7 +106,8 @@ final class StatusController: NSObject, NSPopoverDelegate {
         // condicionais fazia o compilador do Xcode 16 desistir da verificação de tipos.
         var parts: [String] = []
         if let recording = CaptureStore.shared.menuBarText { return "gravar:" + recording }
-        parts.append(m.activeAlerts.isEmpty ? "" : "!")
+        // O temporizador muda a cada segundo: fica nos campos "urgentes" para se ver logo.
+        parts.append((m.activeAlerts.isEmpty ? "" : "!") + (TimerStore.shared.menuBarText ?? ""))
         parts.append(String(m.needsAttentionCount))
         parts.append(on("bar.agents", true) ? "\(m.workingCount)/\(m.liveAgentCount)" : "")
         // configuração e aparência da barra: mudar qualquer uma redesenha o ícone
@@ -138,7 +140,7 @@ final class StatusController: NSObject, NSPopoverDelegate {
         lastIconSignature = sig
         lastIconUpdate = Date()
         item.button?.image = MenuBarDrawer.image(monitor, appearance: item.button?.effectiveAppearance,
-                                                recording: CaptureStore.shared.menuBarText)
+                                                recording: CaptureStore.shared.menuBarText, timer: TimerStore.shared.menuBarText)
     }
 
     func saveHistory() { monitor.saveHistory() }
@@ -157,6 +159,30 @@ final class StatusController: NSObject, NSPopoverDelegate {
     }
 
     func closePanel() { popover.performClose(nil) }
+
+    func togglePanel() { toggle(nil) }
+
+    var monitorForCommands: Monitor { monitor }
+
+    private var settingsWindow: NSWindow?
+
+    /// As Definições numa janela, como nas apps do macOS (⌘, ou a roda dentada).
+    func openSettings() {
+        popover.performClose(nil)
+        if settingsWindow == nil {
+            let w = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 460, height: 680),
+                             styleMask: [.titled, .closable, .miniaturizable, .resizable], backing: .buffered, defer: false)
+            w.title = "Definições do AgentStats"
+            w.isReleasedWhenClosed = false
+            w.contentMinSize = NSSize(width: 420, height: 420)
+            w.contentViewController = NSHostingController(rootView: SettingsWindowContent().environment(monitor))
+            w.setFrameAutosaveName("AgentStatsSettings")
+            if !w.setFrameUsingName("AgentStatsSettings") { w.center() }
+            settingsWindow = w
+        }
+        NSApp.activate(ignoringOtherApps: true)
+        settingsWindow?.makeKeyAndOrderFront(nil)
+    }
 
     func openPanel() {
         popover.behavior = .applicationDefined   // diagnóstico: fica aberto mesmo ao clicar noutro sítio
@@ -195,7 +221,7 @@ final class StatusController: NSObject, NSPopoverDelegate {
             Task { await quick.toggleDesktopIcons() }
         }
         menu.addItem(.separator())
-        add("Definições…", ",") { [weak self] in self?.show(.settings) }
+        add("Definições…", ",") { [weak self] in self?.openSettings() }
         add("Abrir Monitor de Atividade") {
             NSWorkspace.shared.open(URL(fileURLWithPath: "/System/Applications/Utilities/Activity Monitor.app"))
         }
@@ -215,7 +241,9 @@ final class StatusController: NSObject, NSPopoverDelegate {
         } else {
             let d = UserDefaults.standard
             let stored = Tab(rawValue: d.string(forKey: Self.tabKey) ?? "") ?? .agents
-            let tab = TabLayout.tabOnOpen(stored: stored, start: d.string(forKey: TabLayout.startKey), visible: TabLayout.currentVisible)
+            var tab = TabLayout.tabOnOpen(stored: stored, start: d.string(forKey: TabLayout.startKey), visible: TabLayout.currentVisible)
+            // As Definições têm janela própria: o painel abre sempre num separador.
+            if tab == .settings { tab = TabLayout.currentVisible[0] }
             if tab != stored { d.set(tab.rawValue, forKey: Self.tabKey) }
             present()
         }
@@ -223,6 +251,7 @@ final class StatusController: NSObject, NSPopoverDelegate {
 
     private func present() {
         guard let button = item.button else { return }
+        QuickPaste.rememberFrontApp()
         host.rootView = AnyView(PanelView().environment(monitor))
         monitor.panelOpen = true
         monitor.sample()   // dados frescos ao abrir

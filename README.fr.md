@@ -39,6 +39,7 @@
 - **Connexion à Claude Code en un clic** (Réglages → Général) : les demandes d’approbation arrivent aussitôt au lieu d’être déduites des processus.
 - **Tokens et coût API estimé** par session, jour et projet pour Claude Code, Codex, Copilot et OpenCode. Le coût n’apparaît que pour les modèles au prix connu et ne correspond pas au prix d’un abonnement.
 - Notifications à la fin d’une tâche longue ou quand un agent a besoin de vous, avec rappels s’il attend encore.
+- **Budget de coût** par jour ou par semaine, avec alerte à 80 % et à 100 %, **résumé hebdomadaire** par notification et **export de l’utilisation en CSV**.
 
 ### Système et processus
 
@@ -61,11 +62,17 @@
 
 - Historique de texte, **désactivé tant que vous ne l’activez pas** : 100 éléments, 7 jours, avec épingles et extraits.
 - Ignore ce que les gestionnaires de mots de passe marquent comme secret et les formats connus de clés API. L’historique reste sur ce Mac, **non chiffré**.
+- **Collage rapide :** 1–9, ou ↑↓ et Entrée, collent un élément dans l’app où vous étiez (nécessite l’Accessibilité ; sinon, il est seulement copié).
 
 ### Capture
 
 - Capturez une zone, une fenêtre ou l’écran et enregistrez l’écran entier, avec micro et clics en option. L’enregistrement d’une zone ouvre l’outil de macOS.
 - **Lire l’écran :** copiez le texte d’une zone (OCR), lisez les codes QR et prélevez la couleur de n’importe quel point en HEX ou RVB. Tout sur ce Mac, sans réseau.
+
+### Temps
+
+- Minuteur et **Pomodoro** (25 + 5 min, longue pause toutes les 4), avec le temps dans la barre des menus et une alerte à la fin.
+- **Horloge mondiale** avec les villes de votre choix, le décalage horaire et si c’est déjà demain là-bas.
 
 ### Outils
 
@@ -81,9 +88,24 @@
 
 ### À votre mesure
 
-Barre des menus configurable, onglets au choix (lesquels, dans quel ordre et lequel s’ouvre), raccourcis ⌥⌘1 à ⌥⌘7 pour chacun, seuils d’alerte à n’importe quelle valeur, raccourci global, profils, thème, couleur, largeur, taille du texte, maintien en éveil (pour une durée ou tant que des agents travaillent), lancement automatique et prise en charge de VoiceOver et de « Réduire les animations ».
+Barre des menus configurable, onglets au choix (lesquels, dans quel ordre et lequel s’ouvre), raccourcis ⌥⌘1 à ⌥⌘8 pour chacun, seuils d’alerte à n’importe quelle valeur, raccourci global, profils, thème, couleur, largeur, taille du texte, maintien en éveil (pour une durée ou tant que des agents travaillent), lancement automatique et prise en charge de VoiceOver et de « Réduire les animations ».
 
 Il se comporte comme les autres icônes de la barre des menus : le clic droit ouvre un menu avec les onglets, les raccourcis rapides, les Réglages et Quitter, et cliquer hors du panneau, y compris sur le bureau, le ferme.
+
+Dans le panneau : ⌘1–8 changent d’onglet, ⌘[ et ⌘] vont au précédent et au suivant, ⌘, ouvre les Réglages (dans leur propre fenêtre, avec export et import vers un autre Mac) et ⌘W ferme.
+
+### Commandes `agentstats://`
+
+Pour l’app Raccourcis (action « Ouvrir l’URL ») ou le Terminal (`open "agentstats://…"`) :
+
+| Commande | Effet |
+| --- | --- |
+| `agentstats://open/system` | Ouvre le panneau sur un onglet (`agents`, `system`, `processes`, `audio`, `clipboard`, `capture`, `time`, `tools`) |
+| `agentstats://settings` | Ouvre les Réglages |
+| `agentstats://timer?minutes=25` · `agentstats://pomodoro` · `agentstats://timer/stop` | Minuteur |
+| `agentstats://read/text` · `read/qr` · `read/color` | Lire l’écran |
+| `agentstats://toggle/dark-mode` · `toggle/desktop-icons` | Raccourcis rapides |
+| `agentstats://usage/copy` | Copie les tokens et le coût du jour et de la semaine |
 
 ## Autorisations et confidentialité
 

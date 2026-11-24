@@ -134,12 +134,14 @@ enum MenuBarDrawer {
     /// Desenha o ícone da barra de menus.
     /// - Sem cores: imagem-modelo (o macOS pinta-a com a cor da barra, em claro e escuro).
     /// - Com o ponto a cores: imagem normal, com o texto na cor da barra (`appearance`) e o ponto colorido.
-    static func image(_ m: Monitor, appearance: NSAppearance? = nil, recording: String? = nil) -> NSImage {
+    static func image(_ m: Monitor, appearance: NSAppearance? = nil, recording: String? = nil, timer: String? = nil) -> NSImage {
         let colored = flag(colorDotKey, false) || recording != nil
         let style = MenuBarStyle.current
         // A gravar, a barra mostra só isso (sempre a vermelho): não pode passar despercebido.
+        // Com o temporizador a correr, o tempo vem antes das métricas.
+        let timerSegs: [Segment] = timer.map { [.symbol("timer", 12, nil), .text($0, agentFont)] } ?? []
         let segs: [Segment] = recording.map { [.symbol("stop.circle.fill", 13, .systemRed), .text($0, agentFont)] }
-            ?? segments(m, style: style, colored: colored)
+            ?? (timerSegs + segments(m, style: style, colored: colored))
         // símbolo + texto dos agentes ficam colados (2 pt); o resto separado por `spacing`
         let widths = segs.map(width)
         var gaps: [CGFloat] = []

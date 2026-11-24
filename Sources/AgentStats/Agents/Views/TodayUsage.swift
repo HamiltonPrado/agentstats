@@ -4,6 +4,8 @@ import AppKit
 /// Tokens de hoje (Claude + Codex). Clicar abre os últimos 7 dias e os projetos que mais gastaram.
 struct TodayUsage: View {
     let usage: UsageSnapshot
+    /// Gasto e teto, quando o orçamento está ligado.
+    var budget: (spent: Double, amount: Double, period: Budget.Period)? = nil
     @AppStorage("usage.expanded") private var expanded = false
 
     var body: some View {
@@ -30,13 +32,35 @@ struct TodayUsage: View {
             .accessibilityLabel("Hoje, \(Fmt.tokens(t.total)) tokens" + (usage.todayCost >= 0.01 ? ", cerca de \(Fmt.usd(usage.todayCost)) em API" : ""))
             .accessibilityHint(expanded ? "Esconde a semana" : "Mostra os últimos 7 dias e os projetos")
 
+            if let b = budget { budgetRow(b) }
             if expanded {
                 week
                 if !usage.projects.isEmpty { projects }
+                HStack {
+                    Spacer()
+                    textLink("Exportar CSV…") { SettingsFiles.exportCSV(usage) }
+                        .help("Os últimos 7 dias e os projetos, para uma folha de cálculo")
+                }
             }
         }
         .cardStyle(padding: DS.md)
         .help("Inclui leituras de cache (\(Fmt.tokens(t.cacheRead))), que são a maior parte e custam muito menos do que tokens novos. Entrada nova \(Fmt.tokens(t.input)) · cache escrita \(Fmt.tokens(t.cacheWrite)) · saída \(Fmt.tokens(t.output))")
+    }
+
+    private func budgetRow(_ b: (spent: Double, amount: Double, period: Budget.Period)) -> some View {
+        let fraction: Double = b.amount > 0 ? b.spent / b.amount : 0
+        let color: Color = fraction >= 1 ? Palette.attention : fraction >= 0.8 ? Palette.waiting : Color.accentColor
+        let label: String = "Orçamento \(b.period.short)"
+        let value: String = "~" + Fmt.usd(b.spent) + " de " + Fmt.usd(b.amount)
+        return VStack(alignment: .leading, spacing: DS.xs) {
+            HStack {
+                Text(label).font(DS.meta).foregroundStyle(Color.text2)
+                Spacer()
+                Text(value).font(DS.meta.monospacedDigit()).foregroundStyle(fraction >= 1 ? Color.attentionText : Color.text2)
+            }
+            Bar(value: min(fraction, 1), color: color, height: 3)
+        }
+        .accessibilityElement(children: .combine)
     }
 
     /// Barras dos últimos 7 dias; hoje com a cor de destaque, os outros em neutro.

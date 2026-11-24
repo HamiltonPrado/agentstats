@@ -39,6 +39,7 @@
 - **One-click Claude Code hook** (Settings → General): approval requests arrive right away instead of being inferred from processes.
 - **Tokens and estimated API cost** by session, day, and project for Claude Code, Codex, Copilot, and OpenCode. Cost appears only for models with known prices and is not what you pay on a subscription.
 - Notifications when a long task finishes or an agent needs you, with reminders while it keeps waiting.
+- **Cost budget** per day or week, with alerts at 80% and 100%, a **weekly summary** notification, and **usage export to CSV**.
 
 ### System and processes
 
@@ -61,11 +62,17 @@
 
 - Text history, **off until you turn it on**: 100 items, 7 days, with pins and snippets.
 - Skips what password managers mark as secret and known API key formats. History stays on this Mac, **unencrypted**.
+- **Quick paste:** 1–9, or ↑↓ and Enter, paste an item into the app you were using (needs Accessibility; without it, it is just copied).
 
 ### Capture
 
 - Capture an area, a window, or the screen, and record the full screen with optional microphone and clicks. Area recording opens the macOS tool.
 - **Read the screen:** copy the text in an area (OCR), read QR codes, and pick the color of any point as HEX or RGB. All on this Mac, with no network.
+
+### Time
+
+- Timer and **Pomodoro** (25 + 5 min, long break every 4), with the time in the menu bar and an alert at the end.
+- **World clock** with the cities you choose, the time difference, and whether it is already tomorrow there.
 
 ### Tools
 
@@ -81,9 +88,24 @@
 
 ### Make it yours
 
-Configurable menu bar, tabs of your choice (which ones, in what order, and which one opens first), ⌥⌘1 to ⌥⌘7 shortcuts for each, alert limits with any value, global shortcut, profiles, theme, color, width, text size, keep awake (for a set time or while agents are working), launch at login, and support for VoiceOver and Reduce Motion.
+Configurable menu bar, tabs of your choice (which ones, in what order, and which one opens first), ⌥⌘1 to ⌥⌘8 shortcuts for each, alert limits with any value, global shortcut, profiles, theme, color, width, text size, keep awake (for a set time or while agents are working), launch at login, and support for VoiceOver and Reduce Motion.
 
 It behaves like other menu bar icons: right-click opens a menu with the tabs, quick toggles, Settings, and Quit, and clicking outside the panel, including on the desktop, closes it.
+
+Inside the panel: ⌘1–8 switch tabs, ⌘[ and ⌘] go to the previous and next one, ⌘, opens Settings (in its own window, with export and import for another Mac), and ⌘W closes.
+
+### `agentstats://` commands
+
+For the Shortcuts app (“Open URL” action) or Terminal (`open "agentstats://…"`):
+
+| Command | Does |
+| --- | --- |
+| `agentstats://open/system` | Opens the panel on a tab (`agents`, `system`, `processes`, `audio`, `clipboard`, `capture`, `time`, `tools`) |
+| `agentstats://settings` | Opens Settings |
+| `agentstats://timer?minutes=25` · `agentstats://pomodoro` · `agentstats://timer/stop` | Timer |
+| `agentstats://read/text` · `read/qr` · `read/color` | Read the screen |
+| `agentstats://toggle/dark-mode` · `toggle/desktop-icons` | Quick toggles |
+| `agentstats://usage/copy` | Copies today's and this week's tokens and cost |
 
 ## Permissions and privacy
 

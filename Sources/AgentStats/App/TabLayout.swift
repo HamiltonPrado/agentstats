@@ -40,6 +40,15 @@ enum TabLayout {
         return encode(all)
     }
 
+    /// Arrastar: põe o separador na posição de outro.
+    static func moving(order rawOrder: String?, _ tab: Tab, to target: Tab) -> String {
+        var all = order(rawOrder)
+        guard tab != target, let from = all.firstIndex(of: tab), let to = all.firstIndex(of: target) else { return encode(all) }
+        all.remove(at: from)
+        all.insert(tab, at: to)
+        return encode(all)
+    }
+
     /// Mostrar ou esconder. Esconder o último que se vê não faz nada.
     static func toggled(hidden rawHidden: String?, _ tab: Tab, order rawOrder: String?) -> String {
         var set = hidden(rawHidden)

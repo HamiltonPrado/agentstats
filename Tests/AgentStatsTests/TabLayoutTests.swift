@@ -2,7 +2,7 @@ import Testing
 @testable import AgentStats
 
 @Suite struct TabLayoutTests {
-    private let all: [Tab] = [.agents, .system, .processes, .audio, .clipboard, .capture, .tools]
+    private let all: [Tab] = [.agents, .system, .processes, .audio, .clipboard, .capture, .time, .tools]
 
     @Test func withNothingSavedItIsAsBefore() {
         #expect(TabLayout.order(nil) == all)
@@ -10,12 +10,12 @@ import Testing
     }
 
     @Test func savedOrderWinsAndNewTabsGoToTheEnd() {
-        #expect(TabLayout.order("tools,agents") == [.tools, .agents, .system, .processes, .audio, .clipboard, .capture])
+        #expect(TabLayout.order("tools,agents") == [.tools, .agents, .system, .processes, .audio, .clipboard, .capture, .time])
         #expect(TabLayout.order("tools,lixo,tools,settings,agents").prefix(2) == [.tools, .agents])
     }
 
     @Test func hiddenTabsLeaveTheBarButNeverAll() {
-        #expect(TabLayout.visible(order: nil, hidden: "audio,capture") == [.agents, .system, .processes, .clipboard, .tools])
+        #expect(TabLayout.visible(order: nil, hidden: "audio,capture") == [.agents, .system, .processes, .clipboard, .time, .tools])
         #expect(TabLayout.visible(order: "tools", hidden: TabLayout.encode(all)) == [.tools])
     }
 

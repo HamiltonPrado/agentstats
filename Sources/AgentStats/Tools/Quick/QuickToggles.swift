@@ -108,19 +108,22 @@ final class QuickTogglesStore: ObservableObject {
 struct QuickTogglesView: View {
     @ObservedObject var store: QuickTogglesStore
 
+    /// Uma linha só: os atalhos não deviam empurrar as ferramentas para baixo.
     var body: some View {
         VStack(alignment: .leading, spacing: DS.sm) {
-            Text("Atalhos rápidos").font(DS.body.weight(.medium))
-            HStack(spacing: DS.sm) {
-                tile(store.dark ? "Modo claro" : "Modo escuro", store.dark ? "sun.max" : "moon", on: store.dark) {
+            HStack(spacing: DS.xs) {
+                pill(store.dark ? "Claro" : "Escuro", store.dark ? "sun.max" : "moon", on: store.dark,
+                     help: store.dark ? "Passar para o modo claro" : "Passar para o modo escuro") {
                     Task { await store.toggleDarkMode() }
                 }
-                tile(store.iconsShown ? "Esconder ícones" : "Mostrar ícones", store.iconsShown ? "eye.slash" : "eye", on: !store.iconsShown) {
+                pill(store.iconsShown ? "Ícones" : "Ícones", store.iconsShown ? "eye" : "eye.slash", on: !store.iconsShown,
+                     help: store.iconsShown ? "Esconder os ícones da secretária (o Finder reinicia)" : "Mostrar os ícones da secretária") {
                     Task { await store.toggleDesktopIcons() }
                 }
-                .help("Esconde os ficheiros da secretária, para partilhar o ecrã. O Finder reinicia.")
-                tile("Não incomodar", "moon.zzz", on: false) { Task { await store.toggleFocus() } }
-                    .help(store.focusShortcut.map { "Corre o atalho “\($0)”" } ?? "Precisa de um atalho na app Atalhos")
+                pill("Foco", "moon.zzz", on: false,
+                     help: store.focusShortcut.map { "Não incomodar: corre o atalho “\($0)”" } ?? "Não incomodar: precisa de um atalho na app Atalhos") {
+                    Task { await store.toggleFocus() }
+                }
             }
             .disabled(store.busy)
             if store.explainFocus && store.focusShortcut == nil {
@@ -134,22 +137,22 @@ struct QuickTogglesView: View {
             }
             if let m = store.message { note(m, color: .attentionText) }
         }
-        .cardStyle()
         .task { await store.refresh() }
     }
 
-    private func tile(_ title: String, _ symbol: String, on: Bool, action: @escaping () -> Void) -> some View {
+    private func pill(_ title: String, _ symbol: String, on: Bool, help: String, action: @escaping () -> Void) -> some View {
         Button(action: action) {
-            VStack(spacing: DS.xs) {
-                Image(systemName: symbol).font(.system(size: 15 * TextSize.current.scale, weight: .medium))
-                    .foregroundStyle(on ? Color.accentColor : Color.primary).frame(height: 20)
-                Text(title).font(DS.meta).lineLimit(1).minimumScaleFactor(0.8)
+            HStack(spacing: DS.xs) {
+                Image(systemName: symbol).font(DS.meta.weight(.medium))
+                Text(title).font(DS.meta).lineLimit(1)
             }
-            .frame(maxWidth: .infinity).frame(height: 52)
-            .background(RoundedRectangle(cornerRadius: DS.rControl, style: .continuous).fill(DS.raised))
+            .foregroundStyle(on ? Color.accentColor : Color.primary)
+            .frame(maxWidth: .infinity).frame(height: 26)
+            .background(RoundedRectangle(cornerRadius: DS.rSmall, style: .continuous).fill(DS.raised))
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .accessibilityLabel(title)
+        .help(help)
+        .accessibilityLabel(help)
     }
 }
