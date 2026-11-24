@@ -17,6 +17,7 @@ struct SystemView: View {
     @Environment(\.agentAccentColor) private var agentAccentColor
     @AppStorage("system.detail") private var selected: Metric = .cpu
     @ObservedObject private var speed = SpeedTestStore.shared
+    @ObservedObject private var location = LocationAccess.shared
 
     var body: some View {
         VStack(spacing: DS.md) {
@@ -304,6 +305,41 @@ struct SystemView: View {
         return Fmt.num(wh, wh < 1 ? 2 : 1) + " Wh"
     }
 
+    @ViewBuilder private func wifiSection(_ w: WiFiInfo) -> some View {
+        Divider().opacity(0.5)
+        HStack(spacing: DS.xs) {
+            Image(systemName: Self.wifiSymbol(w.quality)).font(DS.body).foregroundStyle(Color.text2)
+            Text(w.ssid ?? "Wi-Fi").font(DS.body.weight(.medium)).lineLimit(1)
+            Spacer()
+            Text(w.quality.rawValue).font(DS.body)
+                .foregroundStyle(w.quality == .weak ? Color.attentionText : w.quality == .fair ? Color.waitingText : Color.primary)
+        }
+        .accessibilityElement(children: .combine)
+        StatRow(label: "Sinal", value: "\(w.rssi) dBm · ruído \(w.noise) dBm")
+        StatRow(label: "Velocidade da ligação", value: "\(Fmt.num(w.txRate, 0)) Mbps")
+        if let c = w.channel { StatRow(label: "Canal", value: w.band.map { "\(c) · \($0)" } ?? "\(c)") }
+        if w.ssid == nil { wifiNameAccess }
+    }
+
+    @ViewBuilder private var wifiNameAccess: some View {
+        if location.undecided {
+            Button("Mostrar o nome da rede…") { location.request() }
+                .buttonStyle(.link).font(DS.meta)
+                .help("O macOS só dá o nome da rede a apps com acesso à Localização. A app não pede a tua posição.")
+        } else if !location.allowed {
+            Button("Nome da rede: dá acesso à Localização nas Definições do Sistema") { location.openSettings() }
+                .buttonStyle(.link).font(DS.meta).multilineTextAlignment(.leading)
+        }
+    }
+
+    nonisolated static func wifiSymbol(_ q: WiFiInfo.Quality) -> String {
+        switch q {
+        case .excellent, .good: "wifi"
+        case .fair: "wifi.exclamationmark"
+        case .weak: "wifi.exclamationmark"
+        }
+    }
+
     private var networkDetail: some View {
         Card(title: "Rede", icon: "network", trailing: m.network.interface) {
             StatRow(label: "Download", value: Fmt.rate(m.network.downPerSec), swatch: .accentColor)
@@ -312,6 +348,7 @@ struct SystemView: View {
             StatRow(label: "Recebido desde que a app abriu", value: Fmt.bytes(m.network.totalDown))
             StatRow(label: "Enviado desde que a app abriu", value: Fmt.bytes(m.network.totalUp))
             StatRow(label: "IP local", value: m.network.localIP)
+            if let w = m.network.wifi { wifiSection(w) }
             Divider().opacity(0.5)
             if let result = speed.result {
                 StatRow(label: "Velocidade de download", value: "\(Fmt.num(result.downloadMbps, 1)) Mbps", swatch: .accentColor)

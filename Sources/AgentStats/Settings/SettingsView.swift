@@ -33,6 +33,7 @@ struct SettingsView: View {
     @AppStorage(TabLayout.startKey) private var startTab = TabLayout.lastUsed
     @AppStorage(TabLayout.shortcutsKey) private var tabShortcuts = false
     @ObservedObject private var hook = ClaudeHookStore.shared
+    @ObservedObject private var updates = UpdateStore.shared
     @StateObject private var login = Box(SMAppService.mainApp.status == .enabled)
     @StateObject private var loginErr = Box<String?>(nil)
     @StateObject private var savedProfile = Box<String?>(nil)
@@ -157,6 +158,8 @@ struct SettingsView: View {
                             } catch { loginErr.value = error.localizedDescription }
                         }))
                     if let e = loginErr.value { Text(e).font(DS.meta).foregroundStyle(Color.attentionText) }
+                    row("arrow.down.circle", "Procurar versões novas", "Uma vez por dia, no GitHub", Binding(
+                        get: { updates.enabled }, set: { updates.enabled = $0 }))
                 }
             }
             group("Claude Code") {

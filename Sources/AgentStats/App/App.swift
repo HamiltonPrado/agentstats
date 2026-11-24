@@ -136,6 +136,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
             NSApp.mainMenu = EditMenu.make()
             controller = StatusController(monitor: Monitor())
             ClipboardStore.shared.start()
+            UpdateStore.shared.start()
             CaptureStore.shared.stopOrphan()
             AppState.controller = controller
             HookEvents.prune()

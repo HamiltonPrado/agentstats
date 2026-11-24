@@ -7,6 +7,8 @@ final class NetworkReader {
     private var lastTime = Date()
     private var accDown: UInt64 = 0
     private var accUp: UInt64 = 0
+    private var wifi: WiFiInfo?
+    private var wifiReads = 0
 
     private func isPhysical(_ name: String) -> Bool {
         name.hasPrefix("en") || name.hasPrefix("pdp_ip")
@@ -51,6 +53,10 @@ final class NetworkReader {
         s.totalUp = accUp
         prev = cur
         lastTime = now
+        // O Wi-Fi muda devagar: de 5 em 5 leituras chega.
+        if wifiReads % 5 == 0 { wifi = WiFiReader.read() }
+        wifiReads += 1
+        s.wifi = wifi
         return s
     }
 

@@ -33,6 +33,7 @@ enum Tab: String, CaseIterable, Identifiable {
 
 struct PanelView: View {
     @Environment(Monitor.self) private var m
+    @ObservedObject private var updates = UpdateStore.shared
     @Environment(\.colorScheme) private var scheme
     @AppStorage("panel.tab2") private var storedTab: Tab = .agents
     @AppStorage("appearance.theme") private var themeRawValue = PanelTheme.system.rawValue
@@ -76,6 +77,10 @@ struct PanelView: View {
                 }
             } else {
                 content.padding(DS.md)
+            }
+            if updates.available != nil {
+                Divider().opacity(0.6)
+                updateBar
             }
             Divider().opacity(0.6)
             footer
@@ -185,6 +190,33 @@ struct PanelView: View {
 
     private var agentsBadgeDescription: String {
         m.needsAttentionCount > 0 ? "Precisa de ti" : m.workingCount > 0 ? "A trabalhar" : ""
+    }
+
+    // MARK: Versão nova
+
+    @ViewBuilder private var updateBar: some View {
+        if let r = updates.available {
+            HStack(spacing: DS.sm) {
+                Image(systemName: "arrow.down.circle.fill").foregroundStyle(Color.accentColor)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Versão \(r.version) disponível").font(DS.body.weight(.medium))
+                    if UpdateCheck.installedWithHomebrew {
+                        Text(UpdateCheck.brewCommand).font(DS.meta.monospaced()).foregroundStyle(Color.text2)
+                            .lineLimit(1).truncationMode(.middle).textSelection(.enabled)
+                    }
+                }
+                Spacer(minLength: DS.xs)
+                if UpdateCheck.installedWithHomebrew {
+                    Button("Copiar") { updates.copyBrewCommand() }
+                        .help("Copia o comando para o colares no Terminal")
+                }
+                Button("Novidades") { updates.openPage() }
+                    .help("Abre a página da versão no GitHub")
+            }
+            .controlSize(.small)
+            .padding(.horizontal, DS.md).padding(.vertical, DS.sm)
+            .accessibilityElement(children: .contain)
+        }
     }
 
     // MARK: Rodapé

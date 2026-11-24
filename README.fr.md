@@ -47,6 +47,8 @@
 - Applications les plus énergivores, processus les plus lourds et dossiers les plus volumineux.
 - Disque par catégories, avec les couleurs et les unités de macOS. Il est mesuré par dossiers à l’ouverture de la carte, donc approximatif.
 - Test de débit manuel via Cloudflare : environ **32 Mo par test** ; les mesures peuvent être collectées sous forme agrégée.
+- Wi-Fi : qualité du signal, bruit, débit de liaison et canal. Le nom du réseau n’apparaît que si vous autorisez la Localisation, que macOS exige pour cela ; l’app ne demande jamais votre position.
+- Avis de nouvelle version dans le panneau et par notification, avec la commande Homebrew si vous l’avez installée ainsi. Consulte GitHub une fois par jour et se désactive dans les Réglages.
 - Ne contrôle pas les ventilateurs.
 
 ### Audio
@@ -86,8 +88,9 @@ Barre des menus configurable, onglets au choix (lesquels, dans quel ordre et leq
 | Nettoyage du clavier et de l’écran | Accessibilité |
 | Historique du presse-papiers | Coller depuis d’autres apps (macOS 15.4+) |
 | Catégories du disque, mesurées à l’ouverture de la carte | Dossiers personnels (Bureau, Documents, Téléchargements, Musique, Images) |
+| Nom du réseau Wi-Fi (optionnel) | Localisation |
 
-Ni compte ni télémétrie. AgentStats lit les journaux des agents sur le Mac et ne les envoie pas. Le réseau ne sert qu’au test de débit, à Homebrew quand vous l’utilisez et à la consultation périodique des limites par votre Claude Code.
+Ni compte ni télémétrie. AgentStats lit les journaux des agents sur le Mac et ne les envoie pas. Le réseau ne sert qu’au test de débit, à Homebrew quand vous l’utilisez, à la consultation périodique des limites par votre Claude Code et à la recherche quotidienne de nouvelles versions sur GitHub, que vous pouvez désactiver.
 
 À partir de la 1.18.1, l’application a une signature fixe afin que **les autorisations persistent entre les mises à jour**. Depuis une version antérieure, il faut les accorder une dernière fois : si l’une semble activée sans fonctionner, retirez AgentStats de la liste avec − puis ajoutez-le à nouveau.
 

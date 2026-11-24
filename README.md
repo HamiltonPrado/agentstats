@@ -47,6 +47,8 @@
 - Apps que gastam mais energia, processos mais pesados e pastas que ocupam mais espaço.
 - Disco por categorias, com as cores e as unidades do macOS. Mede-se por pastas ao abrir o cartão, por isso é aproximado.
 - Teste de velocidade manual pelo Cloudflare: cerca de **32 MB por teste**; as medições podem ser recolhidas de forma agregada.
+- Wi-Fi: qualidade do sinal, ruído, velocidade da ligação e canal. O nome da rede só aparece se deres acesso à Localização, que o macOS exige para isso; a app não pede a tua posição.
+- Aviso de versão nova no painel e por notificação, com o comando do Homebrew se a instalaste por lá. Consulta o GitHub uma vez por dia e desliga-se nas Definições.
 - Não controla ventoinhas.
 
 ### Áudio
@@ -86,8 +88,9 @@ Barra de menus configurável, separadores à tua escolha (quais, por que ordem e
 | Limpeza do teclado e do ecrã | Acessibilidade |
 | Histórico do clipboard | Colar de outras apps (macOS 15.4+) |
 | Categorias do Disco, medidas ao abrir o cartão | Pastas pessoais (Secretária, Documentos, Descargas, Música, Fotografias) |
+| Nome da rede Wi-Fi (opcional) | Localização |
 
-Não há conta nem telemetria. O AgentStats lê os registos dos agentes no Mac e não os envia. Só há rede no teste de velocidade, no Homebrew quando o usas e na consulta periódica dos limites, feita pelo teu Claude Code.
+Não há conta nem telemetria. O AgentStats lê os registos dos agentes no Mac e não os envia. Só há rede no teste de velocidade, no Homebrew quando o usas, na consulta periódica dos limites, feita pelo teu Claude Code, e na procura diária de versões novas no GitHub, que podes desligar.
 
 A partir da 1.18.1 a app tem uma assinatura fixa, para **as permissões se manterem entre atualizações**. Ao vires de uma versão anterior tens de as dar uma última vez: se alguma aparecer ligada e não funcionar, tira o AgentStats dessa lista com − e volta a juntá-lo.
 

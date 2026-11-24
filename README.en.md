@@ -47,6 +47,8 @@
 - Apps using the most energy, heaviest processes, and largest folders.
 - Disk by category, with the colors and units macOS uses. It is measured by folder when the card opens, so it is approximate.
 - Manual speed test through Cloudflare: about **32 MB per test**; measurements may be collected in aggregate.
+- Wi-Fi: signal quality, noise, link speed, and channel. The network name appears only if you grant Location access, which macOS requires for it; the app never asks for your position.
+- New version notice in the panel and as a notification, with the Homebrew command if you installed it that way. It checks GitHub once a day and can be turned off in Settings.
 - Does not control fans.
 
 ### Audio
@@ -86,8 +88,9 @@ Configurable menu bar, tabs of your choice (which ones, in what order, and which
 | Keyboard and screen cleaning | Accessibility |
 | Clipboard history | Paste from other apps (macOS 15.4+) |
 | Disk categories, measured when the card opens | Personal folders (Desktop, Documents, Downloads, Music, Pictures) |
+| Wi-Fi network name (optional) | Location |
 
-There is no account and no telemetry. AgentStats reads agent logs on your Mac and does not send them. The network is used only by the speed test, by Homebrew when you use it, and by the periodic limits check made through your Claude Code.
+There is no account and no telemetry. AgentStats reads agent logs on your Mac and does not send them. The network is used only by the speed test, by Homebrew when you use it, by the periodic limits check made through your Claude Code, and by the daily check for new versions on GitHub, which you can turn off.
 
 Starting with 1.18.1 the app has a fixed signature, so **permissions persist across updates**. When coming from an earlier version you need to grant them one last time: if one looks enabled but does not work, remove AgentStats from that list with − and add it again.
 

@@ -77,6 +77,7 @@ enum DemoData {
 
         m.network.downPerSec = 2_400_000
         m.network.upPerSec = 320_000
+        m.network.wifi = WiFiInfo(interface: "en0", ssid: "Casa", rssi: -52, noise: -94, txRate: 1200, channel: 149, band: "5 GHz")
         m.network.totalDown = 3 * gb
         m.network.totalUp = 420 * mb
         m.network.localIP = "192.0.2.24"   // reservado para documentação (RFC 5737)

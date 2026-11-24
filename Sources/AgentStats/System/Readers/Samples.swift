@@ -31,6 +31,7 @@ struct NetworkSample {
     var totalUp: UInt64 = 0
     var localIP: String = "—"
     var interface: String = "—"
+    var wifi: WiFiInfo?
 }
 
 struct DiskSample {

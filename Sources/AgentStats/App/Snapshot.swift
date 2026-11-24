@@ -21,6 +21,8 @@ enum Snapshot {
                 SystemAlert(kind: .temp, value: "91 °C", since: Date().addingTimeInterval(-30), detail: "node (74%)"),
             ]
         }
+        UpdateStore.shared.loadDemo(ProcessInfo.processInfo.environment["AGENTSTATS_FAKE_UPDATE"] != nil
+            ? Release(version: "1.19", page: URL(string: "https://github.com/HamiltonPrado/agentstats/releases")!) : nil)
         var failed = false
         for scheme in [ColorScheme.light, .dark] {
             let dark = scheme == .dark

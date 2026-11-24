@@ -11,6 +11,8 @@ let package = Package(
             linkerSettings: [
                 .linkedFramework("IOKit"),
                 .linkedFramework("ServiceManagement"),
+                .linkedFramework("CoreWLAN"),
+                .linkedFramework("CoreLocation"),
                 .linkedLibrary("sqlite3"),
             ]
         ),
