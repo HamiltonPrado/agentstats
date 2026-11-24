@@ -27,11 +27,13 @@ enum Fmt {
         return num(Double(b) / 1_000_000, 0) + " MB"
     }
     static func rate(_ bps: Double, short: Bool = false) -> String {
-        let units = short ? ["B", "K", "M", "G"] : ["B/s", "KB/s", "MB/s", "GB/s"]
+        // Sempre com a unidade de velocidade: "320K" sozinho lia-se como 320 mil.
+        // Na barra de menus, com um espaço fino, para caber.
+        let units = ["B/s", "KB/s", "MB/s", "GB/s"]
         var v = bps, i = 0
         while v >= 1000 && i < units.count - 1 { v /= 1000; i += 1 }
         let n = v >= 100 || i == 0 ? Fmt.num(v, 0) : Fmt.num(v, 1)
-        return n + (short ? units[i] : " " + units[i])
+        return n + (short ? "\u{2009}" : " ") + units[i]
     }
     /// Número com vírgula decimal (pt-PT), igual em todo o lado: 46,9 · 1,2 · 0,85
     static func num(_ v: Double, _ digits: Int) -> String {

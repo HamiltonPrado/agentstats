@@ -96,11 +96,11 @@ enum MenuBarDrawer {
                 case .compact: s.append(.value("↓" + down))
                 case .graphs:
                     let mx = Swift.max((m.downHistory.values + m.upHistory.values).max() ?? 1, 10_000)
-                    s.append(.graph(title: "REDE", value: "↓" + down, values: m.downHistory.values, max: mx))
+                    s.append(.graph(title: L("REDE"), value: "↓" + down, values: m.downHistory.values, max: mx))
                 case .labeled: s.append(.twoLines("↑ " + up, "↓ " + down, minWidth: 40))
                 }
             case "battery" where bat:
-                if let b = m.battery { s.append(metric(b.isCharging ? "CARGA" : "BAT", Fmt.pct(b.percent))) }
+                if let b = m.battery { s.append(metric(L(b.isCharging ? "CARGA" : "BAT"), Fmt.pct(b.percent))) }
             default:
                 break
             }

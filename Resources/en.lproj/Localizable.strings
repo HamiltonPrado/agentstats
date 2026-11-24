@@ -840,3 +840,5 @@
 "D" = "R";
 "ontem" = "yesterday";
 "desligado" = "off";
+"REDE" = "NET";
+"CARGA" = "CHRG";
