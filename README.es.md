@@ -67,7 +67,10 @@
 
 ### Herramientas
 
-- **Puertos:** muestra lo que está a la escucha y termina procesos tuyos, con confirmación.
+- **Red:** ve los puertos a la escucha y cierra procesos tuyos, con confirmación, y vacía la caché de DNS (pide la contraseña de administrador en el diálogo de macOS).
+- **Discos:** expulsa discos externos, imágenes de disco y volúmenes de red, y dice qué app impide expulsarlos.
+- **Arranque:** lo que se abre solo (LaunchAgents y LaunchDaemons). Los tuyos se pueden desactivar y volver a activar; los demás solo se muestran.
+- **Archivos:** los archivos más grandes de tu carpeta personal, con la fecha de la última apertura y un filtro para los que llevan más de 6 meses sin uso. Los mueve a la Papelera con confirmación.
 - **Homebrew:** actualiza y elimina paquetes.
 - **Desinstalar:** mueve apps a la Papelera, con los restos que elijas.
 - **Limpieza:** mueve a la Papelera cachés de una lista cerrada (Homebrew, pip y npm; Brave, Playwright, Hugging Face y npx son opcionales), con confirmación y sin tocar lo que detecte en uso. El espacio se libera al vaciar la Papelera.

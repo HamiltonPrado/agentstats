@@ -67,7 +67,10 @@
 
 ### Tools
 
-- **Ports:** see what is listening and stop your own processes, with confirmation.
+- **Network:** see listening ports and quit your own processes, with confirmation, and flush the DNS cache (asks for the administrator password in the macOS dialog).
+- **Disks:** eject external disks, disk images and network volumes, and see which app is blocking the eject.
+- **Startup:** what starts on its own (LaunchAgents and LaunchDaemons). Your own can be turned off and back on; the others are shown only.
+- **Files:** the largest files in your home folder, with the last opened date and a filter for files unused for more than 6 months. Moves to the Trash with confirmation.
 - **Homebrew:** upgrade and remove packages.
 - **Uninstall:** move apps to the Trash, with the leftovers you select.
 - **Cleanup:** moves caches from a closed list to the Trash (Homebrew, pip, and npm; Brave, Playwright, Hugging Face, and npx are optional), with confirmation and without touching anything detected as in use. Space is freed when you empty the Trash.

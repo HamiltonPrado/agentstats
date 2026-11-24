@@ -67,7 +67,10 @@
 
 ### Outils
 
-- **Ports :** affiche ce qui est à l’écoute et arrête vos processus, après confirmation.
+- **Réseau :** voyez les ports à l’écoute et quittez vos processus, après confirmation, et videz le cache DNS (demande le mot de passe administrateur dans la fenêtre de macOS).
+- **Disques :** éjectez disques externes, images disque et volumes réseau, et voyez quelle app empêche l’éjection.
+- **Démarrage :** ce qui démarre tout seul (LaunchAgents et LaunchDaemons). Les vôtres se désactivent et se réactivent ; les autres sont seulement affichés.
+- **Fichiers :** les plus gros fichiers de votre dossier personnel, avec la date de dernière ouverture et un filtre pour ceux inutilisés depuis plus de 6 mois. Mise à la Corbeille après confirmation.
 - **Homebrew :** met à jour et supprime des paquets.
 - **Désinstaller :** place les applications dans la Corbeille, avec les restes choisis.
 - **Nettoyage :** place dans la Corbeille des caches d’une liste fermée (Homebrew, pip et npm ; Brave, Playwright, Hugging Face et npx sont optionnels), après confirmation et sans toucher à ce qui est détecté en cours d’utilisation. L’espace est libéré quand vous videz la Corbeille.

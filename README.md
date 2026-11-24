@@ -67,7 +67,10 @@
 
 ### Ferramentas
 
-- **Portas:** vê o que está à escuta e termina processos teus, com confirmação.
+- **Rede:** vê as portas à escuta e termina processos teus, com confirmação, e limpa a cache de DNS (pede a password de administrador no diálogo do macOS).
+- **Discos:** ejeta discos externos, imagens de disco e volumes de rede, e diz que app está a impedir a ejeção.
+- **Arranque:** o que arranca sozinho (LaunchAgents e LaunchDaemons). Os teus podem desligar-se e voltar a ligar-se; os outros só se veem.
+- **Ficheiros:** os ficheiros maiores da tua pasta pessoal, com a data da última abertura e um filtro para os que estão sem uso há mais de 6 meses. Move para o Lixo com confirmação.
 - **Homebrew:** atualiza e remove pacotes.
 - **Desinstalar:** move apps para o Lixo, com os restos que escolheres.
 - **Limpeza:** move para o Lixo caches de uma lista fechada (Homebrew, pip e npm; Brave, Playwright, Hugging Face e npx são opcionais), com confirmação e sem tocar no que detetar em uso. O espaço fica livre quando esvaziares o Lixo.
