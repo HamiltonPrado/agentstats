@@ -80,7 +80,7 @@
 ### Outils
 
 - **Fenêtres :** placez la fenêtre au premier plan en moitiés, tiers, deux tiers, coins, plein écran ou au centre, et passez-la sur l’autre écran, avec des raccourcis globaux (⌃⌥ + flèches et lettres, comme dans Rectangle) désactivables. Appuyer de nouveau sur la moitié gauche ou droite alterne entre ½, ⅔ et ⅓. Nécessite l’Accessibilité.
-- **Raccourcis rapides :** mode sombre, masquer les icônes du bureau (le Finder redémarre) et Ne pas déranger, qui nécessite un raccourci de ce nom dans l’app Raccourcis.
+- **Raccourcis rapides :** mode sombre et masquer les icônes du bureau (le Finder redémarre).
 - **Réseau :** voyez les ports à l’écoute et quittez vos processus, après confirmation, et videz le cache DNS (demande le mot de passe administrateur dans la fenêtre de macOS).
 - **Disques :** éjectez disques externes, images disque et volumes réseau, et voyez quelle app empêche l’éjection.
 - **Démarrage :** ce qui démarre tout seul (LaunchAgents et LaunchDaemons). Les vôtres se désactivent et se réactivent ; les autres sont seulement affichés.

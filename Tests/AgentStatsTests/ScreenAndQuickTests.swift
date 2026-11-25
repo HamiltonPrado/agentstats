@@ -59,12 +59,6 @@ struct ScreenReadingTests {
 
 @Suite("Atalhos rápidos")
 struct QuickTogglesTests {
-    @Test func findsTheFocusShortcut() {
-        #expect(QuickToggles.focusShortcut(in: "Enviar\nnão incomodar\nOutro") == "não incomodar")
-        #expect(QuickToggles.focusShortcut(in: "Do Not Disturb\n") == "Do Not Disturb")
-        #expect(QuickToggles.focusShortcut(in: "Não incomodar no trabalho\n") == nil)
-    }
-
     @Test func desktopIconsDefaultToShown() {
         #expect(QuickToggles.desktopIconsShown(nil as Any?))
         #expect(!QuickToggles.desktopIconsShown(false as Any?))

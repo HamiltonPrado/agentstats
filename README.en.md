@@ -80,7 +80,7 @@
 ### Tools
 
 - **Windows:** put the front window in halves, thirds, two thirds, corners, full screen or centered, and move it to the other display, with global shortcuts (⌃⌥ + arrows and letters, as in Rectangle) that can be turned off. Pressing left or right half again cycles through ½, ⅔ and ⅓. Needs Accessibility.
-- **Quick toggles:** dark mode, hide desktop icons (Finder restarts), and Do Not Disturb, which needs a shortcut with that name in the Shortcuts app.
+- **Quick toggles:** dark mode and hide desktop icons (Finder restarts).
 - **Network:** see listening ports and quit your own processes, with confirmation, and flush the DNS cache (asks for the administrator password in the macOS dialog).
 - **Disks:** eject external disks, disk images and network volumes, and see which app is blocking the eject.
 - **Startup:** what starts on its own (LaunchAgents and LaunchDaemons). Your own can be turned off and back on; the others are shown only.

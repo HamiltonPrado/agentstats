@@ -80,7 +80,7 @@
 ### Herramientas
 
 - **Ventanas:** pon la ventana del frente en mitades, tercios, dos tercios, esquinas, pantalla completa o centrada, y pásala a la otra pantalla, con atajos globales (⌃⌥ + flechas y letras, como en Rectangle) que se pueden desactivar. Pulsar otra vez la mitad izquierda o derecha alterna entre ½, ⅔ y ⅓. Necesita Accesibilidad.
-- **Atajos rápidos:** modo oscuro, ocultar los iconos del escritorio (el Finder se reinicia) y No molestar, que necesita un atajo con ese nombre en la app Atajos.
+- **Atajos rápidos:** modo oscuro y ocultar los iconos del escritorio (el Finder se reinicia).
 - **Red:** ve los puertos a la escucha y cierra procesos tuyos, con confirmación, y vacía la caché de DNS (pide la contraseña de administrador en el diálogo de macOS).
 - **Discos:** expulsa discos externos, imágenes de disco y volúmenes de red, y dice qué app impide expulsarlos.
 - **Arranque:** lo que se abre solo (LaunchAgents y LaunchDaemons). Los tuyos se pueden desactivar y volver a activar; los demás solo se muestran.

@@ -115,7 +115,6 @@
 "Abre o painel. Clicar fora fecha-o." = "Opens the panel. Clicking outside closes it.";
 "Abrir" = "Open";
 "Abrir AgentStats" = "Open AgentStats";
-"Abrir Atalhos" = "Open Shortcuts";
 "Abrir Definições do Sistema" = "Open System Settings";
 "Abrir Itens de início nas Definições…" = "Open Login Items in Settings…";
 "Abrir Monitor de Atividade" = "Open Activity Monitor";
@@ -339,7 +338,6 @@
 "Filmes" = "Movies";
 "Filtrar por estado" = "Filter by state";
 "Filtrar sessões" = "Filter sessions";
-"Foco" = "Focus";
 "Forçar" = "Force";
 "Forçar a terminação de %@?" = "Force quit %@?";
 "Forçar terminação…" = "Force quit…";
@@ -379,7 +377,6 @@
 "Junta as cidades das pessoas com quem trabalhas." = "Add the cities of the people you work with.";
 "Junta uma entrada ao ~/.claude/settings.json, com cópia de segurança ao lado. Desligar tira só essa entrada." = "Adds an entry to ~/.claude/settings.json, with a backup next to it. Turning it off removes only that entry.";
 "Juntar cidade (ex.: Tóquio, New York)" = "Add a city (e.g. Tokyo, New York)";
-"Já criei" = "I created it";
 "Larga" = "Wide";
 "Largura" = "Width";
 "Latência" = "Latency";
@@ -492,9 +489,6 @@
 "Não foi possível concluir o teste. Verifica a ligação e tenta novamente." = "The test couldn't finish. Check the connection and try again.";
 "Não foi possível ler a utilização da GPU" = "Couldn't read GPU usage";
 "Não há nada que valha a pena limpar." = "Nothing worth cleaning.";
-"Não incomodar" = "Do Not Disturb";
-"Não incomodar: corre o atalho “%@”" = "Do Not Disturb: runs the shortcut “%@”";
-"Não incomodar: precisa de um atalho na app Atalhos" = "Do Not Disturb: needs a shortcut in the Shortcuts app";
 "Não movi nada." = "Nothing was moved.";
 "Não selecionado" = "Not selected";
 "Nível do microfone" = "Microphone level";
@@ -503,7 +497,6 @@
 "O Homebrew não devolveu a lista." = "Homebrew didn't return the list.";
 "O Homebrew não está instalado neste Mac." = "Homebrew isn't installed on this Mac.";
 "O Homebrew recusou ou falhou. Se precisar de administrador, corre-o no Terminal." = "Homebrew refused or failed. If it needs an administrator, run it in Terminal.";
-"O atalho “%@” não correu. Abre-o na app Atalhos para ver o que falta." = "The shortcut “%@” didn't run. Open it in the Shortcuts app to see what's missing.";
 "O disco está em uso. Fecha o que estiver a usá-lo e tenta outra vez." = "The disk is in use. Close whatever is using it and try again.";
 "O ecrã inteiro guarda em Filmes → AgentStats; para parar, clica no AgentStats na barra de menus. A área abre a ferramenta do macOS, que guarda onde estiver configurada." = "Full screen saves to Movies → AgentStats; to stop, click AgentStats in the menu bar. Area opens the macOS tool, which saves wherever it's set to.";
 "O macOS não deixa o AgentStats ler o clipboard, por isso nada está a ser guardado." = "macOS doesn't let AgentStats read the clipboard, so nothing is being saved.";
@@ -512,7 +505,6 @@
 "O macOS não devolveu a captura (código %d)." = "macOS didn't return the screenshot (code %d).";
 "O macOS não me deixou mover %@, por isso não mexi nos restos. Arrasta-a no Finder, que pede a password." = "macOS didn't let me move %@, so the leftovers were left alone. Drag it in Finder, which asks for the password.";
 "O macOS pede-as na primeira vez que usares a captura, o mixer ou a limpeza do teclado. Nada é enviado: tudo fica neste Mac." = "macOS asks for them the first time you use capture, the mixer or keyboard cleaning. Nothing is sent: everything stays on this Mac.";
-"O macOS só deixa mudar o Foco pela app Atalhos. Cria lá um atalho chamado “Não incomodar” com a ação “Definir Foco” → Não incomodar → Alternar. Depois volta aqui." = "macOS only lets the Shortcuts app change Focus. Create a shortcut there called “Não incomodar” with the action “Set Focus” → Do Not Disturb → Toggle. Then come back here.";
 "O macOS só dá o nome da rede a apps com acesso à Localização. A app não pede a tua posição." = "macOS only gives the network name to apps with Location access. The app never asks for your position.";
 "O macOS tem de te perguntar primeiro. Depois escolhe “Permitir sempre” nas Definições, senão pergunta a cada cópia." = "macOS has to ask you first. Then choose “Always Allow” in Settings, or it asks on every copy.";
 "O pedido continua pendente há %lld min." = "The request has been pending for %lld min.";
@@ -902,3 +894,4 @@
 "Centrar" = "Center";
 "Próximo ecrã" = "Next display";
 "Ecrã anterior" = "Previous display";
+"Foco" = "Focus";

@@ -80,7 +80,7 @@
 ### Ferramentas
 
 - **Janelas:** põe a janela da frente em metades, terços, dois terços, cantos, ecrã inteiro ou ao centro, e passa-a para o outro monitor, com atalhos globais (⌃⌥ + setas e letras, como no Rectangle) que se podem desligar. Carregar outra vez na metade esquerda ou direita alterna entre ½, ⅔ e ⅓. Precisa da Acessibilidade.
-- **Atalhos rápidos:** modo escuro, esconder os ícones da secretária (o Finder reinicia) e Não incomodar, que precisa de um atalho com esse nome na app Atalhos.
+- **Atalhos rápidos:** modo escuro e esconder os ícones da secretária (o Finder reinicia).
 - **Rede:** vê as portas à escuta e termina processos teus, com confirmação, e limpa a cache de DNS (pede a password de administrador no diálogo do macOS).
 - **Discos:** ejeta discos externos, imagens de disco e volumes de rede, e diz que app está a impedir a ejeção.
 - **Arranque:** o que arranca sozinho (LaunchAgents e LaunchDaemons). Os teus podem desligar-se e voltar a ligar-se; os outros só se veem.
