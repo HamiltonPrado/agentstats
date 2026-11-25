@@ -10,8 +10,6 @@ func L(_ s: String) -> String {
 /// como nos testes, é português.
 let appIsEnglish: Bool = L("Hoje") == "Today"
 
-/// Igual, para textos opcionais.
-func L(_ s: String?) -> String? { s.map { L($0) } }
 
 /// O idioma da app, à parte do sistema. Fica em `AppleLanguages` do próprio AgentStats e vale a partir da reabertura.
 enum AppLanguage: String, CaseIterable, Identifiable {
