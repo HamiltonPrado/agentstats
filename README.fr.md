@@ -84,7 +84,7 @@
 ### Outils
 
 - **Fenêtres :** placez la fenêtre au premier plan en moitiés, tiers, deux tiers, coins, plein écran ou au centre, et passez-la sur l’autre écran, avec des raccourcis globaux (⌃⌥ + flèches et lettres, comme dans Rectangle) désactivables. Appuyer de nouveau sur la moitié gauche ou droite alterne entre ½, ⅔ et ⅓. Nécessite l’Accessibilité.
-- **Partager :** envoyez un fichier sur le téléphone par code QR, via le réseau local (le lien a un code secret, fonctionne une fois et expire en 10 minutes), et générez le QR du Wi-Fi pour les invités.
+- **Partager :** envoyez un fichier sur le téléphone par code QR, via le réseau local (le lien a un code secret, fonctionne une fois et expire en 10 minutes), et générez le QR du Wi-Fi pour les invités, avec le mot de passe déjà enregistré sur le Mac (macOS demande votre autorisation).
 - **Mode présentation** dans les raccourcis rapides : masque les icônes, garde l’écran allumé, met en pause le Presse-papiers et coupe les notifications de l’app.
 - **Raccourcis rapides :** mode sombre et masquer les icônes du bureau (le Finder redémarre).
 - **Réseau :** voyez les ports à l’écoute et quittez vos processus, après confirmation, et videz le cache DNS (demande le mot de passe administrateur dans la fenêtre de macOS).

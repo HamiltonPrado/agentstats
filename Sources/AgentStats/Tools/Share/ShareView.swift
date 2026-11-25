@@ -72,6 +72,9 @@ struct ShareView: View {
     @StateObject private var ssid = Box("")
     @StateObject private var password = Box("")
     @StateObject private var security = Box(WiFiQR.Security.wpa)
+    @StateObject private var fetching = Box(false)
+    @StateObject private var wifiNote = Box<String?>(nil)
+    @ObservedObject private var location = LocationAccess.shared
 
     var body: some View {
         VStack(alignment: .leading, spacing: DS.md) {
@@ -137,17 +140,47 @@ struct ShareView: View {
 
     // MARK: Wi-Fi
 
+    /// Lê do porta-chaves a password que o Mac já tem para esta rede. Fica só em memória, neste cartão.
+    private func fetchPassword() async {
+        fetching.value = true
+        wifiNote.value = nil
+        switch await WiFiPassword.fetch(ssid: ssid.value) {
+        case .found(let p):
+            password.value = p
+            security.value = .wpa
+        case .notSaved: wifiNote.value = String(localized: "O Mac não tem guardada a password de “\(ssid.value)”. Confirma o nome da rede.")
+        case .cancelled: break
+        case .failed: wifiNote.value = L("Não consegui ler a password guardada.")
+        }
+        fetching.value = false
+    }
+
     private var wifiCard: some View {
         let payload = WiFiQR.payload(ssid: ssid.value, password: password.value, security: security.value)
         return VStack(alignment: .leading, spacing: DS.sm) {
             Text("Partilhar o Wi-Fi").font(DS.body.weight(.medium))
             TextField("Nome da rede", text: $ssid.value).textFieldStyle(.roundedBorder).font(DS.body)
+            if ssid.value.isEmpty && !location.allowed && !store.isDemo {
+                // Sem Localização, o macOS não diz o nome da rede atual.
+                textLink("Usar a rede atual (pede acesso à Localização)", color: .accentColor) {
+                    location.undecided ? location.request() : location.openSettings()
+                }
+            }
             Picker("Segurança", selection: $security.value) {
                 ForEach(WiFiQR.Security.allCases) { Text(L($0.title)).tag($0) }
             }
             .labelsHidden()
             if security.value != .open {
                 SecureField("Password da rede", text: $password.value).textFieldStyle(.roundedBorder).font(DS.body)
+                HStack(spacing: DS.sm) {
+                    if fetching.value { ProgressView().controlSize(.small) }
+                    Button("Usar a password guardada no Mac") { Task { await fetchPassword() } }
+                        .controlSize(.small)
+                        .disabled(fetching.value || ssid.value.trimmingCharacters(in: .whitespaces).isEmpty)
+                        .help("O macOS pede a tua password de administrador ou o Touch ID, no diálogo dele")
+                    Spacer()
+                }
+                if let n = wifiNote.value { note(n, color: .text2) }
             }
             if let payload, let qr = QRMaker.image(payload) {
                 HStack {
@@ -163,6 +196,9 @@ struct ShareView: View {
         .onAppear {
             // Nas capturas (README e site), nunca o nome da rede real.
             if ssid.value.isEmpty { ssid.value = store.isDemo ? "Casa" : (WiFiReader.read()?.ssid ?? "") }
+        }
+        .onChange(of: location.status) { _, _ in
+            if ssid.value.isEmpty, !store.isDemo { ssid.value = WiFiReader.read()?.ssid ?? "" }
         }
         .onDisappear { password.value = "" }
     }

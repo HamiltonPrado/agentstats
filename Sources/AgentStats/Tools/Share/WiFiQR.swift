@@ -33,3 +33,36 @@ enum WiFiQR {
         return s + ";"
     }
 }
+
+/// A password de uma rede Wi-Fi que o Mac já conhece, lida do porta-chaves do sistema com o `security` do macOS.
+/// É o macOS que pede a password de administrador (ou o Touch ID) no diálogo dele: a app nunca a vê.
+enum WiFiPassword {
+    enum Outcome: Equatable {
+        case found(String)
+        case notSaved
+        case cancelled
+        case failed
+    }
+
+    static func arguments(ssid: String) -> [String] {
+        ["find-generic-password", "-D", "AirPort network password", "-a", ssid, "-w"]
+    }
+
+    /// 44 é "não existe"; 128 ou "canceled" é o Cancelar do diálogo do macOS.
+    static func outcome(status: Int32, out: String, err: String) -> Outcome {
+        if status == 0 {
+            let password = out.trimmingCharacters(in: .newlines)
+            return password.isEmpty ? .notSaved : .found(password)
+        }
+        if status == 44 || err.contains("could not be found") { return .notSaved }
+        if status == 128 || err.lowercased().contains("cancel") { return .cancelled }
+        return .failed
+    }
+
+    static func fetch(ssid: String) async -> Outcome {
+        let name = ssid.trimmingCharacters(in: .whitespaces)
+        guard !name.isEmpty else { return .failed }
+        let r = await ToolRunner.run("/usr/bin/security", arguments(ssid: name), timeout: 120)
+        return outcome(status: r.timedOut ? -1 : r.status, out: r.out, err: r.err)
+    }
+}

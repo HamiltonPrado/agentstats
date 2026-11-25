@@ -84,7 +84,7 @@
 ### Ferramentas
 
 - **Janelas:** põe a janela da frente em metades, terços, dois terços, cantos, ecrã inteiro ou ao centro, e passa-a para o outro monitor, com atalhos globais (⌃⌥ + setas e letras, como no Rectangle) que se podem desligar. Carregar outra vez na metade esquerda ou direita alterna entre ½, ⅔ e ⅓. Precisa da Acessibilidade.
-- **Partilhar:** envia um ficheiro para o telemóvel por código QR, pela rede local (o link tem um código secreto, serve uma vez e expira em 10 minutos), e gera o QR do Wi-Fi para os convidados.
+- **Partilhar:** envia um ficheiro para o telemóvel por código QR, pela rede local (o link tem um código secreto, serve uma vez e expira em 10 minutos), e gera o QR do Wi-Fi para os convidados, com a password que o Mac já tem guardada (o macOS pede a tua autorização).
 - **Modo apresentação** nos atalhos rápidos: esconde os ícones, mantém o ecrã ligado, pausa o Clipboard e cala as notificações da app.
 - **Atalhos rápidos:** modo escuro e esconder os ícones da secretária (o Finder reinicia).
 - **Rede:** vê as portas à escuta e termina processos teus, com confirmação, e limpa a cache de DNS (pede a password de administrador no diálogo do macOS).

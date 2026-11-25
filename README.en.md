@@ -84,7 +84,7 @@
 ### Tools
 
 - **Windows:** put the front window in halves, thirds, two thirds, corners, full screen or centered, and move it to the other display, with global shortcuts (⌃⌥ + arrows and letters, as in Rectangle) that can be turned off. Pressing left or right half again cycles through ½, ⅔ and ⅓. Needs Accessibility.
-- **Share:** send a file to your phone by QR code over the local network (the link has a secret code, works once and expires in 10 minutes), and make a Wi-Fi QR code for guests.
+- **Share:** send a file to your phone by QR code over the local network (the link has a secret code, works once and expires in 10 minutes), and make a Wi-Fi QR code for guests, using the password your Mac already has saved (macOS asks for your authorization).
 - **Presentation mode** in the quick toggles: hides icons, keeps the display on, pauses the Clipboard and silences the app's notifications.
 - **Quick toggles:** dark mode and hide desktop icons (Finder restarts).
 - **Network:** see listening ports and quit your own processes, with confirmation, and flush the DNS cache (asks for the administrator password in the macOS dialog).

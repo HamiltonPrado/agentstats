@@ -12,6 +12,14 @@ struct ShareTests {
         #expect(WiFiQR.payload(ssid: "Casa", password: "", security: .wpa) == nil)
     }
 
+    @Test func savedWiFiPassword() {
+        #expect(WiFiPassword.arguments(ssid: "Casa") == ["find-generic-password", "-D", "AirPort network password", "-a", "Casa", "-w"])
+        #expect(WiFiPassword.outcome(status: 0, out: "segredo123\n", err: "") == .found("segredo123"))
+        #expect(WiFiPassword.outcome(status: 44, out: "", err: "security: SecKeychainSearchCopyNext: The specified item could not be found in the keychain.") == .notSaved)
+        #expect(WiFiPassword.outcome(status: 128, out: "", err: "User canceled the operation.") == .cancelled)
+        #expect(WiFiPassword.outcome(status: 1, out: "", err: "outra coisa") == .failed)
+    }
+
     @Test func requestRules() {
         let t = "abc"
         #expect(FileDrop.decide(requestLine: "GET /abc/f.pdf HTTP/1.1", token: t, served: false, expired: false) == .serve)

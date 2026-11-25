@@ -84,7 +84,7 @@
 ### Herramientas
 
 - **Ventanas:** pon la ventana del frente en mitades, tercios, dos tercios, esquinas, pantalla completa o centrada, y pásala a la otra pantalla, con atajos globales (⌃⌥ + flechas y letras, como en Rectangle) que se pueden desactivar. Pulsar otra vez la mitad izquierda o derecha alterna entre ½, ⅔ y ⅓. Necesita Accesibilidad.
-- **Compartir:** envía un archivo al móvil por código QR, por la red local (el enlace tiene un código secreto, funciona una vez y caduca en 10 minutos), y genera el QR del Wi-Fi para los invitados.
+- **Compartir:** envía un archivo al móvil por código QR, por la red local (el enlace tiene un código secreto, funciona una vez y caduca en 10 minutos), y genera el QR del Wi-Fi para los invitados, con la contraseña que el Mac ya tiene guardada (macOS pide tu autorización).
 - **Modo presentación** en los atajos rápidos: oculta los iconos, mantiene la pantalla encendida, pausa el Portapapeles y silencia las notificaciones de la app.
 - **Atajos rápidos:** modo oscuro y ocultar los iconos del escritorio (el Finder se reinicia).
 - **Red:** ve los puertos a la escucha y cierra procesos tuyos, con confirmación, y vacía la caché de DNS (pide la contraseña de administrador en el diálogo de macOS).
