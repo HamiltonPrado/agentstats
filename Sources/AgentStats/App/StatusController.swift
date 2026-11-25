@@ -169,6 +169,12 @@ final class StatusController: NSObject, NSPopoverDelegate {
 
     func togglePanel() { toggle(nil) }
 
+    /// Abre o painel neste separador (ou muda para ele, se já estiver aberto). Nunca fecha.
+    func reveal(_ tab: Tab) {
+        UserDefaults.standard.set(tab.rawValue, forKey: Self.tabKey)
+        if !popover.isShown { present() }
+    }
+
     var monitorForCommands: Monitor { monitor }
 
     private var settingsWindow: NSWindow?

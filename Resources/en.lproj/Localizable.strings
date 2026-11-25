@@ -978,3 +978,5 @@
 "Usar a rede atual (pede acesso à Localização)" = "Use the current network (asks for Location access)";
 "O Mac não tem guardada a password de “%@”. Confirma o nome da rede." = "This Mac has no saved password for “%@”. Check the network name.";
 "Não consegui ler a password guardada." = "Couldn't read the saved password.";
+"Esquecer a password" = "Forget the password";
+"Os convidados apontam a câmara e entram, sem escrever a password. A password fica só em memória e é esquecida ao fim de 10 minutos." = "Guests point their camera and join, without typing the password. The password stays in memory only and is forgotten after 10 minutes.";
