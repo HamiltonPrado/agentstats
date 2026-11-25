@@ -2,7 +2,9 @@ import SwiftUI
 import AppKit
 
 enum ToolSection: String, CaseIterable, Identifiable {
-    case ports, brew, apps, cleanup, disks, startup, files, images, windows, share
+    // A ordem é a da grelha: em cima o dia a dia, em baixo a manutenção do Mac.
+    case windows, share, images, files, disks
+    case cleanup, apps, startup, brew, ports
     var id: String { rawValue }
     var title: String {
         switch self {
@@ -18,10 +20,25 @@ enum ToolSection: String, CaseIterable, Identifiable {
         case .share: "Partilhar"
         }
     }
+
+    var symbol: String {
+        switch self {
+        case .windows: "macwindow.on.rectangle"
+        case .share: "qrcode"
+        case .images: "photo.on.rectangle"
+        case .files: "doc.text.magnifyingglass"
+        case .disks: "externaldrive"
+        case .cleanup: "sparkles"
+        case .apps: "xmark.app"
+        case .startup: "power"
+        case .brew: "mug"
+        case .ports: "network"
+        }
+    }
 }
 
 struct ToolsView: View {
-    /// Duas linhas de cinco: dez secções numa só ficavam ilegíveis na largura do painel.
+    /// Duas linhas de cinco ícones, todos do mesmo tamanho: em texto, os nomes compridos encolhiam.
     static let rows: [[ToolSection]] = stride(from: 0, to: ToolSection.allCases.count, by: 5).map {
         Array(ToolSection.allCases[$0..<min($0 + 5, ToolSection.allCases.count)])
     }
@@ -34,7 +51,7 @@ struct ToolsView: View {
             QuickTogglesView(store: .shared)
             VStack(spacing: 2) {
                 ForEach(Self.rows, id: \.self) { line in
-                    HStack(spacing: 0) {
+                    HStack(spacing: 2) {
                         ForEach(line) { item in sectionButton(item) }
                     }
                 }
@@ -63,14 +80,18 @@ struct ToolsView: View {
 
     private func sectionButton(_ item: ToolSection) -> some View {
         Button { section = item } label: {
-            Text(L(item.title))
-                .font(DS.body.weight(.medium)).lineLimit(1).minimumScaleFactor(0.75)
-                .padding(.horizontal, DS.xs)
-                .foregroundStyle(section == item ? Color.primary : Color.text2)
-                .frame(maxWidth: .infinity).frame(height: 24)
-                .background(RoundedRectangle(cornerRadius: DS.rSmall, style: .continuous)
-                    .fill(section == item ? (scheme == .dark ? Color.white.opacity(0.12) : Color.white) : .clear))
-                .contentShape(Rectangle())
+            VStack(spacing: 3) {
+                Image(systemName: item.symbol)
+                    .font(.system(size: 15 * TextSize.current.scale, weight: .medium))
+                    .frame(height: 18)
+                Text(L(item.title))
+                    .font(DS.meta.weight(.medium)).lineLimit(1).minimumScaleFactor(0.9)
+            }
+            .foregroundStyle(section == item ? Color.accentColor : Color.text2)
+            .frame(maxWidth: .infinity).frame(height: 46)
+            .background(RoundedRectangle(cornerRadius: DS.rSmall, style: .continuous)
+                .fill(section == item ? (scheme == .dark ? Color.white.opacity(0.12) : Color.white) : .clear))
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .accessibilityAddTraits(section == item ? .isSelected : [])
