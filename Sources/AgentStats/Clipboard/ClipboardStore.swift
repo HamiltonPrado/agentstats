@@ -29,6 +29,8 @@ final class ClipboardStore: ObservableObject {
     @Published private(set) var enabled: Bool
     /// Guardar também imagens (desligado por defeito: as capturas de ecrã podem ter coisas sensíveis).
     @Published private(set) var imagesEnabled: Bool
+    /// Pausado pelo modo apresentação: não guarda nada enquanto estiver.
+    @Published var paused = false
     @Published private(set) var access: ClipboardAccess = .notRequested
     @Published private(set) var items: [ClipItem] = []
     @Published private(set) var snippets: [Snippet] = []
@@ -115,6 +117,10 @@ final class ClipboardStore: ObservableObject {
 
     func poll(now: Date = Date()) {
         guard enabled else { return }
+        if paused {
+            lastChange = pasteboard.changeCount   // o que se copiar durante a pausa não entra depois
+            return
+        }
         let app = frontApp()
         // A da volta anterior também conta: copia-se no gestor de passwords e muda-se logo de app.
         let apps = [app, previousApp].compactMap { $0 }

@@ -52,6 +52,7 @@
 - IP pública (solo cuando pulsas “Ver”, mediante Cloudflare) y VPN activa. Batería de AirPods, ratón, teclado y otros accesorios Bluetooth.
 - Aviso de versión nueva en el panel y por notificación, con el comando de Homebrew si la instalaste así. Consulta GitHub una vez al día y se desactiva en Ajustes.
 - No controla los ventiladores.
+- Avisa cuando una app **deja de responder** y permite forzar la salida sin abrir el Monitor de Actividad.
 
 ### Audio
 
@@ -65,6 +66,7 @@
 - Ignora lo que los gestores de contraseñas marcan como secreto y los formatos conocidos de claves de API. El historial se queda en este Mac, **sin cifrar**.
 - **Pegado rápido:** 1–9, o ↑↓ y Enter, pegan un elemento en la app donde estabas (necesita Accesibilidad; sin ella, queda copiado).
 - **Imágenes en el historial** (opcional, desactivado por defecto): capturas e imágenes copiadas, hasta 30, con “Guardar como PNG…”.
+- **Notas rápidas** en el panel, guardadas solo en este Mac.
 
 ### Captura
 
@@ -76,10 +78,14 @@
 
 - Temporizador y **Pomodoro** (25 + 5 min, pausa larga cada 4), con el tiempo en la barra de menús y aviso al final.
 - **Reloj mundial** con las ciudades que elijas, la diferencia horaria y si allí ya es mañana.
+- **Próxima reunión** del Calendario, con botón para entrar en Zoom, Meet o Teams y cuenta atrás en la barra de menús en los últimos 15 minutos (opcional).
+- **Tiempo por app hoy**, contado solo mientras usas el Mac y guardado en este Mac.
 
 ### Herramientas
 
 - **Ventanas:** pon la ventana del frente en mitades, tercios, dos tercios, esquinas, pantalla completa o centrada, y pásala a la otra pantalla, con atajos globales (⌃⌥ + flechas y letras, como en Rectangle) que se pueden desactivar. Pulsar otra vez la mitad izquierda o derecha alterna entre ½, ⅔ y ⅓. Necesita Accesibilidad.
+- **Compartir:** envía un archivo al móvil por código QR, por la red local (el enlace tiene un código secreto, funciona una vez y caduca en 10 minutos), y genera el QR del Wi-Fi para los invitados.
+- **Modo presentación** en los atajos rápidos: oculta los iconos, mantiene la pantalla encendida, pausa el Portapapeles y silencia las notificaciones de la app.
 - **Atajos rápidos:** modo oscuro y ocultar los iconos del escritorio (el Finder se reinicia).
 - **Red:** ve los puertos a la escucha y cierra procesos tuyos, con confirmación, y vacía la caché de DNS (pide la contraseña de administrador en el diálogo de macOS).
 - **Discos:** expulsa discos externos, imágenes de disco y volúmenes de red, y dice qué app impide expulsarlos.
@@ -98,6 +104,10 @@ Barra de menús configurable, pestañas a tu elección (cuáles, en qué orden y
 Se comporta como los demás iconos de la barra de menús: el botón derecho abre un menú con las pestañas, los atajos rápidos, Ajustes y Salir, y hacer clic fuera del panel, incluido el escritorio, lo cierra.
 
 Dentro del panel: ⌘1–8 cambian de pestaña, ⌘[ y ⌘] van a la anterior y la siguiente, ⌘, abre los Ajustes (en su propia ventana, con exportar e importar para otro Mac) y ⌘W cierra.
+
+**Atajos de la app del frente:** mantén ⌘ un segundo (o ⌃⌥/) y ve los atajos de teclado de la app que usas.
+
+**Reglas “cuando… entonces…”** (Ajustes → Reglas): cuando un agente termina, la batería baja de un nivel o conectas la corriente o un monitor, suena un sonido, se muestra un aviso, se ejecuta un comando, se activa el modo presentación, se silencia el micrófono o se organiza la ventana. Nunca se incluyen en los ajustes exportados.
 
 ### Comandos `agentstats://`
 
@@ -121,13 +131,14 @@ Para la app Atajos (acción “Abrir URL”) o el Terminal (`open "agentstats://
 | Mezclador por app | Grabación del audio del sistema |
 | Captura y grabación | Grabación de pantalla |
 | Grabar con micrófono | Micrófono |
-| Limpieza del teclado y la pantalla, pegado rápido y organizar ventanas | Accesibilidad |
+| Limpieza del teclado y la pantalla, pegado rápido, organizar ventanas, atajos de la app y apps que no responden | Accesibilidad |
 | Historial del portapapeles | Pegar desde otras apps (macOS 15.4+) |
 | Categorías del disco, medidas al abrir la tarjeta | Carpetas personales (Escritorio, Documentos, Descargas, Música, Imágenes) |
 | Nombre de la red Wi-Fi (opcional) | Localización |
 | Modo oscuro en los atajos rápidos | Automatización (System Events) |
+| Próxima reunión (opcional) | Calendarios |
 
-No hay cuenta ni telemetría. AgentStats lee los registros de los agentes en el Mac y no los envía. Solo usan la red la prueba de velocidad, Homebrew cuando lo utilizas, la consulta periódica de límites mediante tu Claude Code, la búsqueda diaria de versiones nuevas en GitHub, que puedes desactivar, y la IP pública, solo cuando la pides.
+No hay cuenta ni telemetría. AgentStats lee los registros de los agentes en el Mac y no los envía. Solo usan la red la prueba de velocidad, Homebrew cuando lo utilizas, la consulta periódica de límites mediante tu Claude Code, la búsqueda diaria de versiones nuevas en GitHub, que puedes desactivar, y la IP pública, solo cuando la pides. Al enviar un archivo al móvil, la app lo sirve en la red local solo hasta que se descarga o pasan 10 minutos.
 
 A partir de la 1.18.1 la app tiene una firma fija, para que **los permisos se mantengan entre actualizaciones**. Si vienes de una versión anterior debes concederlos una última vez: si alguno aparece activado y no funciona, quita AgentStats de esa lista con − y vuelve a añadirlo.
 

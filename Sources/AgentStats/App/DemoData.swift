@@ -27,6 +27,11 @@ enum DemoData {
         CleanupStore.shared.loadDemo()
         DisksStore.shared.loadDemo()
         ImagesStore.shared.loadDemo()
+        ShareStore.shared.loadDemo(now: now)
+        RulesStore.shared.loadDemo()
+        AppUsageStore.shared.loadDemo(now: now)
+        MeetingsStore.shared.loadDemo(now: now)
+        QuickNotesStore.shared.loadDemo()
         QRMaker.demoText = "https://github.com/HamiltonPrado/agentstats"
         TimerStore.shared.loadDemo(now: now)
         WorldClockStore.shared.loadDemo()

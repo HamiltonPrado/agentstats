@@ -9,6 +9,8 @@ struct TimeView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: DS.md) {
             timerCard
+            MeetingCard(store: .shared)
+            AppUsageCard(store: .shared)
             clockCard
         }
     }

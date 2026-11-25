@@ -135,14 +135,16 @@ enum MenuBarDrawer {
     /// - Sem cores: imagem-modelo (o macOS pinta-a com a cor da barra, em claro e escuro).
     /// - Com o ponto a cores: imagem normal, com o texto na cor da barra (`appearance`) e o ponto colorido.
     static func image(_ m: Monitor, appearance: NSAppearance? = nil, recording: String? = nil, timer: String? = nil,
-                      micMuted: Bool = false) -> NSImage {
+                      micMuted: Bool = false, meeting: String? = nil, presenting: Bool = false) -> NSImage {
         let colored = flag(colorDotKey, false) || recording != nil || micMuted
         let style = MenuBarStyle.current
         // A gravar, a barra mostra só isso (sempre a vermelho): não pode passar despercebido.
         // Com o temporizador a correr, o tempo vem antes das métricas.
         // Microfone silenciado: sempre visível, a vermelho, para não se esquecer.
         let micSegs: [Segment] = micMuted ? [.symbol("mic.slash.fill", 12, .systemRed)] : []
-        let timerSegs: [Segment] = micSegs + (timer.map { [.symbol("timer", 12, nil), .text($0, agentFont)] } ?? [])
+        let meetingSegs: [Segment] = meeting.map { [.symbol("calendar", 12, nil), .text($0, agentFont)] } ?? []
+        let presentingSegs: [Segment] = presenting ? [.symbol("play.rectangle.fill", 12, nil)] : []
+        let timerSegs: [Segment] = presentingSegs + micSegs + meetingSegs + (timer.map { [.symbol("timer", 12, nil), .text($0, agentFont)] } ?? [])
         let segs: [Segment] = recording.map { [.symbol("stop.circle.fill", 13, .systemRed), .text($0, agentFont)] }
             ?? (timerSegs + segments(m, style: style, colored: colored))
         // símbolo + texto dos agentes ficam colados (2 pt); o resto separado por `spacing`

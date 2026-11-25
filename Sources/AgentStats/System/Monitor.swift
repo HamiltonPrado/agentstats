@@ -239,6 +239,7 @@ final class Monitor {
         if let b = s.battery {
             battery = b
             recordBatteryDay(b)
+            if !demoMode { RulesStore.shared.battery(percent: b.percent, externalPower: b.externalPower) }
         }
         if let u = s.usage { usage = u }
         if let e = s.energy {
@@ -338,6 +339,14 @@ final class Monitor {
         }
         let live = Set(new.map(\.id))
         taskStart = taskStart.filter { live.contains($0.key) }
+        // As regras disparam mesmo com as notificações dos agentes desligadas.
+        if !previousStates.isEmpty {
+            for s in new {
+                guard let old = previousStates[s.id] else { continue }
+                if s.state.needsAttention && !old.needsAttention { RulesStore.shared.fire(.agentNeedsYou) }
+                else if (old.isWorking || old.needsAttention), s.state == .waitingUser, finished[s.id] != nil { RulesStore.shared.fire(.agentFinished) }
+            }
+        }
         guard notifyOnFinish, !previousStates.isEmpty else { return }
         for s in new {
             guard let old = previousStates[s.id] else { continue }
@@ -356,7 +365,7 @@ final class Monitor {
             } else { continue }
             content.userInfo = ["session": s.id]   // clicar na notificação abre o agente
             content.sound = .default
-            UNUserNotificationCenter.current().add(
+            Notify.add(
                 UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: nil))
         }
     }
@@ -390,7 +399,7 @@ final class Monitor {
                 c.title = L(level >= 100 ? "Orçamento esgotado" : String(localized: "Orçamento a \(Int(level))%"))
                 c.body = L(String(localized: "~\(Fmt.usd(budgetSpent)) de \(Fmt.usd(budgetAmount)) \(budgetPeriod.short), estimado a preços de API."))
                 c.sound = .default
-                UNUserNotificationCenter.current().add(UNNotificationRequest(identifier: "budget-\(UUID().uuidString)", content: c, trigger: nil))
+                Notify.add(UNNotificationRequest(identifier: "budget-\(UUID().uuidString)", content: c, trigger: nil))
             }
         }
         if weeklySummaryEnabled, let week = WeeklySummary.due(now: now, last: d.string(forKey: WeeklySummary.lastKey)) {
@@ -399,7 +408,7 @@ final class Monitor {
                 let c = UNMutableNotificationContent()
                 c.title = t.title
                 c.body = t.body
-                UNUserNotificationCenter.current().add(UNNotificationRequest(identifier: "summary-\(week)", content: c, trigger: nil))
+                Notify.add(UNNotificationRequest(identifier: "summary-\(week)", content: c, trigger: nil))
             }
         }
     }
@@ -426,7 +435,7 @@ final class Monitor {
                 content.body = L("Podes voltar a usar à vontade.")
             }
             content.sound = .default
-            UNUserNotificationCenter.current().add(
+            Notify.add(
                 UNNotificationRequest(identifier: "limit-\(UUID().uuidString)", content: content, trigger: nil))
         }
     }
@@ -451,7 +460,7 @@ final class Monitor {
                 : String(localized: "Sem nova atividade há \(Int(waitingAlertMinutes)) min. \(session.detail ?? session.title)")
             content.userInfo = ["session": session.id]
             content.sound = .default
-            UNUserNotificationCenter.current().add(
+            Notify.add(
                 UNNotificationRequest(identifier: "waiting-\(UUID().uuidString)", content: content, trigger: nil))
             activityHistory[index].reminderSent = true
             AgentActivityHistoryStore.save(activityHistory)
@@ -508,7 +517,7 @@ final class Monitor {
             }
             content.body = L(alert.detail.map { String(localized: "Processo mais pesado: \($0)") } ?? String(localized: "Há mais de \(Int(Self.alertSustain)) s acima do limite."))
             content.sound = .default
-            UNUserNotificationCenter.current().add(
+            Notify.add(
                 UNNotificationRequest(identifier: "alert-\(alert.kind.rawValue)", content: content, trigger: nil))
         }
     }

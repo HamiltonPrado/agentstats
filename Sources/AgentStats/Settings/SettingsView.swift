@@ -24,6 +24,7 @@ struct SettingsView: View {
     @AppStorage("profiles.monitoring") private var monitoringProfileData = ""
     @AppStorage(GlobalHotKey.defaultsKey) var hotkey = GlobalHotKey.defaultPreset
     @AppStorage(MicMute.hotkeyKey) private var micHotkey = MicMute.defaultPreset
+    @AppStorage(ShortcutsOverlay.holdKey) private var holdCommand = true
     @AppStorage("settings.section") private var sectionRaw = SettingsSection.general.rawValue
     @AppStorage(MenuBarStyle.defaultsKey) private var barStyle = MenuBarStyle.labeled.rawValue
     @AppStorage(MenuBarDrawer.colorDotKey) private var colorDot = false
@@ -51,6 +52,7 @@ struct SettingsView: View {
             case .panel: panelSection
             case .appearance: appearanceSection
             case .alerts: alertsSection
+            case .rules: RulesSettings(store: .shared)
             }
             HStack {
                 Text("AgentStats " + (Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "")).font(DS.meta).foregroundStyle(Color.text3)
@@ -166,6 +168,7 @@ struct SettingsView: View {
                         }
                         .labelsHidden().frame(width: 104)
                     }
+                    row("command", "Atalhos da app da frente", "Segurar ⌘ 1 s, ou ⌃⌥/", $holdCommand)
                     row("power", "Abrir ao iniciar sessão", nil, Binding(
                         get: { login.value },
                         set: { on in
@@ -695,7 +698,7 @@ private struct SettingsSnapshot: Codable, Equatable {
 
 /// Secções das Definições.
 enum SettingsSection: String, CaseIterable, Identifiable {
-    case general, menuBar, panel, appearance, alerts
+    case general, menuBar, panel, appearance, alerts, rules
     var id: String { rawValue }
     var title: String {
         switch self {
@@ -704,6 +707,7 @@ enum SettingsSection: String, CaseIterable, Identifiable {
         case .panel: "Painel"
         case .appearance: "Aspeto"
         case .alerts: "Alertas"
+        case .rules: "Regras"
         }
     }
 }

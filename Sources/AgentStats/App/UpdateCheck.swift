@@ -120,7 +120,7 @@ final class UpdateStore: ObservableObject {
         let content = UNMutableNotificationContent()
         content.title = L(String(localized: "AgentStats \(r.version) disponível"))
         content.body = L(UpdateCheck.installedWithHomebrew ? String(localized: "Atualiza com: \(UpdateCheck.brewCommand)") : "Abre o painel para ver as novidades.")
-        UNUserNotificationCenter.current().add(UNNotificationRequest(identifier: "update-\(r.version)", content: content, trigger: nil))
+        Notify.add(UNNotificationRequest(identifier: "update-\(r.version)", content: content, trigger: nil))
     }
 
     func openPage() {

@@ -52,6 +52,7 @@
 - Public IP (only when you click “Show”, through Cloudflare) and active VPN. Battery of AirPods, mouse, keyboard, and other Bluetooth accessories.
 - New version notice in the panel and as a notification, with the Homebrew command if you installed it that way. It checks GitHub once a day and can be turned off in Settings.
 - Does not control fans.
+- Warns when an app **stops responding** and lets you force quit it without opening Activity Monitor.
 
 ### Audio
 
@@ -65,6 +66,7 @@
 - Skips what password managers mark as secret and known API key formats. History stays on this Mac, **unencrypted**.
 - **Quick paste:** 1–9, or ↑↓ and Enter, paste an item into the app you were using (needs Accessibility; without it, it is just copied).
 - **Images in the history** (optional, off by default): screenshots and copied images, up to 30, with “Save as PNG…”.
+- **Quick notes** in the panel, kept only on this Mac.
 
 ### Capture
 
@@ -76,10 +78,14 @@
 
 - Timer and **Pomodoro** (25 + 5 min, long break every 4), with the time in the menu bar and an alert at the end.
 - **World clock** with the cities you choose, the time difference, and whether it is already tomorrow there.
+- **Next meeting** from Calendar, with a button to join Zoom, Meet or Teams and a countdown in the menu bar in the last 15 minutes (optional).
+- **Time per app today**, counted only while you use the Mac and kept on this Mac.
 
 ### Tools
 
 - **Windows:** put the front window in halves, thirds, two thirds, corners, full screen or centered, and move it to the other display, with global shortcuts (⌃⌥ + arrows and letters, as in Rectangle) that can be turned off. Pressing left or right half again cycles through ½, ⅔ and ⅓. Needs Accessibility.
+- **Share:** send a file to your phone by QR code over the local network (the link has a secret code, works once and expires in 10 minutes), and make a Wi-Fi QR code for guests.
+- **Presentation mode** in the quick toggles: hides icons, keeps the display on, pauses the Clipboard and silences the app's notifications.
 - **Quick toggles:** dark mode and hide desktop icons (Finder restarts).
 - **Network:** see listening ports and quit your own processes, with confirmation, and flush the DNS cache (asks for the administrator password in the macOS dialog).
 - **Disks:** eject external disks, disk images and network volumes, and see which app is blocking the eject.
@@ -98,6 +104,10 @@ Configurable menu bar, tabs of your choice (which ones, in what order, and which
 It behaves like other menu bar icons: right-click opens a menu with the tabs, quick toggles, Settings, and Quit, and clicking outside the panel, including on the desktop, closes it.
 
 Inside the panel: ⌘1–8 switch tabs, ⌘[ and ⌘] go to the previous and next one, ⌘, opens Settings (in its own window, with export and import for another Mac), and ⌘W closes.
+
+**Front app's shortcuts:** hold ⌘ for a second (or ⌃⌥/) to see the keyboard shortcuts of the app you're using.
+
+**“When… then…” rules** (Settings → Rules): when an agent finishes, the battery drops below a level, or you plug in power or a display, play a sound, show a notification, run a command, turn on presentation mode, mute the microphone or arrange the window. They're never included in exported settings.
 
 ### `agentstats://` commands
 
@@ -121,13 +131,14 @@ For the Shortcuts app (“Open URL” action) or Terminal (`open "agentstats://�
 | Per-app mixer | System audio recording |
 | Capture and recording | Screen recording |
 | Recording with microphone | Microphone |
-| Keyboard and screen cleaning, quick paste and arranging windows | Accessibility |
+| Keyboard and screen cleaning, quick paste, arranging windows, app shortcuts and unresponsive apps | Accessibility |
 | Clipboard history | Paste from other apps (macOS 15.4+) |
 | Disk categories, measured when the card opens | Personal folders (Desktop, Documents, Downloads, Music, Pictures) |
 | Wi-Fi network name (optional) | Location |
 | Dark mode in quick toggles | Automation (System Events) |
+| Next meeting (optional) | Calendars |
 
-There is no account and no telemetry. AgentStats reads agent logs on your Mac and does not send them. The network is used only by the speed test, by Homebrew when you use it, by the periodic limits check made through your Claude Code, by the daily check for new versions on GitHub, which you can turn off, and by the public IP, only when you ask for it.
+There is no account and no telemetry. AgentStats reads agent logs on your Mac and does not send them. The network is used only by the speed test, by Homebrew when you use it, by the periodic limits check made through your Claude Code, by the daily check for new versions on GitHub, which you can turn off, and by the public IP, only when you ask for it. When you send a file to your phone, the app serves it on the local network only until it's downloaded or 10 minutes pass.
 
 Starting with 1.18.1 the app has a fixed signature, so **permissions persist across updates**. When coming from an earlier version you need to grant them one last time: if one looks enabled but does not work, remove AgentStats from that list with − and add it again.
 

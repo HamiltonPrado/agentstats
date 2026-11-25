@@ -51,6 +51,8 @@ cat > "$APP/Contents/Info.plist" <<PLIST
         <key>CFBundleURLName</key><string>local.agentstats</string>
         <key>CFBundleURLSchemes</key><array><string>agentstats</string></array>
     </dict></array>
+    <key>NSCalendarsFullAccessUsageDescription</key><string>O AgentStats mostra a próxima reunião e o link para entrar. Nada sai do Mac.</string>
+    <key>NSCalendarsUsageDescription</key><string>O AgentStats mostra a próxima reunião e o link para entrar. Nada sai do Mac.</string>
     <key>NSMicrophoneUsageDescription</key><string>O AgentStats só usa o microfone se escolheres gravá-lo numa gravação de ecrã.</string>
     <key>NSAudioCaptureUsageDescription</key><string>O AgentStats precisa de receber o som das apps que ajustares no mixer, para lhes mudar o volume. Nada é gravado nem enviado.</string>
 </dict>

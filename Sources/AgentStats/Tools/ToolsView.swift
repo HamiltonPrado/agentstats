@@ -2,7 +2,7 @@ import SwiftUI
 import AppKit
 
 enum ToolSection: String, CaseIterable, Identifiable {
-    case ports, brew, apps, cleanup, disks, startup, files, images, windows
+    case ports, brew, apps, cleanup, disks, startup, files, images, windows, share
     var id: String { rawValue }
     var title: String {
         switch self {
@@ -15,13 +15,15 @@ enum ToolSection: String, CaseIterable, Identifiable {
         case .files: "Ficheiros"
         case .images: "Imagens"
         case .windows: "Janelas"
+        case .share: "Partilhar"
         }
     }
 }
 
 struct ToolsView: View {
-    static let rows: [[ToolSection]] = stride(from: 0, to: ToolSection.allCases.count, by: 3).map {
-        Array(ToolSection.allCases[$0..<min($0 + 3, ToolSection.allCases.count)])
+    /// Duas linhas de cinco: dez secções numa só ficavam ilegíveis na largura do painel.
+    static let rows: [[ToolSection]] = stride(from: 0, to: ToolSection.allCases.count, by: 5).map {
+        Array(ToolSection.allCases[$0..<min($0 + 5, ToolSection.allCases.count)])
     }
 
     @Environment(\.colorScheme) private var scheme
@@ -30,7 +32,6 @@ struct ToolsView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: DS.md) {
             QuickTogglesView(store: .shared)
-            // Três linhas de três: nove secções numa só ficavam ilegíveis na largura do painel.
             VStack(spacing: 2) {
                 ForEach(Self.rows, id: \.self) { line in
                     HStack(spacing: 0) {
@@ -55,6 +56,7 @@ struct ToolsView: View {
             case .files: LargeFilesView(store: .shared)
             case .images: ImagesView(store: .shared)
             case .windows: WindowsView()
+            case .share: ShareView(store: .shared)
             }
         }
     }

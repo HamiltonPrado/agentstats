@@ -43,6 +43,8 @@ final class StatusController: NSObject, NSPopoverDelegate {
         CaptureStore.shared.onChange = { [weak self] in self?.updateIcon() }
         TimerStore.shared.onChange = { [weak self] in self?.updateIcon() }
         MicMuteStore.shared.onChange = { [weak self] in self?.updateIcon() }
+        MeetingsStore.shared.onChange = { [weak self] in self?.updateIcon() }
+        PresentationMode.shared.onChange = { [weak self] in self?.updateIcon() }
         NotificationCenter.default.publisher(for: UserDefaults.didChangeNotification)
             .debounce(for: .milliseconds(60), scheduler: RunLoop.main)
             .sink { [weak self] _ in
@@ -110,7 +112,7 @@ final class StatusController: NSObject, NSPopoverDelegate {
         var parts: [String] = []
         if let recording = CaptureStore.shared.menuBarText { return "gravar:" + recording }
         // O temporizador muda a cada segundo: fica nos campos "urgentes" para se ver logo.
-        parts.append((m.activeAlerts.isEmpty ? "" : "!") + (TimerStore.shared.menuBarText ?? "") + (MicMuteStore.shared.muted ? "mic" : ""))
+        parts.append((m.activeAlerts.isEmpty ? "" : "!") + (TimerStore.shared.menuBarText ?? "") + (MicMuteStore.shared.muted ? "mic" : "") + (MeetingsStore.shared.menuBarText ?? "") + (PresentationMode.shared.active ? "apr" : ""))
         parts.append(String(m.needsAttentionCount))
         parts.append(on("bar.agents", true) ? "\(m.workingCount)/\(m.liveAgentCount)" : "")
         // configuração e aparência da barra: mudar qualquer uma redesenha o ícone
@@ -144,7 +146,8 @@ final class StatusController: NSObject, NSPopoverDelegate {
         lastIconUpdate = Date()
         item.button?.image = MenuBarDrawer.image(monitor, appearance: item.button?.effectiveAppearance,
                                                 recording: CaptureStore.shared.menuBarText, timer: TimerStore.shared.menuBarText,
-                                                micMuted: MicMuteStore.shared.muted)
+                                                micMuted: MicMuteStore.shared.muted, meeting: MeetingsStore.shared.menuBarText,
+                                                presenting: PresentationMode.shared.active)
     }
 
     func saveHistory() { monitor.saveHistory() }
@@ -220,6 +223,7 @@ final class StatusController: NSObject, NSPopoverDelegate {
         }
         menu.addItem(.separator())
         let quick = QuickTogglesStore.shared
+        add(PresentationMode.shared.active ? "Sair do modo apresentação" : "Modo apresentação") { Task { await PresentationMode.shared.toggle() } }
         add(QuickToggles.isDark ? "Modo claro" : "Modo escuro") { Task { await quick.toggleDarkMode() } }
         add(QuickToggles.desktopIconsShown ? "Esconder ícones da secretária" : "Mostrar ícones da secretária") {
             Task { await quick.toggleDesktopIcons() }

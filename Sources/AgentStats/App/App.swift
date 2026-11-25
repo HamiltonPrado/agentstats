@@ -147,6 +147,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
             UpdateStore.shared.start()
             MicMuteStore.shared.start()
             WindowShortcuts.update()
+            AppUsageStore.shared.start()
+            PresentationMode.shared.restoreAfterLaunch()
+            UnresponsiveStore.shared.start()
+            ShortcutsOverlay.shared.start()
+            RulesStore.shared.start()
+            MeetingsStore.shared.start()
             CaptureStore.shared.stopOrphan()
             AppState.controller = controller
             HookEvents.prune()

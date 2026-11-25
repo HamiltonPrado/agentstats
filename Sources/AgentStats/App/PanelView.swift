@@ -36,6 +36,7 @@ enum Tab: String, CaseIterable, Identifiable {
 struct PanelView: View {
     @Environment(Monitor.self) private var m
     @ObservedObject private var updates = UpdateStore.shared
+    @ObservedObject private var stuckApps = UnresponsiveStore.shared
     @Environment(\.colorScheme) private var scheme
     @AppStorage("panel.tab2") private var storedTab: Tab = .agents
     @AppStorage("appearance.theme") private var themeRawValue = PanelTheme.system.rawValue
@@ -60,6 +61,7 @@ struct PanelView: View {
             header
                 .background { keyboardShortcuts }
             if !m.activeAlerts.isEmpty { AlertBanner(alerts: m.activeAlerts).padding(.horizontal, DS.md).padding(.bottom, DS.sm) }
+            if !stuckApps.stuck.isEmpty { UnresponsiveBanner(store: stuckApps).padding(.horizontal, DS.md).padding(.bottom, DS.sm) }
             if tab != .settings { tabBar.padding(.horizontal, DS.md).padding(.bottom, DS.md) }
             Divider().opacity(0.6)
             if scrollable {

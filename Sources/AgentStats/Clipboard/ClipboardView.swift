@@ -21,6 +21,7 @@ struct ClipboardView: View {
             }
             historyCard
             snippetsCard
+            QuickNotesCard(store: .shared)
         }
         .focusable()
         .focusEffectDisabled()

@@ -73,6 +73,7 @@ final class QuickTogglesStore: ObservableObject {
 
 struct QuickTogglesView: View {
     @ObservedObject var store: QuickTogglesStore
+    @ObservedObject private var presentation = PresentationMode.shared
 
     /// Uma linha só: os atalhos não deviam empurrar as ferramentas para baixo.
     var body: some View {
@@ -85,6 +86,10 @@ struct QuickTogglesView: View {
                 pill(store.iconsShown ? "Ícones" : "Ícones", store.iconsShown ? "eye" : "eye.slash", on: !store.iconsShown,
                      help: store.iconsShown ? "Esconder os ícones da secretária (o Finder reinicia)" : "Mostrar os ícones da secretária") {
                     Task { await store.toggleDesktopIcons() }
+                }
+                pill("Apresentar", "play.rectangle", on: presentation.active,
+                     help: presentation.active ? "Sair do modo apresentação" : "Esconde os ícones, mantém o ecrã ligado, pausa o Clipboard e cala as notificações") {
+                    Task { await presentation.toggle() }
                 }
             }
             .disabled(store.busy)

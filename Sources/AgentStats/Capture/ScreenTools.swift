@@ -147,7 +147,7 @@ final class ScreenToolsStore: ObservableObject {
         let c = UNMutableNotificationContent()
         c.title = L(title)
         c.body = L(String(L(body).prefix(200)))
-        UNUserNotificationCenter.current().add(UNNotificationRequest(identifier: "screen-\(UUID().uuidString)", content: c, trigger: nil))
+        Notify.add(UNNotificationRequest(identifier: "screen-\(UUID().uuidString)", content: c, trigger: nil))
     }
 
     func loadDemo() {

@@ -52,6 +52,7 @@
 - IP publique (seulement quand vous cliquez sur « Voir », via Cloudflare) et VPN active. Batterie des AirPods, de la souris, du clavier et d’autres accessoires Bluetooth.
 - Avis de nouvelle version dans le panneau et par notification, avec la commande Homebrew si vous l’avez installée ainsi. Consulte GitHub une fois par jour et se désactive dans les Réglages.
 - Ne contrôle pas les ventilateurs.
+- Prévient quand une app **ne répond plus** et permet de forcer à quitter sans ouvrir le Moniteur d’activité.
 
 ### Audio
 
@@ -65,6 +66,7 @@
 - Ignore ce que les gestionnaires de mots de passe marquent comme secret et les formats connus de clés API. L’historique reste sur ce Mac, **non chiffré**.
 - **Collage rapide :** 1–9, ou ↑↓ et Entrée, collent un élément dans l’app où vous étiez (nécessite l’Accessibilité ; sinon, il est seulement copié).
 - **Images dans l’historique** (optionnel, désactivé par défaut) : captures et images copiées, jusqu’à 30, avec « Enregistrer en PNG… ».
+- **Notes rapides** dans le panneau, gardées uniquement sur ce Mac.
 
 ### Capture
 
@@ -76,10 +78,14 @@
 
 - Minuteur et **Pomodoro** (25 + 5 min, longue pause toutes les 4), avec le temps dans la barre des menus et une alerte à la fin.
 - **Horloge mondiale** avec les villes de votre choix, le décalage horaire et si c’est déjà demain là-bas.
+- **Prochaine réunion** du Calendrier, avec un bouton pour rejoindre Zoom, Meet ou Teams et un compte à rebours dans la barre des menus dans les 15 dernières minutes (optionnel).
+- **Temps par app aujourd’hui**, compté seulement pendant que vous utilisez le Mac et gardé sur ce Mac.
 
 ### Outils
 
 - **Fenêtres :** placez la fenêtre au premier plan en moitiés, tiers, deux tiers, coins, plein écran ou au centre, et passez-la sur l’autre écran, avec des raccourcis globaux (⌃⌥ + flèches et lettres, comme dans Rectangle) désactivables. Appuyer de nouveau sur la moitié gauche ou droite alterne entre ½, ⅔ et ⅓. Nécessite l’Accessibilité.
+- **Partager :** envoyez un fichier sur le téléphone par code QR, via le réseau local (le lien a un code secret, fonctionne une fois et expire en 10 minutes), et générez le QR du Wi-Fi pour les invités.
+- **Mode présentation** dans les raccourcis rapides : masque les icônes, garde l’écran allumé, met en pause le Presse-papiers et coupe les notifications de l’app.
 - **Raccourcis rapides :** mode sombre et masquer les icônes du bureau (le Finder redémarre).
 - **Réseau :** voyez les ports à l’écoute et quittez vos processus, après confirmation, et videz le cache DNS (demande le mot de passe administrateur dans la fenêtre de macOS).
 - **Disques :** éjectez disques externes, images disque et volumes réseau, et voyez quelle app empêche l’éjection.
@@ -98,6 +104,10 @@ Barre des menus configurable, onglets au choix (lesquels, dans quel ordre et leq
 Il se comporte comme les autres icônes de la barre des menus : le clic droit ouvre un menu avec les onglets, les raccourcis rapides, les Réglages et Quitter, et cliquer hors du panneau, y compris sur le bureau, le ferme.
 
 Dans le panneau : ⌘1–8 changent d’onglet, ⌘[ et ⌘] vont au précédent et au suivant, ⌘, ouvre les Réglages (dans leur propre fenêtre, avec export et import vers un autre Mac) et ⌘W ferme.
+
+**Raccourcis de l’app au premier plan :** maintenez ⌘ une seconde (ou ⌃⌥/) pour voir les raccourcis clavier de l’app utilisée.
+
+**Règles « quand… alors… »** (Réglages → Règles) : quand un agent termine, que la batterie passe sous un seuil ou que vous branchez le secteur ou un écran, jouer un son, afficher une alerte, lancer une commande, activer le mode présentation, couper le micro ou organiser la fenêtre. Elles ne sont jamais incluses dans les réglages exportés.
 
 ### Commandes `agentstats://`
 
@@ -121,13 +131,14 @@ Pour l’app Raccourcis (action « Ouvrir l’URL ») ou le Terminal (`open "age
 | Mixeur par application | Enregistrement de l’audio du système |
 | Capture et enregistrement | Enregistrement de l’écran |
 | Enregistrer avec le micro | Micro |
-| Nettoyage du clavier et de l’écran, collage rapide et organisation des fenêtres | Accessibilité |
+| Nettoyage du clavier et de l’écran, collage rapide, organisation des fenêtres, raccourcis de l’app et apps qui ne répondent pas | Accessibilité |
 | Historique du presse-papiers | Coller depuis d’autres apps (macOS 15.4+) |
 | Catégories du disque, mesurées à l’ouverture de la carte | Dossiers personnels (Bureau, Documents, Téléchargements, Musique, Images) |
 | Nom du réseau Wi-Fi (optionnel) | Localisation |
 | Mode sombre des raccourcis rapides | Automatisation (System Events) |
+| Prochaine réunion (optionnel) | Calendriers |
 
-Ni compte ni télémétrie. AgentStats lit les journaux des agents sur le Mac et ne les envoie pas. Le réseau ne sert qu’au test de débit, à Homebrew quand vous l’utilisez, à la consultation périodique des limites par votre Claude Code, à la recherche quotidienne de nouvelles versions sur GitHub, que vous pouvez désactiver, et à l’IP publique, seulement quand vous la demandez.
+Ni compte ni télémétrie. AgentStats lit les journaux des agents sur le Mac et ne les envoie pas. Le réseau ne sert qu’au test de débit, à Homebrew quand vous l’utilisez, à la consultation périodique des limites par votre Claude Code, à la recherche quotidienne de nouvelles versions sur GitHub, que vous pouvez désactiver, et à l’IP publique, seulement quand vous la demandez. Quand vous envoyez un fichier sur le téléphone, l’app le sert sur le réseau local seulement jusqu’au téléchargement ou pendant 10 minutes.
 
 À partir de la 1.18.1, l’application a une signature fixe afin que **les autorisations persistent entre les mises à jour**. Depuis une version antérieure, il faut les accorder une dernière fois : si l’une semble activée sans fonctionner, retirez AgentStats de la liste avec − puis ajoutez-le à nouveau.
 
