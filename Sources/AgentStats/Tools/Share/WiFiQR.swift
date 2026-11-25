@@ -59,10 +59,25 @@ enum WiFiPassword {
         return .failed
     }
 
+    /// Lê a saída por um pipe, só em memória: a password nunca passa por um ficheiro, nem temporário.
     static func fetch(ssid: String) async -> Outcome {
         let name = ssid.trimmingCharacters(in: .whitespaces)
         guard !name.isEmpty else { return .failed }
-        let r = await ToolRunner.run("/usr/bin/security", arguments(ssid: name), timeout: 120)
-        return outcome(status: r.timedOut ? -1 : r.status, out: r.out, err: r.err)
+        let args = arguments(ssid: name)
+        return await Task.detached(priority: .userInitiated) { () -> Outcome in
+            let p = Process()
+            p.executableURL = URL(fileURLWithPath: "/usr/bin/security")
+            p.arguments = args
+            let out = Pipe(), err = Pipe()
+            p.standardOutput = out
+            p.standardError = err
+            p.standardInput = FileHandle.nullDevice
+            do { try p.run() } catch { return .failed }
+            // A saída é curta (uma password): ler até ao fim antes de esperar não bloqueia.
+            let o = out.fileHandleForReading.readDataToEndOfFile()
+            let e = err.fileHandleForReading.readDataToEndOfFile()
+            p.waitUntilExit()
+            return outcome(status: p.terminationStatus, out: String(decoding: o, as: UTF8.self), err: String(decoding: e, as: UTF8.self))
+        }.value
     }
 }

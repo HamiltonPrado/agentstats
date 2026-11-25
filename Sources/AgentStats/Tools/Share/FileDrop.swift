@@ -20,15 +20,23 @@ enum FileDrop {
         return URL(string: "http://\(host):\(port)/\(token)/\(name)")
     }
 
+    /// Depois de entregue, o mesmo aparelho ainda pode pedir outra vez durante este tempo: o Chrome para Android
+    /// descarrega com um segundo pedido, e o Safari repete quando se cancela e volta a tocar.
+    static let regrace: TimeInterval = 60
+
     enum Decision: Equatable { case serve, notFound, gone }
 
-    /// Só um GET para o caminho com o código certo, uma vez e dentro do prazo.
-    static func decide(requestLine: String, token: String, served: Bool, expired: Bool) -> Decision {
+    /// Só um GET com o código certo, dentro do prazo, e só para o primeiro aparelho que o pediu.
+    static func decide(requestLine: String, token: String, client: String, firstClient: String?,
+                       deliveredAt: Date?, closed: Bool, now: Date, started: Date) -> Decision {
         let parts = requestLine.split(separator: " ")
         guard parts.count >= 2, parts[0] == "GET" else { return .notFound }
         let path = parts[1].split(separator: "/", omittingEmptySubsequences: true)
         guard let first = path.first, first == token else { return .notFound }
-        return served || expired ? .gone : .serve
+        if closed || now.timeIntervalSince(started) > lifetime { return .gone }
+        if let firstClient, firstClient != client { return .gone }
+        if let deliveredAt, now.timeIntervalSince(deliveredAt) > regrace { return .gone }
+        return .serve
     }
 
     static func header(fileName: String, size: Int64) -> Data {
@@ -81,8 +89,11 @@ final class FileDropServer: @unchecked Sendable {
     let token = FileDrop.token()
     private let queue = DispatchQueue(label: "agentstats.filedrop")
     private var listener: NWListener?
-    private var served = false
-    private var ended = false
+    /// O primeiro aparelho que pediu o ficheiro: os outros ficam de fora.
+    private var firstClient: String?
+    private var deliveredAt: Date?
+    private var notified = false
+    private var closed = false
     /// Só usado na fila do servidor: espera pela porta.
     private var ready: CheckedContinuation<UInt16?, Never>?
     private let started = Date()
@@ -124,24 +135,39 @@ final class FileDropServer: @unchecked Sendable {
 
     func stop() { queue.async { self.finish(.stopped) } }
 
+    /// Avisa uma só vez e fecha.
     private func finish(_ end: End) {
-        guard !ended else { return }
-        ended = true
+        notify(end)
+        close()
+    }
+
+    private func notify(_ end: End) {
+        guard !notified else { return }
+        notified = true
+        onEnd(end)
+    }
+
+    private func close() {
+        guard !closed else { return }
+        closed = true
         listener?.cancel()
         listener = nil
-        onEnd(end)
     }
 
     private func handle(_ conn: NWConnection) {
         conn.start(queue: queue)
+        let client: String = {
+            if case .hostPort(let host, _) = conn.endpoint { return "\(host)" }
+            return "?"
+        }()
         conn.receive(minimumIncompleteLength: 1, maximumLength: 16_384) { data, _, _, _ in
             let line = data.flatMap { String(data: $0, encoding: .utf8) }?.components(separatedBy: "\r\n").first ?? ""
-            let expired = Date().timeIntervalSince(self.started) > FileDrop.lifetime
-            switch FileDrop.decide(requestLine: line, token: self.token, served: self.served || self.ended, expired: expired) {
+            switch FileDrop.decide(requestLine: line, token: self.token, client: client, firstClient: self.firstClient,
+                                   deliveredAt: self.deliveredAt, closed: self.closed, now: Date(), started: self.started) {
             case .notFound: self.reply(conn, FileDrop.status(404, "Not Found"))
             case .gone: self.reply(conn, FileDrop.status(410, "Gone"))
             case .serve:
-                self.served = true
+                if self.firstClient == nil { self.firstClient = client }
                 self.send(conn)
             }
         }
@@ -152,33 +178,53 @@ final class FileDropServer: @unchecked Sendable {
     }
 
     private func send(_ conn: NWConnection) {
-        guard let h = try? FileHandle(forReadingFrom: file) else {
+        guard let handle = try? FileHandle(forReadingFrom: file) else {
             reply(conn, FileDrop.status(404, "Not Found"))
             finish(.failed("unreadable"))
             return
         }
         let size = Int64((try? file.resourceValues(forKeys: [.fileSizeKey]).fileSize) ?? 0)
         conn.send(content: FileDrop.header(fileName: file.lastPathComponent, size: size), completion: .contentProcessed { _ in })
+        Transfer(conn: conn, handle: handle) { [self] complete in
+            // Uma transferência cancelada a meio não mata o link: pode tentar-se outra vez.
+            guard complete, deliveredAt == nil else { return }
+            deliveredAt = Date()
+            notify(.delivered)
+            queue.asyncAfter(deadline: .now() + FileDrop.regrace) { self.close() }
+        }.next()
+    }
+
+    /// Envia o ficheiro aos bocados, um a seguir ao outro, na fila do servidor.
+    private final class Transfer: @unchecked Sendable {
+        let conn: NWConnection
+        let handle: FileHandle
+        let done: (Bool) -> Void
+
+        init(conn: NWConnection, handle: FileHandle, done: @escaping (Bool) -> Void) {
+            self.conn = conn
+            self.handle = handle
+            self.done = done
+        }
+
         func next() {
-            let data = (try? h.read(upToCount: FileDrop.chunk)) ?? Data()
+            let data = (try? handle.read(upToCount: FileDrop.chunk)) ?? Data()
             if data.isEmpty {
-                try? h.close()
+                try? handle.close()
                 conn.send(content: nil, contentContext: .finalMessage, isComplete: true, completion: .contentProcessed { error in
-                    conn.cancel()
-                    self.finish(error == nil ? .delivered : .failed(error!.localizedDescription))
+                    self.conn.cancel()
+                    self.done(error == nil)
                 })
                 return
             }
             conn.send(content: data, completion: .contentProcessed { error in
-                if let error {
-                    try? h.close()
-                    conn.cancel()
-                    self.finish(.failed(error.localizedDescription))
+                if error != nil {
+                    try? self.handle.close()
+                    self.conn.cancel()
+                    self.done(false)
                 } else {
-                    next()
+                    self.next()
                 }
             })
         }
-        next()
     }
 }

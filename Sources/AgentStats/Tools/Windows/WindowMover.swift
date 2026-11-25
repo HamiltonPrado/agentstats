@@ -44,11 +44,12 @@ enum WindowMover {
     private static func focusedWindow(of app: NSRunningApplication) -> AXUIElement? {
         let element = AXUIElementCreateApplication(app.processIdentifier)
         var value: CFTypeRef?
-        if AXUIElementCopyAttributeValue(element, kAXFocusedWindowAttribute as CFString, &value) == .success, let value {
-            return (value as! AXUIElement)
-        }
-        if AXUIElementCopyAttributeValue(element, kAXMainWindowAttribute as CFString, &value) == .success, let value {
-            return (value as! AXUIElement)
+        for attribute in [kAXFocusedWindowAttribute, kAXMainWindowAttribute] {
+            // Só se confia no tipo depois de o confirmar: uma app pode devolver outra coisa.
+            if AXUIElementCopyAttributeValue(element, attribute as CFString, &value) == .success, let value,
+               CFGetTypeID(value) == AXUIElementGetTypeID() {
+                return (value as! AXUIElement)
+            }
         }
         return nil
     }
@@ -57,7 +58,7 @@ enum WindowMover {
         var pos: CFTypeRef?, size: CFTypeRef?
         guard AXUIElementCopyAttributeValue(window, kAXPositionAttribute as CFString, &pos) == .success,
               AXUIElementCopyAttributeValue(window, kAXSizeAttribute as CFString, &size) == .success,
-              let pos, let size else { return nil }
+              let pos, let size, CFGetTypeID(pos) == AXValueGetTypeID(), CFGetTypeID(size) == AXValueGetTypeID() else { return nil }
         var p = CGPoint.zero, s = CGSize.zero
         AXValueGetValue(pos as! AXValue, .cgPoint, &p)
         AXValueGetValue(size as! AXValue, .cgSize, &s)

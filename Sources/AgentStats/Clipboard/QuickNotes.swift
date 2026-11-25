@@ -16,6 +16,10 @@ final class QuickNotesStore: ObservableObject {
     init(file: URL?) {
         self.file = file
         if let file, case .value(let saved) = PrivateFile.load(Saved.self, from: file) { text = saved.text } else { text = "" }
+        // O que se escreveu nos últimos instantes antes de sair não se perde.
+        NotificationCenter.default.addObserver(forName: NSApplication.willTerminateNotification, object: nil, queue: .main) { [weak self] _ in
+            MainActor.assumeIsolated { self?.saveNow() }
+        }
     }
 
     private func scheduleSave() {

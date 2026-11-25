@@ -39,11 +39,17 @@ final class ShortcutsOverlay {
         holdTask = Task { @MainActor in
             try? await Task.sleep(for: .milliseconds(1000))
             guard !Task.isCancelled, NSEvent.modifierFlags.intersection(.deviceIndependentFlagsMask) == .command else { return }
+            // O ⌘⇥ (trocar de app) é tratado pelo sistema e não chega aqui: confirma que não houve teclas no último segundo.
+            let sinceKey = CGEventSource.secondsSinceLastEventType(.combinedSessionState, eventType: .keyDown)
+            guard ShortcutsOverlay.heldAlone(secondsSinceLastKey: sinceKey) else { return }
             self.show(byHold: true)
         }
     }
 
     func toggle() { panel == nil ? show(byHold: false) : close() }
+
+    /// ⌘ sozinho: nenhuma tecla carregada desde que se começou a segurar.
+    nonisolated static func heldAlone(secondsSinceLastKey: Double) -> Bool { secondsSinceLastKey >= 0.95 }
 
     private func show(byHold: Bool) {
         let me = ProcessInfo.processInfo.processIdentifier

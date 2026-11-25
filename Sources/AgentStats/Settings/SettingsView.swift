@@ -80,6 +80,11 @@ struct SettingsView: View {
     /// Bindings para as definições guardadas no Monitor.
     private var bm: Bindable<Monitor> { Bindable(m) }
 
+    private var keepAwakeSubtitle: String {
+        guard m.keepAwake else { return L("Termina automaticamente após o período") }
+        return L(m.keepDisplayOn ? "Agora: o Mac e o ecrã ficam acordados" : "Agora: o Mac fica acordado; o ecrã pode apagar-se")
+    }
+
     /// Diz porque é que os limites do Claude não aparecem, quando não aparecem.
     private var limitsSubtitle: String {
         switch m.claudeLimitsStatus {
@@ -240,8 +245,9 @@ struct SettingsView: View {
                     row("terminal", "Acordado com agentes a trabalhar",
                         m.holdingForAgents ? "Agora a manter acordado" : "Até 3 min depois de pararem; o ecrã pode desligar-se",
                         bm.keepAwakeForAgents)
-                    row("moon.zzz", "Manter o Mac acordado", "Termina automaticamente após o período", Binding(
+                    row("moon.zzz", "Manter o Mac acordado", keepAwakeSubtitle, Binding(
                         get: { m.keepAwake }, set: { m.keepAwake = $0 }))
+                    row("display", "Manter também o ecrã ligado", "O ecrã não se apaga enquanto o Mac estiver acordado", bm.keepDisplayOn)
                     if m.keepAwake {
                         HStack(spacing: DS.md) {
                             icon("timer")

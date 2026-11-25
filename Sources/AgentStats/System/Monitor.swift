@@ -79,6 +79,10 @@ final class Monitor {
     var keepAwake = false {
         didSet { keepAwakeController.setEnabled(keepAwake, minutes: keepAwakeMinutes) }
     }
+    /// No manter acordado manual: também o ecrã ligado (o dos agentes deixa-o apagar-se).
+    var keepDisplayOn: Bool = Pref.bool("power.keepDisplayOn", false) {
+        didSet { Pref.set(keepDisplayOn, "power.keepDisplayOn"); keepAwakeController.keepDisplayOn = keepDisplayOn }
+    }
     var keepAwakeForAgents: Bool = Pref.bool(AgentAwake.key, false) {
         didSet { Pref.set(keepAwakeForAgents, AgentAwake.key); updateAgentAwake() }
     }
@@ -149,6 +153,7 @@ final class Monitor {
         day = History24h.load()
         activityHistory = AgentActivityHistoryStore.load()
         keepAwakeController.onTimeout = { [weak self] in self?.keepAwake = false }
+        keepAwakeController.keepDisplayOn = keepDisplayOn
         sample()
         restart()
         // @Sendable: o sistema chama esta resposta numa fila de fundo. Sem isto, a closure herdava o

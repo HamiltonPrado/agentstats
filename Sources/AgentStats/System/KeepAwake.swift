@@ -16,6 +16,31 @@ final class KeepAwakeController {
 
     var isHolding: Bool { assertion != 0 }
 
+    /// Também o ecrã ligado (a asserção do ecrã impede igualmente o Mac de adormecer).
+    var keepDisplayOn = false {
+        didSet {
+            guard keepDisplayOn != oldValue, assertion != 0 else { return }
+            // Troca a asserção sem largar o Mac pelo meio.
+            let old = assertion
+            assertion = 0
+            create()
+            IOPMAssertionRelease(old)
+        }
+    }
+
+    nonisolated static func assertionType(display: Bool) -> String {
+        display ? kIOPMAssertionTypePreventUserIdleDisplaySleep : kIOPMAssertionTypePreventUserIdleSystemSleep
+    }
+
+    private func create() {
+        let result = IOPMAssertionCreateWithName(
+            Self.assertionType(display: keepDisplayOn) as CFString,
+            IOPMAssertionLevel(kIOPMAssertionLevelOn),
+            reason as CFString,
+            &assertion)
+        if result != kIOReturnSuccess { assertion = 0 }
+    }
+
     func setEnabled(_ enabled: Bool, minutes: Double) {
         timeout?.invalidate()
         timeout = nil
@@ -24,12 +49,8 @@ final class KeepAwakeController {
                 if minutes > 0 { schedule(minutes: minutes) }
                 return
             }
-            let result = IOPMAssertionCreateWithName(
-                kIOPMAssertionTypePreventUserIdleSystemSleep as CFString,
-                IOPMAssertionLevel(kIOPMAssertionLevelOn),
-                reason as CFString,
-                &assertion)
-            if result != kIOReturnSuccess { assertion = 0; return }
+            create()
+            guard assertion != 0 else { return }
             if minutes > 0 { schedule(minutes: minutes) }
         } else if assertion != 0 {
             IOPMAssertionRelease(assertion)

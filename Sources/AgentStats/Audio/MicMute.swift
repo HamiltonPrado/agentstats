@@ -30,7 +30,22 @@ final class MicMuteStore: ObservableObject {
     private var savedVolume: Double?
     private let hotKey = GlobalHotKey(id: MicMute.hotkeyID)
 
+    private static let restoreVolumeKey = "mic.restoreVolume"
+    private static let unmuteKey = "mic.unmuteOnLaunch"
+
     func start() {
+        // A app fechou de repente com o microfone calado: volta a ligá-lo.
+        let d = UserDefaults.standard
+        if let v = d.object(forKey: Self.restoreVolumeKey) as? Double {
+            audio.refresh()
+            audio.setInputVolume(v)
+            d.removeObject(forKey: Self.restoreVolumeKey)
+        }
+        if d.bool(forKey: Self.unmuteKey) {
+            audio.refresh()
+            if audio.canMuteInput { audio.setInputMuted(false) }
+            d.removeObject(forKey: Self.unmuteKey)
+        }
         GlobalHotKey.handlers[MicMute.hotkeyID] = { MicMuteStore.shared.toggle() }
         registerHotKey()
         NotificationCenter.default.addObserver(forName: NSApplication.willTerminateNotification, object: nil, queue: .main) { _ in
@@ -45,15 +60,19 @@ final class MicMuteStore: ObservableObject {
     func set(_ on: Bool) {
         guard on != muted else { return }
         audio.refresh()
+        let d = UserDefaults.standard
         if audio.canMuteInput {
             audio.setInputMuted(on)
+            if on { d.set(true, forKey: Self.unmuteKey) } else { d.removeObject(forKey: Self.unmuteKey) }
         } else if audio.canSetInputVolume {
             if on {
                 savedVolume = audio.inputVolume
+                d.set(audio.inputVolume, forKey: Self.restoreVolumeKey)
                 audio.setInputVolume(0)
             } else {
                 audio.setInputVolume(savedVolume ?? 0.75)
                 savedVolume = nil
+                d.removeObject(forKey: Self.restoreVolumeKey)
             }
         } else {
             return   // este microfone não deixa nem silenciar nem baixar o volume

@@ -21,13 +21,19 @@ struct ShareTests {
     }
 
     @Test func requestRules() {
-        let t = "abc"
-        #expect(FileDrop.decide(requestLine: "GET /abc/f.pdf HTTP/1.1", token: t, served: false, expired: false) == .serve)
-        #expect(FileDrop.decide(requestLine: "GET /abc/f.pdf HTTP/1.1", token: t, served: true, expired: false) == .gone)
-        #expect(FileDrop.decide(requestLine: "GET /abc/f.pdf HTTP/1.1", token: t, served: false, expired: true) == .gone)
-        #expect(FileDrop.decide(requestLine: "GET /abd/f.pdf HTTP/1.1", token: t, served: false, expired: false) == .notFound)
-        #expect(FileDrop.decide(requestLine: "POST /abc/f.pdf HTTP/1.1", token: t, served: false, expired: false) == .notFound)
-        #expect(FileDrop.decide(requestLine: "GET / HTTP/1.1", token: t, served: false, expired: false) == .notFound)
+        let t = "abc", t0 = Date(timeIntervalSince1970: 1_800_000_000)
+        func d(_ line: String, client: String = "phone", first: String? = nil, delivered: Date? = nil, closed: Bool = false, at: TimeInterval = 10) -> FileDrop.Decision {
+            FileDrop.decide(requestLine: line, token: t, client: client, firstClient: first, deliveredAt: delivered, closed: closed, now: t0 + at, started: t0)
+        }
+        #expect(d("GET /abc/f.pdf HTTP/1.1") == .serve)
+        #expect(d("GET /abd/f.pdf HTTP/1.1") == .notFound)
+        #expect(d("POST /abc/f.pdf HTTP/1.1") == .notFound)
+        #expect(d("GET / HTTP/1.1") == .notFound)
+        #expect(d("GET /abc/f.pdf HTTP/1.1", at: FileDrop.lifetime + 1) == .gone)                    // expirou
+        #expect(d("GET /abc/f.pdf HTTP/1.1", client: "laptop", first: "phone") == .gone)             // outro aparelho
+        #expect(d("GET /abc/f.pdf HTTP/1.1", first: "phone", delivered: t0 + 5, at: 30) == .serve)    // o Android pede outra vez
+        #expect(d("GET /abc/f.pdf HTTP/1.1", first: "phone", delivered: t0 + 5, at: 5 + FileDrop.regrace + 1) == .gone)
+        #expect(d("GET /abc/f.pdf HTTP/1.1", closed: true) == .gone)
         #expect(FileDrop.token().count == 32 && FileDrop.token() != FileDrop.token())
     }
 
@@ -64,8 +70,9 @@ struct ShareTests {
         var it = ended.stream.makeAsyncIterator()
         #expect(await it.next() == .delivered)
 
-        // Depois de entregue, o servidor fecha: uma segunda tentativa não chega a nada.
-        let again = try? await session.data(from: URL(string: "\(base)/\(server.token)/nota.txt")!)
-        #expect(again == nil || (again?.1 as? HTTPURLResponse)?.statusCode == 410)
+        // O mesmo aparelho pode pedir outra vez logo a seguir (o Chrome para Android faz isto).
+        let (again, r2) = try await session.data(from: URL(string: "\(base)/\(server.token)/nota.txt")!)
+        #expect((r2 as? HTTPURLResponse)?.statusCode == 200 && again == body)
+        server.stop()
     }
 }

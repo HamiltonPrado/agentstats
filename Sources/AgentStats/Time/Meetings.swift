@@ -67,7 +67,7 @@ final class MeetingsStore: ObservableObject {
     private var timer: Timer?
     private var demo = false
 
-    var allowed: Bool { access == .fullAccess || access == .authorized }
+    var allowed: Bool { access == .fullAccess }
 
     func start() {
         guard !demo else { return }

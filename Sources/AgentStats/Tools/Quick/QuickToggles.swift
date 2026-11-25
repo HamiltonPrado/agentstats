@@ -49,11 +49,19 @@ final class QuickTogglesStore: ObservableObject {
     }
 
     /// Escreve a preferência do Finder e reinicia-o: as janelas do Finder fecham e voltam.
+    /// Lê o estado na hora: o guardado podia estar desatualizado e mostrar em vez de esconder.
     func toggleDesktopIcons() async {
         guard !demo, !busy else { return }
+        await setDesktopIcons(shown: !QuickToggles.desktopIconsShown)
+    }
+
+    /// Põe os ícones como pedido (sem nada a fazer se já estiverem assim).
+    func setDesktopIcons(shown show: Bool) async {
+        guard !demo else { return }
+        iconsShown = QuickToggles.desktopIconsShown
+        guard show != iconsShown else { return }
         busy = true
         message = nil
-        let show = !iconsShown
         let w = await ToolRunner.run("/usr/bin/defaults", ["write", "com.apple.finder", "CreateDesktop", "-bool", show ? "true" : "false"], timeout: 10)
         if w.ok {
             _ = await ToolRunner.run("/usr/bin/killall", ["Finder"], timeout: 10)

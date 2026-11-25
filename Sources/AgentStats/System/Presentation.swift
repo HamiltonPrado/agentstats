@@ -39,7 +39,7 @@ final class PresentationMode: ObservableObject {
             d.set(true, forKey: Self.activeKey)
             let hide = QuickToggles.desktopIconsShown
             d.set(hide, forKey: Self.hidIconsKey)
-            if hide { await QuickTogglesStore.shared.toggleDesktopIcons() }
+            if hide { await QuickTogglesStore.shared.setDesktopIcons(shown: false) }
             if assertion == 0 {
                 _ = IOPMAssertionCreateWithName(kIOPMAssertionTypePreventUserIdleDisplaySleep as CFString,
                                                 IOPMAssertionLevel(kIOPMAssertionLevelOn), "AgentStats: modo apresentação" as CFString, &assertion)
@@ -50,7 +50,7 @@ final class PresentationMode: ObservableObject {
             active = false
             d.set(false, forKey: Self.activeKey)
             d.set(false, forKey: Self.hidIconsKey)
-            if hid && !QuickToggles.desktopIconsShown { await QuickTogglesStore.shared.toggleDesktopIcons() }
+            if hid { await QuickTogglesStore.shared.setDesktopIcons(shown: true) }
             if assertion != 0 { IOPMAssertionRelease(assertion); assertion = 0 }
             ClipboardStore.shared.paused = false
         }

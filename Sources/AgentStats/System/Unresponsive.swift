@@ -7,6 +7,12 @@ import UserNotifications
 /// com 1 s de limite: duas falhas seguidas (a 10 s de distância) contam como bloqueada.
 enum UnresponsiveRules {
     static let strikes = 2
+    static let warmup: TimeInterval = 30
+
+    static func oldEnough(launched: Date?, now: Date) -> Bool {
+        guard let launched else { return true }
+        return now.timeIntervalSince(launched) >= warmup
+    }
 
     /// Junta o resultado desta volta ao das anteriores. Devolve as contagens novas e os pids bloqueados.
     static func update(strikes old: [pid_t: Int], failed: Set<pid_t>, alive: Set<pid_t>) -> (strikes: [pid_t: Int], stuck: Set<pid_t>) {
@@ -46,6 +52,8 @@ final class UnresponsiveStore: ObservableObject {
         let me = ProcessInfo.processInfo.processIdentifier
         let apps = NSWorkspace.shared.runningApplications
             .filter { $0.activationPolicy == .regular && $0.processIdentifier != me && !$0.isTerminated }
+            // A arrancar, muitas apps ainda não respondem à Acessibilidade: isso não é estar bloqueada.
+            .filter { UnresponsiveRules.oldEnough(launched: $0.launchDate, now: Date()) }
         let pids = apps.map(\.processIdentifier)
         let names = Dictionary(apps.map { ($0.processIdentifier, $0.localizedName ?? "?") }, uniquingKeysWith: { a, _ in a })
         queue.async {

@@ -980,3 +980,7 @@
 "Não consegui ler a password guardada." = "Couldn't read the saved password.";
 "Esquecer a password" = "Forget the password";
 "Os convidados apontam a câmara e entram, sem escrever a password. A password fica só em memória e é esquecida ao fim de 10 minutos." = "Guests point their camera and join, without typing the password. The password stays in memory only and is forgotten after 10 minutes.";
+"Manter também o ecrã ligado" = "Also keep the display on";
+"O ecrã não se apaga enquanto o Mac estiver acordado" = "The display doesn't turn off while the Mac is kept awake";
+"Agora: o Mac e o ecrã ficam acordados" = "Now: the Mac and the display stay awake";
+"Agora: o Mac fica acordado; o ecrã pode apagar-se" = "Now: the Mac stays awake; the display may turn off";

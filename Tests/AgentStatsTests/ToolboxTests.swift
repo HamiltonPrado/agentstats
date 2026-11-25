@@ -112,3 +112,26 @@ struct RulesTests {
         #expect(exported[RulesStore.key] == nil && exported["bar.cpu"] != nil)
     }
 }
+
+@Suite("Correções da revisão")
+struct ReviewFixTests {
+    @Test func commandHeldAloneOnly() {
+        #expect(ShortcutsOverlay.heldAlone(secondsSinceLastKey: 1.2))
+        #expect(!ShortcutsOverlay.heldAlone(secondsSinceLastKey: 0.3))   // carregou noutra tecla (ex.: ⌘⇥)
+    }
+
+    @Test func appsStillLaunchingAreNotStuck() {
+        let now = Date()
+        #expect(!UnresponsiveRules.oldEnough(launched: now.addingTimeInterval(-5), now: now))
+        #expect(UnresponsiveRules.oldEnough(launched: now.addingTimeInterval(-60), now: now))
+        #expect(UnresponsiveRules.oldEnough(launched: nil, now: now))
+    }
+}
+
+@Suite("Manter acordado")
+struct KeepAwakeTests {
+    @Test func assertionTypes() {
+        #expect(KeepAwakeController.assertionType(display: true) == "PreventUserIdleDisplaySleep")
+        #expect(KeepAwakeController.assertionType(display: false) == "PreventUserIdleSystemSleep")
+    }
+}
