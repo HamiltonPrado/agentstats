@@ -57,17 +57,20 @@
 
 - Elige la salida y el micrófono y ajusta su volumen.
 - **Mezclador por app**, de 0 a 150% (macOS 14.2+). Solo modifica las apps que ajustes y vuelve al 100% al cerrar AgentStats.
+- **Silenciar el micrófono** con un atajo global (⌃⌥M por defecto), para llamadas, con un icono rojo en la barra de menús mientras está silenciado.
 
 ### Portapapeles
 
 - Historial de texto, **desactivado hasta que lo actives**: 100 elementos, 7 días, con fijados y fragmentos.
 - Ignora lo que los gestores de contraseñas marcan como secreto y los formatos conocidos de claves de API. El historial se queda en este Mac, **sin cifrar**.
 - **Pegado rápido:** 1–9, o ↑↓ y Enter, pegan un elemento en la app donde estabas (necesita Accesibilidad; sin ella, queda copiado).
+- **Imágenes en el historial** (opcional, desactivado por defecto): capturas e imágenes copiadas, hasta 30, con “Guardar como PNG…”.
 
 ### Captura
 
 - Captura un área, una ventana o la pantalla, y graba la pantalla completa con micrófono y clics opcionales. Para grabar un área se abre la herramienta de macOS.
 - **Leer la pantalla:** copia el texto de un área (OCR), lee códigos QR y toma el color de cualquier punto en HEX o RGB. Todo en este Mac, sin red.
+- **Generar un código QR** de un enlace o texto para abrirlo en el móvil, y **convertir la última grabación en un GIF** ligero para PRs y mensajes.
 
 ### Tiempo
 
@@ -76,6 +79,7 @@
 
 ### Herramientas
 
+- **Ventanas:** pon la ventana del frente en mitades, tercios, dos tercios, esquinas, pantalla completa o centrada, y pásala a la otra pantalla, con atajos globales (⌃⌥ + flechas y letras, como en Rectangle) que se pueden desactivar. Pulsar otra vez la mitad izquierda o derecha alterna entre ½, ⅔ y ⅓. Necesita Accesibilidad.
 - **Atajos rápidos:** modo oscuro, ocultar los iconos del escritorio (el Finder se reinicia) y No molestar, que necesita un atajo con ese nombre en la app Atajos.
 - **Red:** ve los puertos a la escucha y cierra procesos tuyos, con confirmación, y vacía la caché de DNS (pide la contraseña de administrador en el diálogo de macOS).
 - **Discos:** expulsa discos externos, imágenes de disco y volúmenes de red, y dice qué app impide expulsarlos.
@@ -85,6 +89,7 @@
 - **Desinstalar:** mueve apps a la Papelera, con los restos que elijas.
 - **Limpieza:** mueve a la Papelera cachés de una lista cerrada (Homebrew, pip y npm; Brave, Playwright, Hugging Face y npx son opcionales), con confirmación y sin tocar lo que detecte en uso. El espacio se libera al vaciar la Papelera.
 - **Teclado y pantalla:** bloquea el teclado y deja la pantalla en negro para limpiarlos. Se sale con un botón, con las dos teclas ⌘ o automáticamente tras 1, 2 o 5 minutos. El botón de encendido y Touch ID no se pueden bloquear.
+- **Imágenes:** arrastra fotos para convertir HEIC, PNG o JPG a JPG o PNG, reducir el tamaño y comprimir, sin la ubicación de las fotos. Y vídeo a GIF.
 
 ### A tu medida
 
@@ -106,6 +111,7 @@ Para la app Atajos (acción “Abrir URL”) o el Terminal (`open "agentstats://
 | `agentstats://read/text` · `read/qr` · `read/color` | Leer la pantalla |
 | `agentstats://toggle/dark-mode` · `toggle/desktop-icons` | Atajos rápidos |
 | `agentstats://usage/copy` | Copia los tokens y el coste de hoy y de la semana |
+| `agentstats://window/leftHalf` | Organiza la ventana del frente (`leftHalf`, `rightHalf`, `maximize`, `center`, `nextDisplay`…) |
 
 ## Permisos y privacidad
 
@@ -115,7 +121,7 @@ Para la app Atajos (acción “Abrir URL”) o el Terminal (`open "agentstats://
 | Mezclador por app | Grabación del audio del sistema |
 | Captura y grabación | Grabación de pantalla |
 | Grabar con micrófono | Micrófono |
-| Limpieza del teclado y la pantalla | Accesibilidad |
+| Limpieza del teclado y la pantalla, pegado rápido y organizar ventanas | Accesibilidad |
 | Historial del portapapeles | Pegar desde otras apps (macOS 15.4+) |
 | Categorías del disco, medidas al abrir la tarjeta | Carpetas personales (Escritorio, Documentos, Descargas, Música, Imágenes) |
 | Nombre de la red Wi-Fi (opcional) | Localización |

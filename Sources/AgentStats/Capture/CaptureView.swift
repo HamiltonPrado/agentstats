@@ -4,6 +4,7 @@ import AppKit
 struct CaptureView: View {
     @ObservedObject var store: CaptureStore
     @ObservedObject private var reading = ScreenToolsStore.shared
+    @ObservedObject private var images = ImagesStore.shared
     @AppStorage("capture.copy") private var copyAfter = true
     @AppStorage("capture.microphone") private var microphone = false
     @AppStorage("capture.clicks") private var clicks = false
@@ -13,6 +14,7 @@ struct CaptureView: View {
             if store.needsPermission { permissionCard }
             screenshotCard
             readingCard
+            QRMakerCard()
             recordingCard
             if let error = store.error {
                 Text(L(error)).font(DS.meta).foregroundStyle(Color.waitingText).fixedSize(horizontal: false, vertical: true)
@@ -131,17 +133,33 @@ struct CaptureView: View {
     }
 
     private func lastCard(_ file: URL) -> some View {
-        HStack(spacing: 0) {
-            VStack(alignment: .leading, spacing: 2) {
-                Text("Última").font(DS.meta).foregroundStyle(Color.text2)
-                Text(L(file.lastPathComponent)).font(DS.body).lineLimit(1).truncationMode(.middle)
+        VStack(alignment: .leading, spacing: DS.xs) {
+            HStack(spacing: 0) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Última").font(DS.meta).foregroundStyle(Color.text2)
+                    Text(L(file.lastPathComponent)).font(DS.body).lineLimit(1).truncationMode(.middle)
+                }
+                Spacer(minLength: DS.sm)
+                IconButton(systemName: "eye", help: "Abrir") { NSWorkspace.shared.open(file) }
+                if file.pathExtension == "png" {
+                    IconButton(systemName: "doc.on.doc", help: "Copiar") { store.copyLast() }
+                }
+                if file.pathExtension.lowercased() == "mov" {
+                    if images.gifProgress != nil {
+                        ProgressView().controlSize(.small).frame(width: 24)
+                    } else {
+                        IconButton(systemName: "photo.stack", help: "Converter em GIF") { Task { await images.makeGIF(from: file) } }
+                    }
+                }
+                IconButton(systemName: "folder", help: "Mostrar no Finder") { NSWorkspace.shared.activateFileViewerSelecting([file]) }
             }
-            Spacer(minLength: DS.sm)
-            IconButton(systemName: "eye", help: "Abrir") { NSWorkspace.shared.open(file) }
-            if file.pathExtension == "png" {
-                IconButton(systemName: "doc.on.doc", help: "Copiar") { store.copyLast() }
+            if let m = images.gifMessage {
+                HStack {
+                    note(m, color: .text2)
+                    Spacer()
+                    if let gif = images.lastGIF { textLink("Mostrar no Finder") { images.reveal([gif]) } }
+                }
             }
-            IconButton(systemName: "folder", help: "Mostrar no Finder") { NSWorkspace.shared.activateFileViewerSelecting([file]) }
         }
         .cardStyle()
     }

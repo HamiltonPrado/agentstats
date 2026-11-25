@@ -26,6 +26,8 @@ enum DemoData {
         UninstallStore.shared.loadDemo()
         CleanupStore.shared.loadDemo()
         DisksStore.shared.loadDemo()
+        ImagesStore.shared.loadDemo()
+        QRMaker.demoText = "https://github.com/HamiltonPrado/agentstats"
         TimerStore.shared.loadDemo(now: now)
         WorldClockStore.shared.loadDemo()
         NetworkExtrasStore.shared.loadDemo()

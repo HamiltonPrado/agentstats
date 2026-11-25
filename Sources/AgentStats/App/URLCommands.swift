@@ -11,6 +11,7 @@ enum URLCommand: Equatable {
     case readText, readCode, pickColor
     case darkMode, desktopIcons
     case copyUsage
+    case window(WindowAction)
 
     static func parse(_ url: URL) -> URLCommand? {
         guard url.scheme?.lowercased() == "agentstats" else { return nil }
@@ -42,6 +43,11 @@ enum URLCommand: Equatable {
             default: return nil
             }
         case "usage": return path.first == "copy" ? .copyUsage : nil
+        case "window":
+            // agentstats://window/leftHalf (sem distinguir maiúsculas)
+            guard let raw = url.pathComponents.filter({ $0 != "/" }).first,
+                  let action = WindowAction.allCases.first(where: { $0.rawValue.lowercased() == raw.lowercased() }) else { return nil }
+            return .window(action)
         default: return nil
         }
     }
@@ -69,6 +75,7 @@ enum URLCommand: Equatable {
         case .pickColor: ScreenToolsStore.shared.pickColor()
         case .darkMode: Task { await QuickTogglesStore.shared.toggleDarkMode() }
         case .desktopIcons: Task { await QuickTogglesStore.shared.toggleDesktopIcons() }
+        case .window(let action): WindowMover.apply(action)
         case .copyUsage:
             NSPasteboard.general.clearContents()
             NSPasteboard.general.setString(Self.usageText(monitor.usage), forType: .string)

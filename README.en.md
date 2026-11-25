@@ -57,17 +57,20 @@
 
 - Choose output and microphone and adjust their volume.
 - **Per-app mixer**, 0 to 150% (macOS 14.2+). It only touches apps you adjust and returns to 100% when AgentStats quits.
+- **Mute the microphone** with a global shortcut (⌃⌥M by default), for calls, with a red icon in the menu bar while it's muted.
 
 ### Clipboard
 
 - Text history, **off until you turn it on**: 100 items, 7 days, with pins and snippets.
 - Skips what password managers mark as secret and known API key formats. History stays on this Mac, **unencrypted**.
 - **Quick paste:** 1–9, or ↑↓ and Enter, paste an item into the app you were using (needs Accessibility; without it, it is just copied).
+- **Images in the history** (optional, off by default): screenshots and copied images, up to 30, with “Save as PNG…”.
 
 ### Capture
 
 - Capture an area, a window, or the screen, and record the full screen with optional microphone and clicks. Area recording opens the macOS tool.
 - **Read the screen:** copy the text in an area (OCR), read QR codes, and pick the color of any point as HEX or RGB. All on this Mac, with no network.
+- **Make a QR code** from a link or text to open on your phone, and **turn the last recording into a light GIF** for PRs and messages.
 
 ### Time
 
@@ -76,6 +79,7 @@
 
 ### Tools
 
+- **Windows:** put the front window in halves, thirds, two thirds, corners, full screen or centered, and move it to the other display, with global shortcuts (⌃⌥ + arrows and letters, as in Rectangle) that can be turned off. Pressing left or right half again cycles through ½, ⅔ and ⅓. Needs Accessibility.
 - **Quick toggles:** dark mode, hide desktop icons (Finder restarts), and Do Not Disturb, which needs a shortcut with that name in the Shortcuts app.
 - **Network:** see listening ports and quit your own processes, with confirmation, and flush the DNS cache (asks for the administrator password in the macOS dialog).
 - **Disks:** eject external disks, disk images and network volumes, and see which app is blocking the eject.
@@ -85,6 +89,7 @@
 - **Uninstall:** move apps to the Trash, with the leftovers you select.
 - **Cleanup:** moves caches from a closed list to the Trash (Homebrew, pip, and npm; Brave, Playwright, Hugging Face, and npx are optional), with confirmation and without touching anything detected as in use. Space is freed when you empty the Trash.
 - **Keyboard and screen:** locks the keyboard and turns the screen black so you can clean them. Exit with a button, both ⌘ keys, or automatically after 1, 2, or 5 minutes. The power button and Touch ID cannot be blocked.
+- **Images:** drop photos to convert HEIC, PNG or JPG to JPG or PNG, resize and compress, without the photos' location. Plus video to GIF.
 
 ### Make it yours
 
@@ -106,6 +111,7 @@ For the Shortcuts app (“Open URL” action) or Terminal (`open "agentstats://�
 | `agentstats://read/text` · `read/qr` · `read/color` | Read the screen |
 | `agentstats://toggle/dark-mode` · `toggle/desktop-icons` | Quick toggles |
 | `agentstats://usage/copy` | Copies today's and this week's tokens and cost |
+| `agentstats://window/leftHalf` | Arranges the front window (`leftHalf`, `rightHalf`, `maximize`, `center`, `nextDisplay`…) |
 
 ## Permissions and privacy
 
@@ -115,7 +121,7 @@ For the Shortcuts app (“Open URL” action) or Terminal (`open "agentstats://�
 | Per-app mixer | System audio recording |
 | Capture and recording | Screen recording |
 | Recording with microphone | Microphone |
-| Keyboard and screen cleaning | Accessibility |
+| Keyboard and screen cleaning, quick paste and arranging windows | Accessibility |
 | Clipboard history | Paste from other apps (macOS 15.4+) |
 | Disk categories, measured when the card opens | Personal folders (Desktop, Documents, Downloads, Music, Pictures) |
 | Wi-Fi network name (optional) | Location |

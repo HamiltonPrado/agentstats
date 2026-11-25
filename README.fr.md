@@ -57,17 +57,20 @@
 
 - Choisissez la sortie et le micro et réglez leur volume.
 - **Mixeur par application**, de 0 à 150 % (macOS 14.2+). Il ne modifie que les applications réglées et revient à 100 % à la fermeture d’AgentStats.
+- **Couper le micro** avec un raccourci global (⌃⌥M par défaut), pour les appels, avec une icône rouge dans la barre des menus tant qu’il est coupé.
 
 ### Presse-papiers
 
 - Historique de texte, **désactivé tant que vous ne l’activez pas** : 100 éléments, 7 jours, avec épingles et extraits.
 - Ignore ce que les gestionnaires de mots de passe marquent comme secret et les formats connus de clés API. L’historique reste sur ce Mac, **non chiffré**.
 - **Collage rapide :** 1–9, ou ↑↓ et Entrée, collent un élément dans l’app où vous étiez (nécessite l’Accessibilité ; sinon, il est seulement copié).
+- **Images dans l’historique** (optionnel, désactivé par défaut) : captures et images copiées, jusqu’à 30, avec « Enregistrer en PNG… ».
 
 ### Capture
 
 - Capturez une zone, une fenêtre ou l’écran et enregistrez l’écran entier, avec micro et clics en option. L’enregistrement d’une zone ouvre l’outil de macOS.
 - **Lire l’écran :** copiez le texte d’une zone (OCR), lisez les codes QR et prélevez la couleur de n’importe quel point en HEX ou RVB. Tout sur ce Mac, sans réseau.
+- **Générer un code QR** à partir d’un lien ou d’un texte pour l’ouvrir sur le téléphone, et **convertir le dernier enregistrement en GIF** léger pour les PR et les messages.
 
 ### Temps
 
@@ -76,6 +79,7 @@
 
 ### Outils
 
+- **Fenêtres :** placez la fenêtre au premier plan en moitiés, tiers, deux tiers, coins, plein écran ou au centre, et passez-la sur l’autre écran, avec des raccourcis globaux (⌃⌥ + flèches et lettres, comme dans Rectangle) désactivables. Appuyer de nouveau sur la moitié gauche ou droite alterne entre ½, ⅔ et ⅓. Nécessite l’Accessibilité.
 - **Raccourcis rapides :** mode sombre, masquer les icônes du bureau (le Finder redémarre) et Ne pas déranger, qui nécessite un raccourci de ce nom dans l’app Raccourcis.
 - **Réseau :** voyez les ports à l’écoute et quittez vos processus, après confirmation, et videz le cache DNS (demande le mot de passe administrateur dans la fenêtre de macOS).
 - **Disques :** éjectez disques externes, images disque et volumes réseau, et voyez quelle app empêche l’éjection.
@@ -85,6 +89,7 @@
 - **Désinstaller :** place les applications dans la Corbeille, avec les restes choisis.
 - **Nettoyage :** place dans la Corbeille des caches d’une liste fermée (Homebrew, pip et npm ; Brave, Playwright, Hugging Face et npx sont optionnels), après confirmation et sans toucher à ce qui est détecté en cours d’utilisation. L’espace est libéré quand vous videz la Corbeille.
 - **Clavier et écran :** verrouille le clavier et affiche un écran noir pour les nettoyer. Sortie par un bouton, les deux touches ⌘ ou automatiquement après 1, 2 ou 5 minutes. Le bouton d’alimentation et Touch ID ne peuvent pas être bloqués.
+- **Images :** déposez des photos pour convertir HEIC, PNG ou JPG en JPG ou PNG, réduire la taille et compresser, sans la localisation des photos. Et vidéo en GIF.
 
 ### À votre mesure
 
@@ -106,6 +111,7 @@ Pour l’app Raccourcis (action « Ouvrir l’URL ») ou le Terminal (`open "age
 | `agentstats://read/text` · `read/qr` · `read/color` | Lire l’écran |
 | `agentstats://toggle/dark-mode` · `toggle/desktop-icons` | Raccourcis rapides |
 | `agentstats://usage/copy` | Copie les tokens et le coût du jour et de la semaine |
+| `agentstats://window/leftHalf` | Organise la fenêtre au premier plan (`leftHalf`, `rightHalf`, `maximize`, `center`, `nextDisplay`…) |
 
 ## Autorisations et confidentialité
 
@@ -115,7 +121,7 @@ Pour l’app Raccourcis (action « Ouvrir l’URL ») ou le Terminal (`open "age
 | Mixeur par application | Enregistrement de l’audio du système |
 | Capture et enregistrement | Enregistrement de l’écran |
 | Enregistrer avec le micro | Micro |
-| Nettoyage du clavier et de l’écran | Accessibilité |
+| Nettoyage du clavier et de l’écran, collage rapide et organisation des fenêtres | Accessibilité |
 | Historique du presse-papiers | Coller depuis d’autres apps (macOS 15.4+) |
 | Catégories du disque, mesurées à l’ouverture de la carte | Dossiers personnels (Bureau, Documents, Téléchargements, Musique, Images) |
 | Nom du réseau Wi-Fi (optionnel) | Localisation |

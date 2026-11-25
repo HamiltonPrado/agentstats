@@ -5,6 +5,9 @@ struct ClipItem: Codable, Identifiable, Equatable, Sendable {
     var text: String
     var date: Date
     var pinned = false
+    /// Imagens: o nome do ficheiro em `clipboard-images` e as dimensões ("1280×720"). O texto fica vazio.
+    var image: String? = nil
+    var imageSize: String? = nil
 }
 
 struct Snippet: Codable, Identifiable, Equatable, Sendable {
@@ -86,6 +89,40 @@ enum ClipboardRules {
             loose += 1
             return true
         }
+    }
+
+    static let maxImageBytes = 15_000_000
+    static let maxImages = 30
+
+    /// Tipos de imagem que se guardam. Se a cópia também tiver texto, fica o texto.
+    static let imageTypes = ["public.png", "public.tiff"]
+
+    static func isImageCopy(types: [String]) -> Bool {
+        !types.contains("public.utf8-plain-text") && types.contains(where: imageTypes.contains)
+    }
+
+    /// A mesma imagem (o nome é o hash do conteúdo) sobe em vez de duplicar. No máximo `maxImages` imagens soltas.
+    static func addingImage(_ name: String, size: String, to items: [ClipItem], now: Date) -> [ClipItem] {
+        var out = items
+        var item = ClipItem(text: "", date: now, image: name, imageSize: size)
+        if let i = out.firstIndex(where: { $0.image == name }) {
+            item = out.remove(at: i)
+            item.date = now
+        }
+        out.insert(item, at: 0)
+        var loose = 0
+        out = out.filter { i in
+            guard i.image != nil, !i.pinned else { return true }
+            loose += 1
+            return loose <= maxImages
+        }
+        return pruned(out, now: now)
+    }
+
+    /// As imagens no disco que nenhum item usa (para apagar).
+    static func orphanImages(files: [String], items: [ClipItem]) -> [String] {
+        let used = Set(items.compactMap(\.image))
+        return files.filter { $0.hasSuffix(".png") && !used.contains($0) }
     }
 
     static func preview(_ text: String) -> String {

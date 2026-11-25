@@ -23,6 +23,7 @@ struct SettingsView: View {
     @AppStorage("profiles.work") private var workProfileData = ""
     @AppStorage("profiles.monitoring") private var monitoringProfileData = ""
     @AppStorage(GlobalHotKey.defaultsKey) var hotkey = GlobalHotKey.defaultPreset
+    @AppStorage(MicMute.hotkeyKey) private var micHotkey = MicMute.defaultPreset
     @AppStorage("settings.section") private var sectionRaw = SettingsSection.general.rawValue
     @AppStorage(MenuBarStyle.defaultsKey) private var barStyle = MenuBarStyle.labeled.rawValue
     @AppStorage(MenuBarDrawer.colorDotKey) private var colorDot = false
@@ -149,6 +150,19 @@ struct SettingsView: View {
                         Picker("", selection: $hotkey) {
                             Text("Desligado").tag("off")
                             ForEach(GlobalHotKey.presets, id: \.key) { p in Text(L(p.combo.label)).tag(p.key) }
+                        }
+                        .labelsHidden().frame(width: 104)
+                    }
+                    HStack(spacing: DS.md) {
+                        icon("mic.slash")
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Silenciar o microfone").font(DS.body)
+                            Text("Atalho global, para chamadas").font(DS.meta).foregroundStyle(Color.text3)
+                        }
+                        Spacer()
+                        Picker("Silenciar o microfone", selection: $micHotkey) {
+                            Text("Desligado").tag("off")
+                            ForEach(MicMute.presets, id: \.key) { p in Text(p.combo.label).tag(p.key) }
                         }
                         .labelsHidden().frame(width: 104)
                     }

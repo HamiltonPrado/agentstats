@@ -28,12 +28,12 @@ struct ClipboardView: View {
         .onKeyPress(.upArrow) { move(-1) }
         .onKeyPress(.return) {
             guard let i = selected.value, visibleItems.indices.contains(i) else { return .ignored }
-            paste(visibleItems[i].text)
+            paste(visibleItems[i])
             return .handled
         }
         .onKeyPress(characters: CharacterSet(charactersIn: "123456789")) { press in
             guard let n = Int(press.characters), visibleItems.indices.contains(n - 1) else { return .ignored }
-            paste(visibleItems[n - 1].text)
+            paste(visibleItems[n - 1])
             return .handled
         }
         .onAppear {
@@ -62,8 +62,8 @@ struct ClipboardView: View {
         return .handled
     }
 
-    private func paste(_ text: String) {
-        if QuickPaste.paste(text, store: store) == .copiedOnly {
+    private func paste(_ item: ClipItem) {
+        if QuickPaste.paste(item, store: store) == .copiedOnly {
             pasteNote.value = "Copiado. Para colar logo na app onde estavas, dá ao AgentStats acesso à Acessibilidade."
         }
     }
@@ -85,6 +85,13 @@ struct ClipboardView: View {
             }
             if store.enabled {
                 accessNotice
+                HStack(spacing: DS.sm) {
+                    Text("Guardar também imagens").font(DS.body)
+                    Spacer()
+                    Toggle("Guardar também imagens", isOn: Binding(get: { store.imagesEnabled }, set: { store.setImagesEnabled($0) }))
+                        .toggleStyle(.switch).controlSize(.mini).labelsHidden()
+                }
+                .help("Capturas e imagens copiadas, até 30, guardadas só neste Mac")
             } else {
                 note("Desligado. Se ligares, guarda o texto que copiares, só neste Mac e por 7 dias. Ignora o que os gestores de passwords copiam e as chaves de API conhecidas.")
             }
@@ -151,9 +158,20 @@ struct ClipboardView: View {
         HStack(spacing: 0) {
             Text(L(number.map(String.init) ?? "")).font(DS.meta.monospacedDigit()).foregroundStyle(Color.text3)
                 .frame(width: 14, alignment: .leading)
-            copyButton(id: item.id, text: item.text) {
+            copyButton(item) {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(L(ClipboardRules.preview(item.text))).font(DS.body).lineLimit(1).truncationMode(.tail)
+                    if item.image != nil {
+                        HStack(spacing: DS.sm) {
+                            if let url = store.imageURL(item), let img = NSImage(contentsOf: url) {
+                                Image(nsImage: img).resizable().scaledToFill().frame(width: 44, height: 28)
+                                    .clipShape(RoundedRectangle(cornerRadius: 4))
+                                    .overlay(RoundedRectangle(cornerRadius: 4).stroke(Color.primary.opacity(0.12)))
+                            }
+                            Text(String(localized: "Imagem · \(item.imageSize ?? "")")).font(DS.body).lineLimit(1)
+                        }
+                    } else {
+                        Text(L(ClipboardRules.preview(item.text))).font(DS.body).lineLimit(1).truncationMode(.tail)
+                    }
                     Text(L(copied.value == item.id ? "Copiado" : Fmt.ago(item.date)))
                         .font(DS.meta)
                         .foregroundStyle(copied.value == item.id ? AnyShapeStyle(Color.workingText) : AnyShapeStyle(Color.text3))
@@ -165,6 +183,12 @@ struct ClipboardView: View {
             IconButton(systemName: "xmark", help: "Apagar do histórico") { store.remove(item.id) }
         }
         .padding(.vertical, DS.xs)
+        .contextMenu {
+            if let url = store.imageURL(item) {
+                Button("Guardar como PNG…") { saveImage(url) }
+                Button("Abrir") { NSWorkspace.shared.open(url) }
+            }
+        }
     }
 
     // MARK: Snippets
@@ -240,9 +264,27 @@ struct ClipboardView: View {
 
     // MARK: Peças
 
+    private func saveImage(_ url: URL) {
+        let panel = NSSavePanel()
+        panel.nameFieldStringValue = L("Imagem") + ".png"
+        panel.allowedContentTypes = [.png]
+        NSApp.activate(ignoringOtherApps: true)
+        guard panel.runModal() == .OK, let dest = panel.url else { return }
+        try? FileManager.default.removeItem(at: dest)
+        try? FileManager.default.copyItem(at: url, to: dest)
+    }
+
+    private func copyButton<Label: View>(_ item: ClipItem, @ViewBuilder label: () -> Label) -> some View {
+        copyButton(id: item.id, copy: { store.copyItem(item) }, label: label)
+    }
+
     private func copyButton<Label: View>(id: UUID, text: String, @ViewBuilder label: () -> Label) -> some View {
+        copyButton(id: id, copy: { store.copy(text) }, label: label)
+    }
+
+    private func copyButton<Label: View>(id: UUID, copy: @escaping () -> Void, @ViewBuilder label: () -> Label) -> some View {
         Button {
-            store.copy(text)
+            copy()
             copied.value = id
             Task {
                 try? await Task.sleep(for: .seconds(1.2))

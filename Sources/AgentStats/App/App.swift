@@ -145,6 +145,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
             controller = StatusController(monitor: Monitor())
             ClipboardStore.shared.start()
             UpdateStore.shared.start()
+            MicMuteStore.shared.start()
+            WindowShortcuts.update()
             CaptureStore.shared.stopOrphan()
             AppState.controller = controller
             HookEvents.prune()

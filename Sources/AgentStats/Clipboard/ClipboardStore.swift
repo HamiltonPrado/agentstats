@@ -1,4 +1,5 @@
 import AppKit
+import CryptoKit
 import SwiftUI
 
 enum ClipboardAccess: Equatable {
@@ -22,9 +23,12 @@ final class ClipboardStore: ObservableObject {
     private enum Key {
         static let enabled = "clipboard.enabled"
         static let requested = "clipboard.accessRequested"
+        static let images = "clipboard.images"
     }
 
     @Published private(set) var enabled: Bool
+    /// Guardar também imagens (desligado por defeito: as capturas de ecrã podem ter coisas sensíveis).
+    @Published private(set) var imagesEnabled: Bool
     @Published private(set) var access: ClipboardAccess = .notRequested
     @Published private(set) var items: [ClipItem] = []
     @Published private(set) var snippets: [Snippet] = []
@@ -56,6 +60,7 @@ final class ClipboardStore: ObservableObject {
         self.accessOverride = accessOverride
         self.frontApp = frontApp
         enabled = defaults?.bool(forKey: Key.enabled) ?? false
+        imagesEnabled = defaults?.bool(forKey: Key.images) ?? false
         requested = defaults?.bool(forKey: Key.requested) ?? false
         lastChange = pasteboard.changeCount
         load()
@@ -63,6 +68,17 @@ final class ClipboardStore: ObservableObject {
     }
 
     private var historyFile: URL? { directory?.appendingPathComponent("clipboard.json") }
+    private var imagesDirectory: URL? { directory?.appendingPathComponent("clipboard-images") }
+
+    func setImagesEnabled(_ on: Bool) {
+        imagesEnabled = on
+        defaults?.set(on, forKey: Key.images)
+    }
+
+    func imageURL(_ item: ClipItem) -> URL? {
+        guard let name = item.image else { return nil }
+        return imagesDirectory?.appendingPathComponent(name)
+    }
     private var snippetsFile: URL? { directory?.appendingPathComponent("snippets.json") }
 
     // MARK: Vigiar
@@ -114,6 +130,10 @@ final class ClipboardStore: ObservableObject {
         guard access == .allowed else { return }
 
         let types = (pasteboard.types ?? []).map(\.rawValue)
+        if imagesEnabled, ClipboardRules.isImageCopy(types: types), ClipboardRules.shouldRead(types: types, apps: apps) {
+            keepImage(change: change, now: now)
+            return
+        }
         guard types.contains(NSPasteboard.PasteboardType.string.rawValue),
               ClipboardRules.shouldRead(types: types, apps: apps),
               let text = pasteboard.string(forType: .string) else { return }
@@ -121,6 +141,43 @@ final class ClipboardStore: ObservableObject {
         guard pasteboard.changeCount == change, ClipboardRules.shouldKeep(text) else { return }
         items = ClipboardRules.adding(text, to: items, now: now)
         saveHistory()
+    }
+
+    /// Guarda a imagem como PNG, com o hash do conteúdo como nome (a mesma imagem não se duplica).
+    private func keepImage(change: Int, now: Date) {
+        let raw = pasteboard.data(forType: .png) ?? pasteboard.data(forType: .tiff)
+        guard pasteboard.changeCount == change, let raw, raw.count <= ClipboardRules.maxImageBytes,
+              let rep = NSBitmapImageRep(data: raw), let png = rep.representation(using: .png, properties: [:]),
+              png.count <= ClipboardRules.maxImageBytes, let dir = imagesDirectory else { return }
+        let name = SHA256.hash(data: png).prefix(12).map { String(format: "%02x", $0) }.joined() + ".png"
+        let url = dir.appendingPathComponent(name)
+        let fm = FileManager.default
+        try? fm.createDirectory(at: dir, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
+        if !fm.fileExists(atPath: url.path) {
+            guard fm.createFile(atPath: url.path, contents: png, attributes: [.posixPermissions: 0o600]) else { return }
+        }
+        items = ClipboardRules.addingImage(name, size: "\(rep.pixelsWide)×\(rep.pixelsHigh)", to: items, now: now)
+        saveHistory()
+        removeOrphanImages()
+    }
+
+    func copyImage(_ item: ClipItem) {
+        guard let url = imageURL(item), let data = try? Data(contentsOf: url) else { return }
+        pasteboard.clearContents()
+        pasteboard.setData(data, forType: .png)
+        lastChange = pasteboard.changeCount
+    }
+
+    /// Copia o que o item tiver: texto ou imagem.
+    func copyItem(_ item: ClipItem) {
+        if item.image != nil { copyImage(item) } else { copy(item.text) }
+    }
+
+    private func removeOrphanImages() {
+        guard let dir = imagesDirectory, let files = try? FileManager.default.contentsOfDirectory(atPath: dir.path) else { return }
+        for name in ClipboardRules.orphanImages(files: files, items: items) {
+            try? FileManager.default.removeItem(at: dir.appendingPathComponent(name))
+        }
     }
 
     // MARK: Permissão
@@ -171,6 +228,7 @@ final class ClipboardStore: ObservableObject {
     func remove(_ id: UUID) {
         items.removeAll { $0.id == id }
         saveHistory()
+        removeOrphanImages()
     }
 
     func clearHistory() {
@@ -178,6 +236,7 @@ final class ClipboardStore: ObservableObject {
         historyWritable = true   // apagar também serve para recomeçar depois de um ficheiro ilegível
         storageError = nil
         saveHistory()
+        removeOrphanImages()
     }
 
     func prune(now: Date = Date()) {
@@ -185,6 +244,7 @@ final class ClipboardStore: ObservableObject {
         guard kept != items else { return }
         items = kept
         saveHistory()
+        removeOrphanImages()
     }
 
     // MARK: Snippets

@@ -57,17 +57,20 @@
 
 - Escolhe saída e microfone e ajusta o volume.
 - **Mixer por app**, de 0 a 150% (macOS 14.2+). Só mexe nas apps que ajustares e volta a 100% ao fechar o AgentStats.
+- **Silenciar o microfone** com um atalho global (⌃⌥M por defeito), para chamadas, com um ícone vermelho na barra de menus enquanto está calado.
 
 ### Clipboard
 
 - Histórico de texto, **desligado até o ligares**: 100 itens, 7 dias, com itens fixos e snippets.
 - Ignora o que os gestores de passwords marcam como secreto e formatos conhecidos de chaves de API. O histórico fica neste Mac, **sem cifra**.
 - **Colar rápido:** 1–9, ou ↑↓ e Enter, colam um item na app onde estavas (precisa da Acessibilidade; sem ela, fica copiado).
+- **Imagens no histórico** (opcional, desligado por defeito): capturas e imagens copiadas, até 30, com “Guardar como PNG…”.
 
 ### Captura
 
 - Captura uma área, uma janela ou o ecrã, e grava o ecrã inteiro com microfone e cliques opcionais. Para gravar uma área abre a ferramenta do macOS.
 - **Ler o ecrã:** copia o texto de uma área (OCR), lê códigos QR e apanha a cor de qualquer ponto em HEX ou RGB. Tudo neste Mac, sem rede.
+- **Gerar código QR** de um link ou texto, para abrir no telemóvel, e **converter a última gravação em GIF** leve para PRs e mensagens.
 
 ### Tempo
 
@@ -76,6 +79,7 @@
 
 ### Ferramentas
 
+- **Janelas:** põe a janela da frente em metades, terços, dois terços, cantos, ecrã inteiro ou ao centro, e passa-a para o outro monitor, com atalhos globais (⌃⌥ + setas e letras, como no Rectangle) que se podem desligar. Carregar outra vez na metade esquerda ou direita alterna entre ½, ⅔ e ⅓. Precisa da Acessibilidade.
 - **Atalhos rápidos:** modo escuro, esconder os ícones da secretária (o Finder reinicia) e Não incomodar, que precisa de um atalho com esse nome na app Atalhos.
 - **Rede:** vê as portas à escuta e termina processos teus, com confirmação, e limpa a cache de DNS (pede a password de administrador no diálogo do macOS).
 - **Discos:** ejeta discos externos, imagens de disco e volumes de rede, e diz que app está a impedir a ejeção.
@@ -85,6 +89,7 @@
 - **Desinstalar:** move apps para o Lixo, com os restos que escolheres.
 - **Limpeza:** move para o Lixo caches de uma lista fechada (Homebrew, pip e npm; Brave, Playwright, Hugging Face e npx são opcionais), com confirmação e sem tocar no que detetar em uso. O espaço fica livre quando esvaziares o Lixo.
 - **Teclado e ecrã:** bloqueia o teclado e põe o ecrã preto para os limpares. Sai com um botão, com as duas teclas ⌘ ou sozinho após 1, 2 ou 5 minutos. O botão de ligar e o Touch ID não se bloqueiam.
+- **Imagens:** arrasta fotos para converter HEIC, PNG ou JPG para JPG ou PNG, reduzir o tamanho e comprimir, sem a localização das fotos. E vídeo para GIF.
 
 ### À tua medida
 
@@ -106,6 +111,7 @@ Para a app Atalhos (ação “Abrir URL”) ou o Terminal (`open "agentstats://�
 | `agentstats://read/text` · `read/qr` · `read/color` | Ler o ecrã |
 | `agentstats://toggle/dark-mode` · `toggle/desktop-icons` | Atalhos rápidos |
 | `agentstats://usage/copy` | Copia os tokens e o custo de hoje e da semana |
+| `agentstats://window/leftHalf` | Organiza a janela da frente (`leftHalf`, `rightHalf`, `maximize`, `center`, `nextDisplay`…) |
 
 ## Permissões e privacidade
 
@@ -115,7 +121,7 @@ Para a app Atalhos (ação “Abrir URL”) ou o Terminal (`open "agentstats://�
 | Mixer por app | Gravação de áudio do sistema |
 | Captura e gravação | Gravação de ecrã |
 | Gravar com microfone | Microfone |
-| Limpeza do teclado e do ecrã | Acessibilidade |
+| Limpeza do teclado e do ecrã, colar rápido e organizar janelas | Acessibilidade |
 | Histórico do clipboard | Colar de outras apps (macOS 15.4+) |
 | Categorias do Disco, medidas ao abrir o cartão | Pastas pessoais (Secretária, Documentos, Descargas, Música, Fotografias) |
 | Nome da rede Wi-Fi (opcional) | Localização |

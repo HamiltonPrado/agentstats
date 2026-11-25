@@ -42,12 +42,15 @@ final class StatusController: NSObject, NSPopoverDelegate {
         monitor.onUpdate = { [weak self] in self?.updateIcon() }
         CaptureStore.shared.onChange = { [weak self] in self?.updateIcon() }
         TimerStore.shared.onChange = { [weak self] in self?.updateIcon() }
+        MicMuteStore.shared.onChange = { [weak self] in self?.updateIcon() }
         NotificationCenter.default.publisher(for: UserDefaults.didChangeNotification)
             .debounce(for: .milliseconds(60), scheduler: RunLoop.main)
             .sink { [weak self] _ in
                 self?.updateIcon()
                 self?.hotKey.register(GlobalHotKey.configured)   // só re-regista se a escolha mudou
                 self?.updateTabKeys()
+                MicMuteStore.shared.registerHotKey()
+                WindowShortcuts.update()
             }
             .store(in: &cancellables)
 
@@ -107,7 +110,7 @@ final class StatusController: NSObject, NSPopoverDelegate {
         var parts: [String] = []
         if let recording = CaptureStore.shared.menuBarText { return "gravar:" + recording }
         // O temporizador muda a cada segundo: fica nos campos "urgentes" para se ver logo.
-        parts.append((m.activeAlerts.isEmpty ? "" : "!") + (TimerStore.shared.menuBarText ?? ""))
+        parts.append((m.activeAlerts.isEmpty ? "" : "!") + (TimerStore.shared.menuBarText ?? "") + (MicMuteStore.shared.muted ? "mic" : ""))
         parts.append(String(m.needsAttentionCount))
         parts.append(on("bar.agents", true) ? "\(m.workingCount)/\(m.liveAgentCount)" : "")
         // configuração e aparência da barra: mudar qualquer uma redesenha o ícone
@@ -140,7 +143,8 @@ final class StatusController: NSObject, NSPopoverDelegate {
         lastIconSignature = sig
         lastIconUpdate = Date()
         item.button?.image = MenuBarDrawer.image(monitor, appearance: item.button?.effectiveAppearance,
-                                                recording: CaptureStore.shared.menuBarText, timer: TimerStore.shared.menuBarText)
+                                                recording: CaptureStore.shared.menuBarText, timer: TimerStore.shared.menuBarText,
+                                                micMuted: MicMuteStore.shared.muted)
     }
 
     func saveHistory() { monitor.saveHistory() }
@@ -220,6 +224,8 @@ final class StatusController: NSObject, NSPopoverDelegate {
         add(QuickToggles.desktopIconsShown ? "Esconder ícones da secretária" : "Mostrar ícones da secretária") {
             Task { await quick.toggleDesktopIcons() }
         }
+        let mic = MicMuteStore.shared
+        add(mic.muted ? "Ligar o microfone" : "Silenciar o microfone") { mic.toggle() }
         menu.addItem(.separator())
         add("Definições…", ",") { [weak self] in self?.openSettings() }
         add("Abrir Monitor de Atividade") {

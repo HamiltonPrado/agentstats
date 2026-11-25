@@ -17,7 +17,13 @@ enum QuickPaste {
 
     @discardableResult
     static func paste(_ text: String, store: ClipboardStore) -> Outcome {
-        store.copy(text)
+        paste(ClipItem(text: text, date: Date()), store: store)
+    }
+
+    /// Texto ou imagem.
+    @discardableResult
+    static func paste(_ item: ClipItem, store: ClipboardStore) -> Outcome {
+        store.copyItem(item)
         guard AXIsProcessTrusted(), let app = previousApp, !app.isTerminated else { return .copiedOnly }
         AppState.controller?.closePanel()
         app.activate()
