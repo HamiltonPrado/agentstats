@@ -199,8 +199,8 @@ AgentStats is distributed under the [MIT License](LICENSE). You may use, modify,
 The first time only, the repository owner runs `Scripts/setup-signing.sh` to create the signing key. Then update `VERSION` and push a tag with the same version, for example:
 
 ```bash
-git tag v1.20
-git push origin v1.20
+git tag v1.21
+git push origin v1.21
 ```
 
 GitHub Actions checks the version, runs the tests, builds the app, and publishes `AgentStats.zip` to the release.
