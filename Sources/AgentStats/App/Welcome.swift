@@ -29,7 +29,7 @@ final class WelcomeWindow {
         })
         w.center()
         window = w
-        NSApp.activate(ignoringOtherApps: true)
+        NSApp.activate()
         w.makeKeyAndOrderFront(nil)
         UserDefaults.standard.set(true, forKey: Welcome.shownKey)
     }

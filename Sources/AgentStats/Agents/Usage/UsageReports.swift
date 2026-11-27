@@ -50,10 +50,7 @@ enum Budget {
         return (level, "\(period)|\(Int(level))")
     }
 
-    static func day(_ d: Date, _ calendar: Calendar) -> String {
-        let c = calendar.dateComponents([.year, .month, .day], from: d)
-        return String(format: "%04d-%02d-%02d", c.year ?? 0, c.month ?? 0, c.day ?? 0)
-    }
+    static func day(_ d: Date, _ calendar: Calendar) -> String { DayKey.string(d, timeZone: calendar.timeZone) }
 }
 
 /// Resumo da semana, por notificação, na primeira vez que a app corre numa semana nova (a partir das 9 h).
@@ -113,7 +110,9 @@ enum SettingsTransfer {
                            "hotkey", "notify", "panel.", "power.", "proc.", "profiles.", "refreshInterval", "screen.",
                            "settings.", "summary.weekly", "system.", "tools.", "ui.", "updates.check", "usage."]
     static let excluded: Set<String> = ["alert.limits.notified", "budget.notified", "panel.tab2", "updates.lastCheck",
-                                        "updates.notified", "welcome.shown", "summary.lastWeek"]
+                                        "updates.notified", "welcome.shown", "summary.lastWeek",
+                                        // Estado de uma gravação em curso neste Mac, não uma definição.
+                                        "capture.recording.pid", "capture.recording.file"]
 
     static func filtered(_ all: [String: Any]) -> [String: Any] {
         all.filter { key, value in

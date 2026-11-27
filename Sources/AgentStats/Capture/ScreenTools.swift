@@ -95,7 +95,7 @@ final class ScreenToolsStore: ObservableObject {
         busy = true
         defer { busy = false }
         guard let image = await selectArea() else { return }
-        let text = await Task.detached(priority: .userInitiated) { ScreenReading.text(in: image) }.value
+        let text = await Blocking.run { ScreenReading.text(in: image) }
         if text.isEmpty {
             result = .nothing("Não encontrei texto nessa área.")
             notify("Sem texto", "Não encontrei texto nessa área.")
@@ -112,7 +112,7 @@ final class ScreenToolsStore: ObservableObject {
         busy = true
         defer { busy = false }
         guard let image = await selectArea() else { return }
-        let codes = await Task.detached(priority: .userInitiated) { ScreenReading.codes(in: image) }.value
+        let codes = await Blocking.run { ScreenReading.codes(in: image) }
         if codes.isEmpty {
             result = .nothing("Não encontrei nenhum código QR nessa área.")
             notify("Sem código QR", "Não encontrei nenhum código QR nessa área.")
@@ -126,18 +126,22 @@ final class ScreenToolsStore: ObservableObject {
     /// A lupa do próprio macOS: Esc cancela.
     func pickColor() {
         guard !demo else { return }
-        NSColorSampler().show { [weak self] color in
+        // @Sendable: a Apple não diz em que thread chama o bloco. Sem isto, o bloco herdava a thread principal
+        // e o Swift fechava a app se viesse de outra (como na 1.16). Converte aqui e passa só o texto.
+        NSColorSampler().show { @Sendable color in
             guard let color else { return }
-            MainActor.assumeIsolated {
-                guard let self else { return }
-                let hex = ScreenReading.hex(color), rgb = ScreenReading.rgbText(color)
-                self.copy(self.colorFormat == "rgb" ? rgb : hex)
-                self.result = .color(hex: hex, rgb: rgb)
-                self.notify("Cor copiada", "\(hex) · \(rgb)")
-            }
+            let hex = ScreenReading.hex(color), rgb = ScreenReading.rgbText(color)
+            Task { @MainActor in ScreenToolsStore.shared.colorPicked(hex: hex, rgb: rgb) }
         }
     }
 
+    private func colorPicked(hex: String, rgb: String) {
+        copy(colorFormat == "rgb" ? rgb : hex)
+        result = .color(hex: hex, rgb: rgb)
+        notify("Cor copiada", "\(hex) · \(rgb)")
+    }
+
+    /// Esta cópia entra no histórico de propósito: é texto lido do ecrã, que se quer poder colar outra vez mais tarde.
     func copy(_ s: String) {
         NSPasteboard.general.clearContents()
         NSPasteboard.general.setString(s, forType: .string)

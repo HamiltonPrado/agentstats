@@ -29,17 +29,14 @@ final class ImagesStore: ObservableObject {
         guard !demo, !converting, !images.isEmpty else { return }
         converting = true
         let options = self.options
-        results = await Task.detached(priority: .userInitiated) { images.map { ImageConverter.convert($0, options: options) } }.value
+        results = await Blocking.run { images.map { ImageConverter.convert($0, options: options) } }
         converting = false
     }
 
     func pickImages() async {
-        let panel = NSOpenPanel()
-        panel.allowsMultipleSelection = true
-        panel.allowedContentTypes = [.image]
-        NSApp.activate(ignoringOtherApps: true)
-        guard panel.runModal() == .OK else { return }
-        await convert(panel.urls)
+        let urls = await FilePanels.open(types: [.image], multiple: true)
+        guard !urls.isEmpty else { return }
+        await convert(urls)
     }
 
     func makeGIF(from video: URL) async {
@@ -58,14 +55,11 @@ final class ImagesStore: ObservableObject {
     }
 
     func pickVideo() async {
-        let panel = NSOpenPanel()
-        panel.allowedContentTypes = [.movie]
-        NSApp.activate(ignoringOtherApps: true)
-        guard panel.runModal() == .OK, let url = panel.url else { return }
+        guard let url = await FilePanels.open(types: [.movie]).first else { return }
         await makeGIF(from: url)
     }
 
-    func reveal(_ urls: [URL]) { NSWorkspace.shared.activateFileViewerSelecting(urls) }
+    func reveal(_ urls: [URL]) { Finder.reveal(urls) }
 
     func loadDemo() {
         demo = true
@@ -80,7 +74,6 @@ final class ImagesStore: ObservableObject {
 struct ImagesView: View {
     @ObservedObject var store: ImagesStore
     @ObservedObject private var capture = CaptureStore.shared
-    @StateObject private var targeted = Box(false)
 
     var body: some View {
         VStack(alignment: .leading, spacing: DS.md) {
@@ -118,33 +111,21 @@ struct ImagesView: View {
                 }
             }
             if !store.results.isEmpty { resultsList }
-            note("Fica ao lado do original, com “(convertida)” no nome. A localização e os outros metadados das fotos não passam para a cópia.")
+            note("A cópia fica ao lado do original, sem a localização.",
+                 more: "Fica ao lado do original, com “(convertida)” no nome. A localização e os outros metadados das fotos não passam para a cópia.")
         }
         .cardStyle()
     }
 
     private var dropZone: some View {
-        Button { Task { await store.pickImages() } } label: {
-            VStack(spacing: DS.xs) {
-                if store.converting {
-                    ProgressView().controlSize(.small)
-                } else {
-                    Image(systemName: "photo.on.rectangle.angled").font(.system(size: 20 * TextSize.current.scale))
-                }
-                Text(store.converting ? L("A converter…") : L("Larga aqui imagens, ou clica para escolher")).font(DS.meta)
-            }
-            .foregroundStyle(targeted.value ? Color.accentColor : Color.text2)
-            .frame(maxWidth: .infinity).frame(height: 76)
-            .background(RoundedRectangle(cornerRadius: DS.rControl, style: .continuous)
-                .strokeBorder(targeted.value ? Color.accentColor : Color.text3.opacity(0.5), style: StrokeStyle(lineWidth: 1, dash: [4, 3])))
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .disabled(store.converting)
-        .dropDestination(for: URL.self) { urls, _ in
-            Task { await store.convert(urls) }
-            return urls.contains(where: ImageConverter.isImage)
-        } isTargeted: { targeted.value = $0 }
+        DropZone(symbol: "photo.on.rectangle.angled",
+                 text: store.converting ? "A converter…" : "Larga aqui imagens, ou clica para escolher",
+                 busy: store.converting,
+                 onPick: { Task { await store.pickImages() } },
+                 onDrop: { urls in
+                     Task { await store.convert(urls) }
+                     return urls.contains(where: ImageConverter.isImage)
+                 })
     }
 
     private var resultsList: some View {

@@ -204,6 +204,45 @@ private func temporaryFolder() throws -> URL {
         #expect(result.timedOut && !result.ok)
         #expect(Date().timeIntervalSince(start) < 10)
     }
+
+    /// Um neto que fica com o stdout aberto já não prende a leitura (era o que podia parar os limites do Claude).
+    @Test func grandchildHoldingThePipeDoesNotBlock() async {
+        let start = Date()
+        let r = await Blocking.run { () -> ProcessRun.Result? in
+            let p = Process()
+            p.executableURL = URL(fileURLWithPath: "/bin/sh")
+            p.arguments = ["-c", "sleep 20 & echo ola"]
+            return ProcessRun.sync(p, timeout: 10)
+        }
+        #expect(String(decoding: r?.out ?? Data(), as: UTF8.self) == "ola\n")
+        #expect(r?.timedOut == false)
+        #expect(Date().timeIntervalSince(start) < 5)
+    }
+
+    /// No fim do prazo param o comando e os filhos dele.
+    @Test func timeoutStopsTheWholeTree() async throws {
+        let marker = "agentstats-tree-\(UUID().uuidString.prefix(8))"
+        let r = await Blocking.run { () -> ProcessRun.Result? in
+            let p = Process()
+            p.executableURL = URL(fileURLWithPath: "/bin/sh")
+            p.arguments = ["-c", "sh -c 'sleep 40; echo \(marker)' & wait"]
+            return ProcessRun.sync(p, timeout: 0.5)
+        }
+        #expect(r?.timedOut == true)
+        let left = await ToolRunner.run("/bin/ps", ["-axo", "command"], timeout: 5)
+        #expect(!left.out.contains(marker))
+    }
+
+    /// Fechar o painel cancela a tarefa: o comando acaba logo, sem o ciclo girar sem pausa.
+    @Test func cancellingStopsTheCommand() async {
+        let start = Date()
+        let task = Task { await ToolRunner.run("/bin/sleep", ["30"], timeout: 60) }
+        try? await Task.sleep(for: .milliseconds(300))
+        task.cancel()
+        let result = await task.value
+        #expect(result.timedOut && !result.ok)
+        #expect(Date().timeIntervalSince(start) < 10)
+    }
 }
 
 // MARK: - Desinstalar

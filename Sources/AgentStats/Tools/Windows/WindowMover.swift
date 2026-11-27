@@ -9,11 +9,7 @@ enum WindowMover {
 
     @discardableResult
     static func apply(_ action: WindowAction) -> Outcome {
-        guard AXIsProcessTrusted() else {
-            // A constante kAXTrustedCheckOptionPrompt é uma var global, que o Swift 6 não deixa usar.
-            _ = AXIsProcessTrustedWithOptions(["AXTrustedCheckOptionPrompt": true] as CFDictionary)
-            return .noPermission
-        }
+        guard AX.ensureTrusted() else { return .noPermission }
         guard let app = targetApp(), let window = focusedWindow(of: app),
               let axFrame = frame(of: window) else { return .noWindow }
 
@@ -43,12 +39,16 @@ enum WindowMover {
 
     private static func focusedWindow(of app: NSRunningApplication) -> AXUIElement? {
         let element = AXUIElementCreateApplication(app.processIdentifier)
+        // Os atalhos de janelas usam-se precisamente em apps que não respondem: 1 s em vez dos ~6 s por omissão.
+        AXUIElementSetMessagingTimeout(element, 1)
         var value: CFTypeRef?
         for attribute in [kAXFocusedWindowAttribute, kAXMainWindowAttribute] {
             // Só se confia no tipo depois de o confirmar: uma app pode devolver outra coisa.
             if AXUIElementCopyAttributeValue(element, attribute as CFString, &value) == .success, let value,
                CFGetTypeID(value) == AXUIElementGetTypeID() {
-                return (value as! AXUIElement)
+                let window = value as! AXUIElement
+                AXUIElementSetMessagingTimeout(window, 1)
+                return window
             }
         }
         return nil

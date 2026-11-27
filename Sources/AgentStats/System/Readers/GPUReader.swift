@@ -12,7 +12,7 @@ enum GPUReader {
         while svc != 0 {
             if let perf = IORegistryEntryCreateCFProperty(svc, "PerformanceStatistics" as CFString, kCFAllocatorDefault, 0)?
                 .takeRetainedValue() as? [String: Any],
-               let u = Sys.number(perf["Device Utilization %"])?.doubleValue {
+               let u = (perf["Device Utilization %"] as? NSNumber)?.doubleValue {
                 best = max(best ?? 0, u / 100)
             }
             IOObjectRelease(svc)

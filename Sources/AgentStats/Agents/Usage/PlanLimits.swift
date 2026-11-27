@@ -112,13 +112,7 @@ enum PlanLimitsParser {
         return n.doubleValue
     }
 
-    private static func parseISO(_ s: String) -> Date? {
-        let f = ISO8601DateFormatter()
-        f.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-        if let d = f.date(from: s) { return d }
-        f.formatOptions = [.withInternetDateTime]
-        return f.date(from: s)
-    }
+    private static func parseISO(_ s: String) -> Date? { ISODate.shared.parse(s) }
 }
 
 /// Pergunta os limites ao Claude Code instalado (`claude`), pelo protocolo de controlo em JSON.
@@ -151,27 +145,20 @@ enum ClaudeLimitsFetcher {
         env["PATH"] = (env["PATH"].map { $0 + ":" } ?? "") + "/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin"
         p.environment = env
         p.currentDirectoryURL = FileManager.default.temporaryDirectory
-        let input = Pipe(), output = Pipe()
+        let input = Pipe()
         p.standardInput = input
-        p.standardOutput = output
-        p.standardError = FileHandle.nullDevice
-        do { try p.run() } catch { return .failed }
-
         let requests = [["type": "control_request", "request_id": "i", "request": ["subtype": "initialize"]],
                         ["type": "control_request", "request_id": "u", "request": ["subtype": "get_usage"]]]
-        for r in requests {
-            guard let d = try? JSONSerialization.data(withJSONObject: r),
-                  send(d + Data("\n".utf8), to: input.fileHandleForWriting) else { break }
+        // Com tempo limite e sem esperar pelo fim do pipe: um neto do `claude` que o herdasse prendia a leitura para sempre.
+        let result = ProcessRun.sync(p, timeout: 15) {
+            for r in requests {
+                guard let d = try? JSONSerialization.data(withJSONObject: r),
+                      send(d + Data("\n".utf8), to: input.fileHandleForWriting) else { break }
+            }
+            try? input.fileHandleForWriting.close()
         }
-        try? input.fileHandleForWriting.close()
-
-        // Corta o processo se não responder a tempo.
-        let deadline = DispatchWorkItem { if p.isRunning { p.terminate() } }
-        DispatchQueue.global().asyncAfter(deadline: .now() + 15, execute: deadline)
-        let data = output.fileHandleForReading.readDataToEndOfFile()
-        deadline.cancel()
-        p.waitUntilExit()
-        return parse(data, observed: Date())
+        guard let result else { return .failed }
+        return parse(result.out, observed: Date())
     }
 
     /// Escreve sem arriscar a app: se o `claude` já saiu, escrever dá SIGPIPE, que mata o processo

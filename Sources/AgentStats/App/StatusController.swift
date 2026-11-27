@@ -53,6 +53,7 @@ final class StatusController: NSObject, NSPopoverDelegate {
                 self?.updateTabKeys()
                 MicMuteStore.shared.registerHotKey()
                 WindowShortcuts.update()
+                ShortcutsOverlay.shared.updateHotKey()
             }
             .store(in: &cancellables)
 
@@ -104,7 +105,6 @@ final class StatusController: NSObject, NSPopoverDelegate {
     /// Texto que a barra de menus mostraria: só se volta a desenhar o ícone quando muda.
     private func iconSignature() -> String {
         let d = UserDefaults.standard
-        func on(_ k: String, _ def: Bool) -> Bool { d.object(forKey: k) == nil ? def : d.bool(forKey: k) }
         let m = monitor
         // Os 3 primeiros campos são "urgentes" (redesenham logo); os restantes no máximo de 4 em 4 s.
         // Construída passo a passo, com tipos explícitos: um único array literal com tantas expressões
@@ -114,23 +114,23 @@ final class StatusController: NSObject, NSPopoverDelegate {
         // O temporizador muda a cada segundo: fica nos campos "urgentes" para se ver logo.
         parts.append((m.activeAlerts.isEmpty ? "" : "!") + (TimerStore.shared.menuBarText ?? "") + (MicMuteStore.shared.muted ? "mic" : "") + (MeetingsStore.shared.menuBarText ?? "") + (PresentationMode.shared.active ? "apr" : ""))
         parts.append(String(m.needsAttentionCount))
-        parts.append(on("bar.agents", true) ? "\(m.workingCount)/\(m.liveAgentCount)" : "")
+        parts.append(MenuBarMetric.agents.isOn ? "\(m.workingCount)/\(m.liveAgentCount)" : "")
         // configuração e aparência da barra: mudar qualquer uma redesenha o ícone
         parts.append(d.string(forKey: MenuBarDrawer.metricOrderKey) ?? "")
         parts.append(MenuBarStyle.current.rawValue)
-        parts.append(on(MenuBarDrawer.colorDotKey, false) ? "cor" : "")
+        parts.append(Pref.bool(MenuBarDrawer.colorDotKey, false) ? "cor" : "")
         parts.append(item.button?.effectiveAppearance.name.rawValue ?? "")
         if MenuBarStyle.current == .graphs { parts.append("\(m.cpuHistory.values.count)-\(m.cpu.total)") }
-        if on("bar.cpu", true) { parts.append(Fmt.pct(m.cpu.total)) }
-        if on("bar.ram", true) { parts.append(Fmt.pct(m.memory.usage)) }
-        if on("bar.gpu", false), let g = m.gpu { parts.append(Fmt.pct(g)) }
-        if on("bar.temp", true), let t = m.temps?.cpuMax { parts.append(String(format: "%.0f", t)) }
-        if on("bar.net", true) {
+        if MenuBarMetric.cpu.isOn { parts.append(Fmt.pct(m.cpu.total)) }
+        if MenuBarMetric.ram.isOn { parts.append(Fmt.pct(m.memory.usage)) }
+        if MenuBarMetric.gpu.isOn, let g = m.gpu { parts.append(Fmt.pct(g)) }
+        if MenuBarMetric.temp.isOn, let t = m.temps?.cpuMax { parts.append(String(format: "%.0f", t)) }
+        if MenuBarMetric.net.isOn {
             let up: String = Fmt.rate(m.network.upPerSec, short: true)
             let down: String = Fmt.rate(m.network.downPerSec, short: true)
             parts.append(up + down)
         }
-        if on("bar.battery", false), let b = m.battery { parts.append(Fmt.pct(b.percent) + (b.isCharging ? "c" : "")) }
+        if MenuBarMetric.battery.isOn, let b = m.battery { parts.append(Fmt.pct(b.percent) + (b.isCharging ? "c" : "")) }
         return parts.joined(separator: "|")
     }
 
@@ -193,7 +193,7 @@ final class StatusController: NSObject, NSPopoverDelegate {
             if !w.setFrameUsingName("AgentStatsSettings") { w.center() }
             settingsWindow = w
         }
-        NSApp.activate(ignoringOtherApps: true)
+        NSApp.activate()
         settingsWindow?.makeKeyAndOrderFront(nil)
     }
 
@@ -271,7 +271,7 @@ final class StatusController: NSObject, NSPopoverDelegate {
         host.rootView = AnyView(PanelView().environment(monitor))
         monitor.panelOpen = true
         monitor.sample()   // dados frescos ao abrir
-        NSApp.activate(ignoringOtherApps: true)
+        NSApp.activate()
         popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
         popover.contentViewController?.view.window?.makeKey()
         // O .transient às vezes deixa-o aberto (clique na secretária, noutro ecrã): isto garante que fecha.

@@ -222,17 +222,15 @@ enum DemoData {
         usage.todayCodex = apiTokens
         usage.todayOther = docsTokens
 
-        let format = DateFormatter()
-        format.dateFormat = "yyyy-MM-dd"
         let totals: [Int] = [1_200_000, 2_900_000, 2_100_000, 3_600_000, 800_000, 1_700_000]
         for (i, total) in totals.enumerated() {
             let date = now.addingTimeInterval(Double(i - totals.count) * 86_400)
-            var d = DayUsage(day: format.string(from: date))
+            var d = DayUsage(day: DayKey.string(date))
             d.claude.cacheRead = total
             d.cost = Double(total) / 800_000
             usage.week.append(d)
         }
-        var today = DayUsage(day: format.string(from: now), claude: shopTokens, codex: apiTokens, other: docsTokens)
+        var today = DayUsage(day: DayKey.string(now), claude: shopTokens, codex: apiTokens, other: docsTokens)
         today.cost = 3.39
         usage.week.append(today)
         usage.projects = [

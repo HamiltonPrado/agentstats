@@ -30,6 +30,8 @@ final class UnresponsiveStore: ObservableObject {
         var id: pid_t { pid }
         let pid: pid_t
         let name: String
+        /// Como estava quando foi visto parado: forçar a saída só se ainda for o mesmo processo.
+        var identity: ProcessIdentity? = nil
     }
 
     @Published private(set) var stuck: [StuckApp] = []
@@ -43,7 +45,7 @@ final class UnresponsiveStore: ObservableObject {
 
     func start() {
         guard !demo else { return }
-        timer = Timer.scheduledTimer(withTimeInterval: 10, repeats: true) { _ in MainActor.assumeIsolated { UnresponsiveStore.shared.check() } }
+        timer = Timer.common(withTimeInterval: 10, repeats: true) { _ in MainActor.assumeIsolated { UnresponsiveStore.shared.check() } }
     }
 
     private func check() {
@@ -72,7 +74,11 @@ final class UnresponsiveStore: ObservableObject {
         checking = false
         let r = UnresponsiveRules.update(strikes: strikes, failed: failed, alive: alive)
         strikes = r.strikes
-        stuck = r.stuck.sorted().map { StuckApp(pid: $0, name: names[$0] ?? "?") }
+        let now = r.stuck.sorted().map { pid in
+            stuck.first { $0.pid == pid } ?? StuckApp(pid: pid, name: names[pid] ?? "?", identity: ProcessIdentity.read(pid))
+        }
+        // Só publica quando muda: o painel inteiro observa isto, e a verificação corre de 10 em 10 s.
+        if now != stuck { stuck = now }
         notified.formIntersection(r.stuck)
         for app in stuck where !notified.contains(app.pid) {
             notified.insert(app.pid)
@@ -85,7 +91,9 @@ final class UnresponsiveStore: ObservableObject {
 
     func forceQuit(_ app: StuckApp) {
         confirming = nil
-        NSRunningApplication(processIdentifier: app.pid)?.forceTerminate()
+        if let expected = app.identity, ProcessIdentity.read(app.pid) == expected {
+            NSRunningApplication(processIdentifier: app.pid)?.forceTerminate()
+        }
         stuck.removeAll { $0.pid == app.pid }
     }
 

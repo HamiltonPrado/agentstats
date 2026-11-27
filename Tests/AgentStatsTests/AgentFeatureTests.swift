@@ -163,8 +163,12 @@ private func limits(_ w: LimitWindow...) -> [PlanLimits] {
         store.set(true)
         #expect(store.state == .on)
         #expect(try Data(contentsOf: dir.appendingPathComponent("settings.json.agentstats-backup")) == original)
+        let events = dir.appendingPathComponent("agentstats/events")
+        try FileManager.default.createDirectory(at: events, withIntermediateDirectories: true)
         store.set(false)
         #expect(store.state == .off)
+        // Sem hook, a pasta de eventos vai: senão a deteção pelos processos nunca mais voltava.
+        #expect(!FileManager.default.fileExists(atPath: events.path))
         let back = try JSONSerialization.jsonObject(with: Data(contentsOf: file)) as? [String: Any]
         #expect(back?["theme"] as? String == "dark")
         #expect(back?["hooks"] == nil)
@@ -175,5 +179,29 @@ private func limits(_ w: LimitWindow...) -> [PlanLimits] {
         #expect(store.state == .unreadable)
         store.set(true)
         #expect(try Data(contentsOf: file) == broken)
+    }
+    /// Um settings.json com 0600 num symlink (dotfiles) continua symlink, e as permissões ficam as que eram.
+    @MainActor @Test func keepsSymlinkAndPermissions() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent("hook-\(UUID().uuidString)")
+        let dir = root.appendingPathComponent(".claude"), dotfiles = root.appendingPathComponent("dotfiles")
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        try FileManager.default.createDirectory(at: dotfiles, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let real = dotfiles.appendingPathComponent("settings.json")
+        FileManager.default.createFile(atPath: real.path, contents: Data("{}".utf8), attributes: [.posixPermissions: 0o600])
+        let link = dir.appendingPathComponent("settings.json")
+        try FileManager.default.createSymbolicLink(at: link, withDestinationURL: real)
+        var env = ClaudeHookStore.Environment()
+        env.claudeDir = dir
+        env.executable = "/Applications/AgentStats.app/Contents/MacOS/AgentStats"
+        env.exists = { _ in true }
+        let store = ClaudeHookStore(environment: env)
+        store.set(true)
+        #expect(store.state == .on)
+        #expect((try? FileManager.default.destinationOfSymbolicLink(atPath: link.path)) != nil)
+        let mode = try FileManager.default.attributesOfItem(atPath: real.path)[.posixPermissions] as? NSNumber
+        #expect(mode?.intValue == 0o600)
+        let backup = try FileManager.default.attributesOfItem(atPath: dir.appendingPathComponent("settings.json.agentstats-backup").path)
+        #expect((backup[.posixPermissions] as? NSNumber)?.intValue == 0o600)
     }
 }

@@ -52,6 +52,16 @@ final class AudioControlStore: ObservableObject {
     func setOutputMuted(_ value: Bool) { setMute(outputID, scope: kAudioDevicePropertyScopeOutput, value: value); readControls() }
     func setInputMuted(_ value: Bool) { setMute(inputID, scope: kAudioDevicePropertyScopeInput, value: value); readControls() }
 
+    // MARK: Um aparelho de entrada concreto (o microfone silenciado, mesmo que já não seja o escolhido)
+
+    func inputMuteSettable(_ id: AudioDeviceID) -> Bool { hasSettableMute(id, scope: kAudioDevicePropertyScopeInput) }
+    func inputVolumeSettable(_ id: AudioDeviceID) -> Bool { hasSettableScalar(id, scope: kAudioDevicePropertyScopeInput) }
+    func inputIsMuted(_ id: AudioDeviceID) -> Bool? { mute(id, scope: kAudioDevicePropertyScopeInput) }
+    func inputVolume(of id: AudioDeviceID) -> Double? { scalar(id, scope: kAudioDevicePropertyScopeInput) }
+    func setInput(muted: Bool, on id: AudioDeviceID) { setMute(id, scope: kAudioDevicePropertyScopeInput, value: muted); readControls() }
+    func setInput(volume: Double, on id: AudioDeviceID) { setScalar(id, scope: kAudioDevicePropertyScopeInput, value: Float(volume)); readControls() }
+    func inputExists(_ id: AudioDeviceID) -> Bool { inputs.contains { $0.id == id } }
+
     private func loadDemo() {
         // O seletor mede-se pelo nome mais comprido da lista, não pelo escolhido: há sempre um segundo aparelho.
         outputs = [SystemAudioDevice(id: 1, name: "Colunas (MacBook Pro)"),

@@ -33,27 +33,8 @@ enum WindowAction: String, CaseIterable, Identifiable, Sendable {
         }
     }
 
-    var symbol: String {
-        switch self {
-        case .leftHalf: "rectangle.lefthalf.filled"
-        case .rightHalf: "rectangle.righthalf.filled"
-        case .topHalf: "rectangle.tophalf.filled"
-        case .bottomHalf: "rectangle.bottomhalf.filled"
-        case .topLeft: "rectangle.inset.topleft.filled"
-        case .topRight: "rectangle.inset.topright.filled"
-        case .bottomLeft: "rectangle.inset.bottomleft.filled"
-        case .bottomRight: "rectangle.inset.bottomright.filled"
-        case .firstThird: "rectangle.leadingthird.inset.filled"
-        case .centerThird: "rectangle.center.inset.filled"
-        case .lastThird: "rectangle.trailingthird.inset.filled"
-        case .firstTwoThirds: "rectangle.leadinghalf.inset.filled"
-        case .lastTwoThirds: "rectangle.trailinghalf.inset.filled"
-        case .maximize: "rectangle.inset.filled"
-        case .center: "rectangle.center.inset.filled"
-        case .nextDisplay: "rectangle.portrait.and.arrow.right"
-        case .previousDisplay: "rectangle.portrait.and.arrow.forward"
-        }
-    }
+    /// Só as ações de mudar de ecrã têm ícone; as outras desenham a zona da janela numa miniatura.
+    var symbol: String { self == .previousDisplay ? "rectangle.portrait.and.arrow.forward" : "rectangle.portrait.and.arrow.right" }
 
     var changesDisplay: Bool { self == .nextDisplay || self == .previousDisplay }
 }

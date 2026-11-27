@@ -22,7 +22,8 @@ struct LargeFilesView: View {
             .pickerStyle(.segmented).labelsHidden()
             Toggle("Só os sem uso há mais de 6 meses", isOn: $store.onlyOld).toggleStyle(.checkbox).font(DS.meta)
             if store.scannedAt == nil && !store.scanning {
-                note("Procura na tua pasta pessoal, sem a Library nem o interior das apps. O macOS pode pedir acesso a algumas pastas.")
+                note("Na tua pasta pessoal, sem a Library nem o interior das apps.",
+                     more: "Procura na tua pasta pessoal, sem a Library nem o interior das apps. O macOS pode pedir acesso a algumas pastas.")
             } else if store.scanning {
                 note("A procurar… pode demorar um pouco.")
             } else if store.shown.isEmpty {

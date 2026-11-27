@@ -38,7 +38,7 @@ struct TodayUsage: View {
                 if !usage.projects.isEmpty { projects }
                 HStack {
                     Spacer()
-                    textLink("Exportar CSV…") { SettingsFiles.exportCSV(usage) }
+                    textLink("Exportar CSV…") { Task { await SettingsFiles.exportCSV(usage) } }
                         .help("Os últimos 7 dias e os projetos, para uma folha de cálculo")
                 }
             }
@@ -78,7 +78,7 @@ struct TodayUsage: View {
                     let isToday = i == usage.week.count - 1
                     VStack(spacing: DS.xs) {
                         Text(L(d.total.isEmpty ? "" : Fmt.tokens(d.total.total)))
-                            .font(.system(size: 9).monospacedDigit()).foregroundStyle(Color.text3)
+                            .font(.system(size: 9 * TextSize.current.scale).monospacedDigit()).foregroundStyle(Color.text3)
                             .lineLimit(1).minimumScaleFactor(0.7)
                         RoundedRectangle(cornerRadius: 2)
                             .fill(isToday ? Color.accentColor : Color.secondary.opacity(0.45))
@@ -87,7 +87,7 @@ struct TodayUsage: View {
                     }
                     .frame(maxWidth: .infinity)
                     .accessibilityElement(children: .ignore)
-                    .accessibilityLabel("\(Self.weekday(d.day)): \(Fmt.tokens(d.total.total)) tokens")
+                    .accessibilityLabel("\(L(Self.weekday(d.day))): \(Fmt.tokens(d.total.total)) tokens")
                 }
             }
             .frame(height: 72, alignment: .bottom)
@@ -120,9 +120,7 @@ struct TodayUsage: View {
 
     /// "2026-11-19" → "qui" (abreviatura fixa de 3 letras, para as barras ficarem alinhadas)
     nonisolated static func weekday(_ day: String) -> String {
-        let parse = DateFormatter()
-        parse.dateFormat = "yyyy-MM-dd"
-        guard let d = parse.date(from: day) else { return "" }
+        guard let d = DayKey.date(day) else { return "" }
         let names = ["dom", "seg", "ter", "qua", "qui", "sex", "sáb"]
         return names[Calendar.current.component(.weekday, from: d) - 1]
     }

@@ -66,9 +66,7 @@ struct PlanLimitsCard: View {
     /// "às 14:30" hoje, "amanhã às 09:00", "qui 09:00" nesta semana, "2 dez" mais longe.
     nonisolated static func resetText(_ d: Date, now: Date) -> String {
         let cal = Calendar.current
-        let hm = DateFormatter()
-        hm.dateFormat = "HH:mm"
-        let time = hm.string(from: d)
+        let time = Fmt.hm(d, timeZone: cal.timeZone)
         if cal.isDate(d, inSameDayAs: now) { return String(localized: "às \(time)") }
         if let t = cal.date(byAdding: .day, value: 1, to: now), cal.isDate(d, inSameDayAs: t) { return String(localized: "amanhã às \(time)") }
         if d.timeIntervalSince(now) < 6 * 86_400 {

@@ -92,6 +92,12 @@ enum ClipboardRules {
     }
 
     static let maxImageBytes = 15_000_000
+    /// Um PNG pequeno pode descomprimir em gigabytes: o tamanho em píxeis vê-se antes de descodificar.
+    static let maxImagePixels = 40_000_000
+
+    static func imageFits(width: Int, height: Int) -> Bool {
+        width > 0 && height > 0 && width * height <= maxImagePixels
+    }
     static let maxImages = 30
 
     /// Tipos de imagem que se guardam. Se a cópia também tiver texto, fica o texto.
@@ -127,45 +133,5 @@ enum ClipboardRules {
 
     static func preview(_ text: String) -> String {
         String(text.prefix(300)).split(whereSeparator: \.isWhitespace).joined(separator: " ")
-    }
-}
-
-/// JSON legível só pelo utilizador (0600) e fora das cópias de segurança do Time Machine.
-enum PrivateFile {
-    enum Loaded<T> {
-        case missing
-        case value(T)
-        case unreadable
-    }
-
-    static func load<T: Decodable>(_ type: T.Type, from url: URL) -> Loaded<T> {
-        guard FileManager.default.fileExists(atPath: url.path) else { return .missing }
-        guard let data = try? Data(contentsOf: url), let value = try? JSONDecoder().decode(type, from: data) else { return .unreadable }
-        return .value(value)
-    }
-
-    /// O ficheiro temporário já nasce com 0600: nunca há um instante em que outros o possam ler.
-    @discardableResult
-    static func save<T: Encodable>(_ value: T, to url: URL, backup: Bool) -> Bool {
-        let fm = FileManager.default
-        guard let data = try? JSONEncoder().encode(value) else { return false }
-        do {
-            try fm.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
-            let temp = url.deletingLastPathComponent().appendingPathComponent(".\(url.lastPathComponent).\(UUID().uuidString)")
-            guard fm.createFile(atPath: temp.path, contents: data, attributes: [.posixPermissions: 0o600]) else { return false }
-            guard rename(temp.path, url.path) == 0 else {
-                try? fm.removeItem(at: temp)
-                return false
-            }
-            if !backup {
-                var target = url
-                var values = URLResourceValues()
-                values.isExcludedFromBackup = true
-                try? target.setResourceValues(values)
-            }
-            return true
-        } catch {
-            return false
-        }
     }
 }

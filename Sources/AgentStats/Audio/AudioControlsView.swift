@@ -34,10 +34,9 @@ struct AudioControlsCard: View {
                     muted: Binding(get: { audio.inputMuted }, set: { audio.setInputMuted($0) }),
                     canMute: audio.canMuteInput,
                     activeIcon: "mic", mutedIcon: "mic.slash", volumeLabel: "Nível do microfone")
-            Text("Os controlos variam por aparelho. Silenciar o microfone pode não afetar todas as apps.")
-                .font(DS.meta).foregroundStyle(Color.text3).fixedSize(horizontal: false, vertical: true)
         }
         .cardStyle()
+        .help("Os controlos variam por aparelho. Silenciar o microfone pode não afetar todas as apps.")
     }
 
     @ViewBuilder

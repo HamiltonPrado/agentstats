@@ -1,18 +1,16 @@
 import SwiftUI
 import AppKit
-import ServiceManagement
-import Combine
-import UserNotifications
 
 struct MenuBarLabel: View {
     @Environment(Monitor.self) private var m
-    @AppStorage("bar.agents") var showAgents = true
-    @AppStorage("bar.cpu") var showCPU = true
-    @AppStorage("bar.ram") var showRAM = true
-    @AppStorage("bar.gpu") var showGPU = false
-    @AppStorage("bar.net") var showNet = true
-    @AppStorage("bar.battery") var showBattery = false
-    @AppStorage("bar.temp") var showTemp = true
+    // Não são lidas no corpo: estão aqui para o ícone se redesenhar quando se muda uma métrica nas Definições.
+    @AppStorage(MenuBarMetric.agents.key) var showAgents = MenuBarMetric.agents.defaultOn
+    @AppStorage(MenuBarMetric.cpu.key) var showCPU = MenuBarMetric.cpu.defaultOn
+    @AppStorage(MenuBarMetric.ram.key) var showRAM = MenuBarMetric.ram.defaultOn
+    @AppStorage(MenuBarMetric.gpu.key) var showGPU = MenuBarMetric.gpu.defaultOn
+    @AppStorage(MenuBarMetric.net.key) var showNet = MenuBarMetric.net.defaultOn
+    @AppStorage(MenuBarMetric.battery.key) var showBattery = MenuBarMetric.battery.defaultOn
+    @AppStorage(MenuBarMetric.temp.key) var showTemp = MenuBarMetric.temp.defaultOn
 
     var body: some View {
         Image(nsImage: render())
@@ -20,12 +18,4 @@ struct MenuBarLabel: View {
 
     @MainActor
     private func render() -> NSImage { MenuBarDrawer.image(m) }
-
-    private func cell(_ title: String, _ value: String) -> some View {
-        VStack(alignment: .leading, spacing: -2) {
-            Text(L(title)).font(.system(size: 7, weight: .semibold))
-            Text(L(value)).font(.system(size: 10, weight: .semibold).monospacedDigit())
-        }
-        .frame(minWidth: 24, alignment: .leading)
-    }
 }

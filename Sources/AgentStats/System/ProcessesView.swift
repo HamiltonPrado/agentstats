@@ -15,8 +15,7 @@ struct ProcessesView: View {
                 sortButton("CPU", selected: !sortByMem) { sortByMem = false }
                 sortButton("Memória", selected: sortByMem) { sortByMem = true }
             }
-            .padding(2)
-            .background(RoundedRectangle(cornerRadius: DS.rControl, style: .continuous).fill(DS.raised))
+            .segmentTrack()
 
             VStack(spacing: 0) {
                 ForEach(Array(list.enumerated()), id: \.element.id) { i, p in
@@ -25,10 +24,6 @@ struct ProcessesView: View {
                 }
             }
             .cardStyle(padding: DS.xs)
-
-            Text("Botão direito num processo para o terminar")
-                .font(DS.meta).foregroundStyle(Color.text3)
-                .frame(maxWidth: .infinity)
         }
     }
 
@@ -38,9 +33,7 @@ struct ProcessesView: View {
                 .font(DS.body.weight(.medium))
                 .foregroundStyle(selected ? Color.primary : Color.text2)
                 .frame(maxWidth: .infinity).frame(height: 24)
-                .background(RoundedRectangle(cornerRadius: DS.rSmall, style: .continuous)
-                    .fill(selected ? (scheme == .dark ? Color.white.opacity(0.12) : Color.white) : .clear)
-                    .shadow(color: .black.opacity(selected ? 0.06 : 0), radius: 1, y: 1))
+                .segmentFill(selected, scheme: scheme, lifted: true)
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -75,6 +68,14 @@ struct ProcRow: View {
                     .lineLimit(1).minimumScaleFactor(0.8)
             }
             Spacer(minLength: DS.sm)
+            // As ações também à vista (antes só no botão direito, com uma frase a explicar). Só aparece ao passar
+            // o rato, sem mexer no resto da linha.
+            Menu { actions(running) } label: { Image(systemName: "ellipsis.circle") }
+                .menuStyle(.borderlessButton).menuIndicator(.hidden).fixedSize()
+                .foregroundStyle(Color.text2)
+                .opacity(hover.value ? 1 : 0)
+                .help("Ações")
+                .accessibilityLabel(L("Ações"))
             VStack(alignment: .trailing, spacing: DS.xs) {
                 HStack(spacing: DS.xs) {
                     Text(L(Fmt.num(p.cpu, 1) + "%"))
@@ -94,14 +95,13 @@ struct ProcRow: View {
         .padding(.horizontal, DS.sm).padding(.vertical, DS.sm)
         .background(RoundedRectangle(cornerRadius: DS.rControl).fill(hover.value ? DS.surface : .clear))
         .onHover { hover.value = $0 }
-        .contextMenu {
-            Button("Terminar \(running.name ?? p.name)…") { ProcessKiller.confirmAndTerminate(pid: p.pid, name: running.name ?? p.name) }
-            Button("Forçar terminação…", role: .destructive) { ProcessKiller.confirmAndTerminate(pid: p.pid, name: running.name ?? p.name, force: true) }
-            Divider()
-            Button("Copiar PID (\(String(p.pid)))") {
-                NSPasteboard.general.clearContents()
-                NSPasteboard.general.setString("\(p.pid)", forType: .string)
-            }
-        }
+        .contextMenu { actions(running) }
+    }
+
+    @ViewBuilder private func actions(_ running: AppInfo.Entry) -> some View {
+        Button("Terminar \(running.name ?? p.name)…") { ProcessKiller.confirmAndTerminate(pid: p.pid, name: running.name ?? p.name) }
+        Button("Forçar terminação…", role: .destructive) { ProcessKiller.confirmAndTerminate(pid: p.pid, name: running.name ?? p.name, force: true) }
+        Divider()
+        Button("Copiar PID (\(String(p.pid)))") { ClipboardStore.shared.copy("\(p.pid)") }
     }
 }

@@ -60,13 +60,6 @@ enum CaptureCommand {
         return url
     }
 
-    /// "0:07", "12:30", "1:02:03"
-    static func clock(_ seconds: Int) -> String {
-        let s = max(seconds, 0)
-        if s >= 3600 { return String(format: "%d:%02d:%02d", s / 3600, (s % 3600) / 60, s % 60) }
-        return String(format: "%d:%02d", s / 60, s % 60)
-    }
-
     /// Uma gravação deixada por uma AgentStats que morreu. O pid pode ter sido reutilizado por outro
     /// `screencapture` do utilizador, por isso também tem de estar órfã e a gravar para o nosso ficheiro.
     static func isOrphan(executable: String, parent: Int32, arguments: String?, file: String) -> Bool {

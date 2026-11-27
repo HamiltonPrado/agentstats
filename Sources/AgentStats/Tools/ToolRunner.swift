@@ -53,18 +53,28 @@ enum ToolRunner {
             return ToolOutput(status: -1, out: "", err: error.localizedDescription)
         }
 
-        let deadline = Date().addingTimeInterval(timeout)
+        var deadline = Date().addingTimeInterval(timeout)
         var timedOut = false
         while process.isRunning {
+            // Cancelada (o painel fechou): o comando acaba como se o prazo tivesse passado.
+            if !timedOut, Task.isCancelled { deadline = Date() }
             if !timedOut, Date() >= deadline {
                 timedOut = true
-                process.terminate()
+                // O comando e o que ele lançou (o `zsh -lc` das regras, os filhos do brew).
+                ProcessTree.signal(process.processIdentifier, SIGTERM)
             } else if timedOut, Date() >= deadline.addingTimeInterval(5) {
-                kill(process.processIdentifier, SIGKILL)
+                ProcessTree.signal(process.processIdentifier, SIGKILL)
             }
-            try? await Task.sleep(for: .milliseconds(100))
+            await pause()
         }
         return ToolOutput(status: process.terminationStatus, out: read(outURL), err: read(errURL), timedOut: timedOut)
+    }
+
+    /// 100 ms que não acabam mais cedo quando a tarefa é cancelada (o `Task.sleep` acabava logo e o ciclo girava sem pausa).
+    private static func pause() async {
+        await withCheckedContinuation { (c: CheckedContinuation<Void, Never>) in
+            DispatchQueue.global().asyncAfter(deadline: .now() + 0.1) { c.resume() }
+        }
     }
 
     private static func read(_ url: URL) -> String {

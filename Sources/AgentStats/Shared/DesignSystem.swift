@@ -161,3 +161,25 @@ enum Motion {
         NSWorkspace.shared.accessibilityDisplayShouldReduceMotion ? nil : .easeOut(duration: duration)
     }
 }
+
+extension View {
+    /// Um botão em mosaico: largura toda, altura fixa, fundo elevado e área de clique inteira.
+    func raisedTile(height: CGFloat, radius: CGFloat = DS.rSmall) -> some View {
+        frame(maxWidth: .infinity).frame(height: height)
+            .background(RoundedRectangle(cornerRadius: radius, style: .continuous).fill(DS.raised))
+            .contentShape(Rectangle())
+    }
+
+    /// O fundo de uma opção de um seletor segmentado (separadores do painel, secções das Ferramentas).
+    /// `lifted`: uma sombra leve por baixo da opção escolhida (só no fundo, nunca no ícone).
+    func segmentFill(_ selected: Bool, scheme: ColorScheme, lifted: Bool = false) -> some View {
+        background(RoundedRectangle(cornerRadius: DS.rSmall, style: .continuous)
+            .fill(selected ? (scheme == .dark ? Color.white.opacity(0.12) : Color.white) : .clear)
+            .shadow(color: .black.opacity(selected && lifted ? 0.06 : 0), radius: 1, y: 1))
+    }
+
+    /// A calha à volta das opções de um seletor segmentado.
+    func segmentTrack(_ fill: Color = DS.raised) -> some View {
+        padding(2).background(RoundedRectangle(cornerRadius: DS.rControl, style: .continuous).fill(fill))
+    }
+}

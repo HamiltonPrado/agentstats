@@ -111,6 +111,19 @@ struct RulesTests {
         let exported = SettingsTransfer.filtered([RulesStore.key: Data([1]), "bar.cpu": true])
         #expect(exported[RulesStore.key] == nil && exported["bar.cpu"] != nil)
     }
+
+    @Test func recordingStateIsNotExported() {
+        let out = SettingsTransfer.filtered(["capture.recording.pid": 123, "capture.recording.file": "/x.mov", "capture.sound": true])
+        #expect(out["capture.recording.pid"] == nil && out["capture.recording.file"] == nil && out["capture.sound"] != nil)
+    }
+
+    @Test func historiesArePrivate() throws {
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent("hist-\(UUID().uuidString)/agent-activity.json")
+        defer { try? FileManager.default.removeItem(at: url.deletingLastPathComponent()) }
+        AgentActivityHistoryStore.save([], to: url)
+        let mode = try FileManager.default.attributesOfItem(atPath: url.path)[.posixPermissions] as? NSNumber
+        #expect(mode?.intValue == 0o600)
+    }
 }
 
 @Suite("Correções da revisão")

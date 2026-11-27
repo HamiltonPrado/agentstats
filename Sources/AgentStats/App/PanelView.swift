@@ -40,7 +40,7 @@ struct PanelView: View {
     @Environment(\.colorScheme) private var scheme
     @AppStorage("panel.tab2") private var storedTab: Tab = .agents
     @AppStorage("appearance.theme") private var themeRawValue = PanelTheme.system.rawValue
-    @AppStorage("appearance.accentHex") private var accentHex = "#0A84FF"
+    @AppStorage(PrefKey.accentHex) private var accentHex = PrefKey.defaultAccentHex
     @AppStorage(TextSize.defaultsKey) private var textSizeRaw = TextSize.normal.rawValue
     @AppStorage(PanelWidth.defaultsKey) private var panelWidthRaw = PanelWidth.normal.rawValue
     @AppStorage(TabLayout.orderKey) private var tabOrder = ""
@@ -201,11 +201,7 @@ struct PanelView: View {
                         }
                         .foregroundStyle(tab == t ? Color.primary : Color.text2)
                         .frame(maxWidth: .infinity).frame(height: 28)
-                        .background(
-                            RoundedRectangle(cornerRadius: DS.rSmall, style: .continuous)
-                                .fill(tab == t ? (effectiveScheme == .dark ? Color.white.opacity(0.12) : Color.white) : .clear)
-                                .shadow(color: .black.opacity(tab == t ? 0.06 : 0), radius: 1, y: 1)
-                        )
+                        .segmentFill(tab == t, scheme: effectiveScheme, lifted: true)
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
@@ -216,8 +212,7 @@ struct PanelView: View {
                 .accessibilityAddTraits(tab == t ? .isSelected : [])
             }
         }
-        .padding(2)
-        .background(RoundedRectangle(cornerRadius: DS.rControl, style: .continuous).fill(DS.raised))
+        .segmentTrack()
     }
 
     private var agentsBadge: StatusKind? {

@@ -27,8 +27,8 @@ final class DiskReader {
             while svc != 0 {
                 if let stats = IORegistryEntryCreateCFProperty(svc, "Statistics" as CFString, kCFAllocatorDefault, 0)?
                     .takeRetainedValue() as? [String: Any] {
-                    rd += Sys.number(stats["Bytes (Read)"])?.uint64Value ?? 0
-                    wr += Sys.number(stats["Bytes (Write)"])?.uint64Value ?? 0
+                    rd += (stats["Bytes (Read)"] as? NSNumber)?.uint64Value ?? 0
+                    wr += (stats["Bytes (Write)"] as? NSNumber)?.uint64Value ?? 0
                 }
                 IOObjectRelease(svc)
                 svc = IOIteratorNext(iter)

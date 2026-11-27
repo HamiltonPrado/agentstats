@@ -30,15 +30,14 @@ final class NetworkReader {
                 if family == AF_LINK, let data = ifa.ifa_data {
                     let d = data.assumingMemoryBound(to: if_data.self).pointee
                     cur[name] = (d.ifi_ibytes, d.ifi_obytes)
-                } else if family == AF_INET, s.localIP == "—", (ifa.ifa_flags & UInt32(IFF_UP)) != 0 {
-                    var host = [CChar](repeating: 0, count: Int(NI_MAXHOST))
-                    if getnameinfo(addr, socklen_t(addr.pointee.sa_len), &host, socklen_t(host.count), nil, 0, NI_NUMERICHOST) == 0 {
-                        s.localIP = Sys.string(host)
-                        s.interface = name
-                    }
                 }
             }
             p = ifa.ifa_next
+        }
+
+        if let a = Interfaces.ipv4().first(where: { isPhysical($0.name) }) {
+            s.localIP = a.ip
+            s.interface = a.name
         }
 
         let now = Date()

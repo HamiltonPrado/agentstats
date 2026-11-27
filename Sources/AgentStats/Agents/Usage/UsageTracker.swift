@@ -74,29 +74,20 @@ final class UsageTracker {
     private var claudeOwner: [String: String] = [:]
     private let home = FileManager.default.homeDirectoryForCurrentUser
 
-    private let iso: ISO8601DateFormatter = {
-        let f = ISO8601DateFormatter()
-        f.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-        return f
-    }()
-    private let dayFormat: DateFormatter = {
-        let f = DateFormatter()
-        f.dateFormat = "yyyy-MM-dd"
-        f.timeZone = .current
-        return f
-    }()
 
     func update(now: Date = Date()) -> UsageSnapshot {
         let cal = Calendar.current
-        let today = dayFormat.string(from: now)
-        let days = (0..<7).reversed().compactMap { cal.date(byAdding: .day, value: -$0, to: now) }.map { dayFormat.string(from: $0) }
+        let today = DayKey.string(now)
+        let days = (0..<7).reversed().compactMap { cal.date(byAdding: .day, value: -$0, to: now) }.map { DayKey.string($0) }
         let since = cal.startOfDay(for: cal.date(byAdding: .day, value: -6, to: now) ?? now)
         var snap = UsageSnapshot()
         var week = Dictionary(uniqueKeysWithValues: days.map { ($0, DayUsage(day: $0)) })
         var projects: [String: TokenUsage] = [:]
         var projectCost: [String: Double] = [:]
 
+        var seen = Set<String>()
         func add(_ st: FileState, path: String, source: Source) {
+            seen.insert(path)
             snap.perSession[path] = st.session
             if st.priced { snap.perSessionCost[path] = st.cost }
             for (day, c) in st.costByDay where week[day] != nil {
@@ -117,6 +108,11 @@ final class UsageTracker {
         for path in codexFiles(modifiedSince: since) { add(scan(path, source: .codex), path: path, source: .codex) }
         for path in copilotFiles(modifiedSince: since) { add(scan(path, source: .copilot), path: path, source: .copilot) }
         addOpenCode(since: since, into: &week, projects: &projects, projectCost: &projectCost, snap: &snap)
+        // Os ficheiros que saíram da semana já não contam: o estado deles sai também (a memória não cresce para sempre).
+        if files.count > seen.count {
+            files = files.filter { seen.contains($0.key) }
+            claudeOwner = claudeOwner.filter { seen.contains($0.value) }
+        }
 
         snap.week = days.compactMap { week[$0] }
         snap.todayClaude = week[today]?.claude ?? TokenUsage()
@@ -146,7 +142,8 @@ final class UsageTracker {
             }
         }
         // Os mais antigos primeiro: ficam donos das mensagens que as continuações copiam.
-        return out.sorted { (created($0), $0.path) < (created($1), $1.path) }
+        // A data de criação lê-se uma vez por ficheiro, não em cada comparação da ordenação.
+        return out.map { ($0, created($0)) }.sorted { ($0.1, $0.0.path) < ($1.1, $1.0.path) }.map(\.0)
     }
 
     private func created(_ url: URL) -> Date {
@@ -187,7 +184,7 @@ final class UsageTracker {
                 guard let sid = SQLiteRead.text(st, 0), let d = SQLiteRead.text(st, 1),
                       let j = TextTail.json(Data(d.utf8)), let u = OpenCodeReader.usage(j) else { return }
                 let cwd = ((j["path"] as? [String: Any])?["cwd"] as? String) ?? SQLiteRead.text(st, 2)
-                rows.append((sid, cwd, dayFormat.string(from: u.date ?? Date()), u.usage, Pricing.cost(u.usage, model: u.model)))
+                rows.append((sid, cwd, DayKey.string(u.date ?? Date()), u.usage, Pricing.cost(u.usage, model: u.model)))
             }
             openCodeCache = (mtime, since, rows)
         }
@@ -209,7 +206,10 @@ final class UsageTracker {
         (try? url.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate) ?? .distantPast
     }
 
-    /// Tokens de um único ficheiro (lido de forma incremental, tal como em `update()`). Usado nos testes.
+    #if DEBUG
+    // Só para os testes: não vão no binário de produção.
+
+    /// Tokens de um único ficheiro (lido de forma incremental, tal como em `update()`).
     func usage(ofFile path: String, codex: Bool) -> (session: TokenUsage, byDay: [String: TokenUsage], project: String?) {
         let st = scan(path, source: codex ? .codex : .claude)
         return (st.session, st.byDay, st.project)
@@ -229,6 +229,7 @@ final class UsageTracker {
         let st = scan(path, source: .copilot)
         return (st.session, st.priced ? st.cost : nil, st.project)
     }
+    #endif
 
     /// false quando o `total_token_usage` é igual ao do evento anterior (evento repetido).
     static func codexIsNew(_ info: [String: Any], previous: inout [Int]?) -> Bool {
@@ -305,8 +306,8 @@ final class UsageTracker {
                         if j["type"] as? String == "turn_context", let model = (j["payload"] as? [String: Any])?["model"] as? String { st.model = model }
                         continue
                     }
-                    let date = (j["timestamp"] as? String).flatMap { iso.date(from: $0) }
-                    let day = date.map { dayFormat.string(from: $0) } ?? ""
+                    let date = (j["timestamp"] as? String).flatMap { ISODate.shared.parse($0) }
+                    let day = date.map { DayKey.string($0) } ?? ""
                     var u: TokenUsage?
                     var model: String? = st.model
                     if codex, let limits = (j["payload"] as? [String: Any])?["rate_limits"] as? [String: Any],

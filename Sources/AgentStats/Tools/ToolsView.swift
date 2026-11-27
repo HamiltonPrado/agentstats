@@ -44,7 +44,7 @@ struct ToolsView: View {
     }
 
     @Environment(\.colorScheme) private var scheme
-    @AppStorage("tools.section") private var section: ToolSection = .ports
+    @AppStorage(PrefKey.toolsSection) private var section: ToolSection = .ports
 
     var body: some View {
         VStack(alignment: .leading, spacing: DS.md) {
@@ -56,8 +56,7 @@ struct ToolsView: View {
                     }
                 }
             }
-            .padding(2)
-            .background(RoundedRectangle(cornerRadius: DS.rControl, style: .continuous).fill(DS.raised))
+            .segmentTrack()
 
             switch section {
             case .ports:
@@ -89,8 +88,7 @@ struct ToolsView: View {
             }
             .foregroundStyle(section == item ? Color.accentColor : Color.text2)
             .frame(maxWidth: .infinity).frame(height: 46)
-            .background(RoundedRectangle(cornerRadius: DS.rSmall, style: .continuous)
-                .fill(section == item ? (scheme == .dark ? Color.white.opacity(0.12) : Color.white) : .clear))
+            .segmentFill(section == item, scheme: scheme)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)

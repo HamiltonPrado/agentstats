@@ -64,20 +64,14 @@ enum WiFiPassword {
         let name = ssid.trimmingCharacters(in: .whitespaces)
         guard !name.isEmpty else { return .failed }
         let args = arguments(ssid: name)
-        return await Task.detached(priority: .userInitiated) { () -> Outcome in
+        // O `security` fica à espera do diálogo do macOS: numa thread própria, e desiste ao fim de 2 minutos.
+        return await Blocking.run { () -> Outcome in
             let p = Process()
             p.executableURL = URL(fileURLWithPath: "/usr/bin/security")
             p.arguments = args
-            let out = Pipe(), err = Pipe()
-            p.standardOutput = out
-            p.standardError = err
-            p.standardInput = FileHandle.nullDevice
-            do { try p.run() } catch { return .failed }
-            // A saída é curta (uma password): ler até ao fim antes de esperar não bloqueia.
-            let o = out.fileHandleForReading.readDataToEndOfFile()
-            let e = err.fileHandleForReading.readDataToEndOfFile()
-            p.waitUntilExit()
-            return outcome(status: p.terminationStatus, out: String(decoding: o, as: UTF8.self), err: String(decoding: e, as: UTF8.self))
-        }.value
+            guard let r = ProcessRun.sync(p, timeout: 120) else { return .failed }
+            if r.timedOut { return .cancelled }
+            return outcome(status: r.status, out: String(decoding: r.out, as: UTF8.self), err: String(decoding: r.err, as: UTF8.self))
+        }
     }
 }

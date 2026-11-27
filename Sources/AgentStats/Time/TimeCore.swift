@@ -37,10 +37,6 @@ struct TimerPlan: Equatable, Sendable {
         }
     }
 
-    static func clock(_ seconds: TimeInterval) -> String {
-        let s = max(0, Int(seconds.rounded(.up)))
-        return s >= 3600 ? String(format: "%d:%02d:%02d", s / 3600, s / 60 % 60, s % 60) : String(format: "%d:%02d", s / 60, s % 60)
-    }
 }
 
 /// Fusos horários escolhidos e como mostrar cada um em relação à hora local.
@@ -78,12 +74,7 @@ enum WorldClock {
         return days > 0 ? "amanhã" : days < 0 ? "ontem" : nil
     }
 
-    static func time(_ z: TimeZone, at date: Date) -> String {
-        let f = DateFormatter()
-        f.timeZone = z
-        f.dateFormat = "HH:mm"
-        return f.string(from: date)
-    }
+    static func time(_ z: TimeZone, at date: Date) -> String { Fmt.hm(date, timeZone: z) }
 
     /// Procura por cidade ou identificador.
     static func search(_ text: String, in all: [String] = TimeZone.knownTimeZoneIdentifiers, limit: Int = 8) -> [TimeZone] {

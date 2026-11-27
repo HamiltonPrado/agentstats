@@ -30,20 +30,17 @@ enum Sys {
         return Date().timeIntervalSince1970 - Double(tv.tv_sec)
     }
 
-    static func run(_ path: String, _ args: [String]) -> String {
+    /// Corre na amostragem: com tempo limite, para um `ps` encravado nunca parar as métricas todas.
+    static func run(_ path: String, _ args: [String], timeout: TimeInterval = 5) -> String {
         let p = Process()
         p.executableURL = URL(fileURLWithPath: path)
         p.arguments = args
-        let pipe = Pipe()
-        p.standardOutput = pipe
-        p.standardError = FileHandle.nullDevice
-        do { try p.run() } catch {
-            Log.readers.error("Falha a lançar \(path, privacy: .public): \(error.localizedDescription, privacy: .public)")
+        guard let r = ProcessRun.sync(p, timeout: timeout) else {
+            Log.readers.error("Falha a lançar \(path, privacy: .public)")
             return ""
         }
-        let data = pipe.fileHandleForReading.readDataToEndOfFile()
-        p.waitUntilExit()
-        return String(decoding: data, as: UTF8.self)
+        if r.timedOut { Log.readers.error("\(path, privacy: .public) não respondeu a tempo") }
+        return String(decoding: r.out, as: UTF8.self)
     }
 
     /// Diretório de trabalho atual de um processo (via libproc).
@@ -57,5 +54,9 @@ enum Sys {
         }
     }
 
-    static func number(_ any: Any?) -> NSNumber? { any as? NSNumber }
+    /// Texto de um array C de tamanho fixo. O kernel não garante o terminador nulo quando o nome
+    /// ocupa o array todo, por isso lê no máximo o tamanho do array (nunca para além dele).
+    static func fixedCString<T>(_ tuple: T) -> String {
+        withUnsafeBytes(of: tuple) { raw in String(decoding: raw.prefix(while: { $0 != 0 }), as: UTF8.self) }
+    }
 }

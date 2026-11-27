@@ -48,12 +48,11 @@ enum Fmt {
     /// Dólares com vírgula decimal: "$0,42", "$12,40", "$1 234".
     static func usd(_ v: Double) -> String {
         if v < 0.01 { return decimal("<$0.01") }
-        let f = NumberFormatter()
-        f.locale = Locale(identifier: appIsEnglish ? "en_US" : "pt_PT")
-        f.numberStyle = .decimal
-        f.minimumFractionDigits = v < 100 ? 2 : 0
-        f.maximumFractionDigits = v < 100 ? 2 : 0
-        return "$" + (f.string(from: NSNumber(value: v)) ?? String(format: "%.2f", v))
+        // FormatStyle é um valor (e fica em cache no sistema): nada de um NumberFormatter novo a cada desenho.
+        let style = FloatingPointFormatStyle<Double>.number
+            .locale(Locale(identifier: appIsEnglish ? "en_US" : "pt_PT"))
+            .precision(.fractionLength(v < 100 ? 2 : 0))
+        return "$" + v.formatted(style)
     }
 
     static func tokens(_ n: Int) -> String {

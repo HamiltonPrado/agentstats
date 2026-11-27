@@ -20,7 +20,7 @@ enum MenuBarDrawer {
     private static let height: CGFloat = 18
     private static let spacing: CGFloat = 7
     private static let graphWidth: CGFloat = 22
-    private static let defaultMetricOrder = ["agents", "cpu", "ram", "gpu", "temp", "net", "battery"]
+    private static let defaultMetricOrder = MenuBarMetric.allCases.map(\.rawValue)
 
     static var metricOrderKey: String { "bar.order" }
     static let colorDotKey = "bar.colorDot"
@@ -43,18 +43,18 @@ enum MenuBarDrawer {
     private static let agentFont = NSFont.monospacedDigitSystemFont(ofSize: 11, weight: .semibold)
     private static let netFont = NSFont.monospacedDigitSystemFont(ofSize: 8.5, weight: .medium)
 
-    private static func flag(_ key: String, _ def: Bool) -> Bool {
-        UserDefaults.standard.object(forKey: key) == nil ? def : UserDefaults.standard.bool(forKey: key)
-    }
-
     private static func segments(_ m: Monitor, style: MenuBarStyle, colored: Bool) -> [Segment] {
         var s: [Segment] = []
-        let agents = flag("bar.agents", true), cpu = flag("bar.cpu", true), ram = flag("bar.ram", true)
-        let gpu = flag("bar.gpu", false), temp = flag("bar.temp", true), net = flag("bar.net", true)
-        let bat = flag("bar.battery", false)
+        let agents = MenuBarMetric.agents.isOn, cpu = MenuBarMetric.cpu.isOn, ram = MenuBarMetric.ram.isOn
+        let gpu = MenuBarMetric.gpu.isOn, temp = MenuBarMetric.temp.isOn, net = MenuBarMetric.net.isOn
+        let bat = MenuBarMetric.battery.isOn
 
         if !m.activeAlerts.isEmpty { s.append(.symbol("exclamationmark.triangle.fill", 11, colored ? .systemOrange : nil)) }
-        if m.needsAttentionCount > 0 { s.append(.symbol("hand.raised.fill", 11, colored ? .systemRed : nil)) }
+        if m.needsAttentionCount > 0 {
+            s.append(.symbol("hand.raised.fill", 11, colored ? .systemRed : nil))
+            // Com mais de um à espera, o número: só a mão não dizia quantos.
+            if m.needsAttentionCount > 1 { s.append(.text("\(m.needsAttentionCount)", agentFont)) }
+        }
         let storedOrder = UserDefaults.standard.string(forKey: metricOrderKey)?
             .split(separator: ",").map(String.init) ?? []
         var seen = Set<String>()
@@ -136,7 +136,7 @@ enum MenuBarDrawer {
     /// - Com o ponto a cores: imagem normal, com o texto na cor da barra (`appearance`) e o ponto colorido.
     static func image(_ m: Monitor, appearance: NSAppearance? = nil, recording: String? = nil, timer: String? = nil,
                       micMuted: Bool = false, meeting: String? = nil, presenting: Bool = false) -> NSImage {
-        let colored = flag(colorDotKey, false) || recording != nil || micMuted
+        let colored = Pref.bool(colorDotKey, false) || recording != nil || micMuted
         let style = MenuBarStyle.current
         // A gravar, a barra mostra só isso (sempre a vermelho): não pode passar despercebido.
         // Com o temporizador a correr, o tempo vem antes das métricas.

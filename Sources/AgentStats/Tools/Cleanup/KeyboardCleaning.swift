@@ -103,6 +103,8 @@ final class KeyboardLock: KeyboardLocking, @unchecked Sendable {
     /// O relógio de arranque: acertar a hora não mexe no prazo.
     private static var now: TimeInterval { ProcessInfo.processInfo.systemUptime }
 
+    /// Espera de propósito (no máximo 2 s) até o bloqueio estar mesmo instalado: o ecrã de limpeza só aparece
+    /// quando as teclas já não chegam às apps, e se não der, nada fica a meio.
     func start(seconds: TimeInterval, onEnd: @escaping @Sendable (CleaningEnd) -> Void) -> Bool {
         let ready = DispatchSemaphore(value: 0)
         let installed = Flag()
@@ -208,11 +210,7 @@ private func keyboardLockCallback(proxy: CGEventTapProxy, type: CGEventType, eve
 final class CleaningModeStore: ObservableObject {
     struct Environment {
         var trusted: @MainActor () -> Bool = { AXIsProcessTrusted() }
-        var requestAccess: @MainActor () -> Void = {
-            // A constante kAXTrustedCheckOptionPrompt é uma var global, que o Swift 6 não deixa usar.
-            let options: [String: Bool] = ["AXTrustedCheckOptionPrompt": true]
-            _ = AXIsProcessTrustedWithOptions(options as CFDictionary)
-        }
+        var requestAccess: @MainActor () -> Void = { AX.ensureTrusted() }
         var secureInput: @MainActor () -> Bool = { IsSecureEventInputEnabled() }
         var recording: @MainActor () -> Bool = { CaptureStore.shared.isRecording }
         var makeLock: @MainActor () -> any KeyboardLocking = { KeyboardLock() }

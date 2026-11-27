@@ -45,8 +45,7 @@ enum History24h {
     static let activityWindow: TimeInterval = 24 * 3600
 
     static var file: URL {
-        FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-            .appendingPathComponent("AgentStats/history.json")
+        AppPaths.support("history.json")
     }
 
     /// Remove o que tem mais de 7 dias.
@@ -56,18 +55,12 @@ enum History24h {
     }
 
     static func load(from url: URL = file, now: Date = Date()) -> [MinuteSample] {
-        guard let data = try? Data(contentsOf: url),
-              let samples = try? JSONDecoder().decode([MinuteSample].self, from: data) else { return [] }
+        guard case .value(let samples) = PrivateFile.load([MinuteSample].self, from: url) else { return [] }
         return pruned(samples, now: now)
     }
 
     static func save(_ samples: [MinuteSample], to url: URL = file) {
-        do {
-            try FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
-            try JSONEncoder().encode(samples).write(to: url, options: .atomic)
-        } catch {
-            Log.readers.error("Não foi possível gravar o histórico: \(error.localizedDescription, privacy: .public)")
-        }
+        if !PrivateFile.save(samples, to: url, backup: false) { Log.readers.error("Não foi possível gravar o histórico") }
     }
 
     /// Agrupa em blocos para desenhar o histórico sem carregar a interface.

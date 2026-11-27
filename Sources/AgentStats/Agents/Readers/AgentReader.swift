@@ -1,76 +1,5 @@
 import Foundation
 
-// MARK: - Models
-
-enum AgentState: Equatable {
-    case runningTool(String)
-    case thinking
-    case needsApproval(String)   // bloqueado à espera de autorização para uma ferramenta
-    case needsAnswer             // fez uma pergunta (AskUserQuestion / plano para aprovar)
-    case waitingUser
-    case finished
-    case unknown
-
-    var label: String {
-        switch self {
-        case .runningTool(let t): return String(localized: "A executar \(t)")
-        case .thinking: return "A pensar…"
-        case .needsApproval(let t): return String(localized: "Precisa de aprovação · \(t)")
-        case .needsAnswer: return "Tem uma pergunta para ti"
-        case .waitingUser: return "À tua espera"
-        case .finished: return "Terminada"
-        case .unknown: return "Ativo"
-        }
-    }
-
-    var isWorking: Bool {
-        switch self {
-        case .runningTool, .thinking: return true
-        default: return false
-        }
-    }
-
-    var needsAttention: Bool {
-        switch self {
-        case .needsApproval, .needsAnswer: return true
-        default: return false
-        }
-    }
-}
-
-struct AgentProcess: Identifiable {
-    var id: Int { pid }
-    let pid: Int
-    let kind: String          // "Claude Code", "Codex", …
-    let cpu: Double           // inclui subprocessos
-    let memKB: UInt64
-    let elapsed: String
-    let cwd: String?
-    let children: [String]    // nomes dos subprocessos ativos
-    let isSubagent: Bool
-    var role: String? = nil   // ex.: "app" / "executor" para os servidores do Codex
-    var shellChildren: Int = 0 // shells filhas (o Claude Code corre cada comando Bash numa zsh)
-    var ancestors: [Int] = []  // PIDs dos pais, do mais próximo ao mais distante (para encontrar a app onde corre)
-}
-
-struct AgentSession: Identifiable {
-    let id: String            // caminho do transcript
-    let kind: String          // "Claude Code", "Codex", …
-    let title: String
-    let cwd: String?
-    let model: String?
-    let state: AgentState
-    let detail: String?
-    let lastActivity: Date
-    let subagents: Int
-    let process: AgentProcess?
-
-    var project: String {
-        guard let cwd else { return "—" }
-        return (cwd as NSString).lastPathComponent
-    }
-}
-
 // MARK: - Reader
 
 final class AgentReader {
@@ -84,14 +13,11 @@ final class AgentReader {
         var detail: String?
         var timestamp: Date?
     }
-    private var tailCache: [String: (mtime: Date, size: UInt64, info: TailInfo)] = [:]
-    private var titleCache: [String: String] = [:]
+    private let tailCache = FileCache<TailInfo>()
+    private let titleCache = FileCache<String>()
+    private let customTitles = FileCache<String?>()
 
-    private let iso: ISO8601DateFormatter = {
-        let f = ISO8601DateFormatter()
-        f.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-        return f
-    }()
+    private let iso = ISODate.shared
 
     // MARK: Processos de agentes
 
@@ -198,7 +124,7 @@ final class AgentReader {
 
     // MARK: Sessões (transcripts do Claude Code)
 
-    func sessions(processes: [AgentProcess], recentWindow: TimeInterval = 20 * 60) -> [AgentSession] {
+    func sessions(processes: [AgentProcess], recentWindow: TimeInterval = AgentSession.recentWindow) -> [AgentSession] {
         let fm = FileManager.default
         guard let projectDirs = try? fm.contentsOfDirectory(at: projectsDir, includingPropertiesForKeys: nil) else { return [] }
 
@@ -294,13 +220,19 @@ final class AgentReader {
 
     private func title(for url: URL) -> String {
         let titleFile = url.deletingPathExtension().appendingPathComponent("custom-title.json")
-        if let d = try? Data(contentsOf: titleFile),
-           let j = try? JSONSerialization.jsonObject(with: d) as? [String: Any],
-           let t = j["customTitle"] as? String, !t.isEmpty {
+        // Só se volta a ler o título dado à mão quando o ficheiro muda (antes era a cada amostra, sessão a sessão).
+        let titleDate = (try? titleFile.resourceValues(forKeys: [.contentModificationDateKey]))?.contentModificationDate
+        let custom = customTitles.value(titleFile.path, mtime: titleDate ?? .distantPast) { () -> String? in
+            guard titleDate != nil, let d = try? Data(contentsOf: titleFile),
+                  let j = try? JSONSerialization.jsonObject(with: d) as? [String: Any],
+                  let t = j["customTitle"] as? String, !t.isEmpty else { return nil }
             return t
         }
-        if let cached = titleCache[url.path] { return cached }
+        if let custom { return custom }
+        return titleCache.value(url.path) { firstTitle(url) }
+    }
 
+    private func firstTitle(_ url: URL) -> String {
         var found = "Sessão sem título"
         if let h = try? FileHandle(forReadingFrom: url) {
             let data = (try? h.read(upToCount: 256 * 1024)) ?? Data()
@@ -321,25 +253,11 @@ final class AgentReader {
                 }
             }
         }
-        titleCache[url.path] = found
         return found
     }
 
     private func tail(_ url: URL, mtime: Date, size: UInt64) -> TailInfo {
-        if let c = tailCache[url.path], c.mtime == mtime, c.size == size { return c.info }
-
-        var info = TailInfo()
-        guard let h = try? FileHandle(forReadingFrom: url) else { return info }
-        defer { try? h.close() }
-        let chunk: UInt64 = 512 * 1024
-        let start = size > chunk ? size - chunk : 0
-        try? h.seek(toOffset: start)
-        let data = (try? h.readToEnd()) ?? Data()
-        var lines = data.split(separator: UInt8(ascii: "\n"))
-        if start > 0, !lines.isEmpty { lines.removeFirst() }
-        info = parseTail(lines)
-        tailCache[url.path] = (mtime, size, info)
-        return info
+        tailCache.value(url.path, mtime: mtime, size: size) { parseTail(TextTail.lines(url.path, maxBytes: 512 * 1024)) }
     }
 
     /// Interpreta as linhas de um transcript do Claude Code, da mais recente para trás.
@@ -355,7 +273,7 @@ final class AgentReader {
 
             if !stateFound, !sidechain, type == "assistant" || type == "user",
                let decided = Self.decide(j) {
-                if info.timestamp == nil, let ts = j["timestamp"] as? String { info.timestamp = iso.date(from: ts) }
+                if info.timestamp == nil, let ts = j["timestamp"] as? String { info.timestamp = iso.parse(ts) }
                 info.state = decided.state
                 info.detail = decided.detail
                 stateFound = true
@@ -446,10 +364,3 @@ final class AgentReader {
     }
 }
 
-extension Sequence where Element: Hashable {
-    /// Remove repetidos mantendo a ordem da primeira ocorrência.
-    func uniqued() -> [Element] {
-        var seen = Set<Element>()
-        return filter { seen.insert($0).inserted }
-    }
-}

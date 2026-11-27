@@ -27,10 +27,16 @@ struct TimeView: View {
                     }
                     Spacer()
                 }
-                Text(L(TimerPlan.clock(timer.left))).font(.system(size: 40, weight: .light).monospacedDigit())
-                    .frame(maxWidth: .infinity)
-                    .accessibilityLabel("Faltam \(TimerPlan.clock(timer.left))")
-                Bar(value: 1 - timer.left / max(plan.duration, 1), color: plan.phase == .focus || plan.phase == .timer ? .accentColor : Palette.working, height: 4)
+                // Só esta parte redesenha a cada segundo.
+                TimelineView(.periodic(from: .now, by: 1)) { context in
+                    let left = timer.left(at: context.date)
+                    VStack(spacing: DS.sm) {
+                        Text(L(Fmt.clock(left))).font(.system(size: 40 * TextSize.current.scale, weight: .light).monospacedDigit())
+                            .frame(maxWidth: .infinity)
+                            .accessibilityLabel("Faltam \(Fmt.clock(left))")
+                        Bar(value: 1 - left / max(plan.duration, 1), color: plan.phase == .focus || plan.phase == .timer ? .accentColor : Palette.working, height: 4)
+                    }
+                }
                 HStack(spacing: DS.sm) {
                     Button(timer.pausedLeft == nil ? "Pausa" : "Continuar") { timer.pauseOrResume() }
                     Button("Parar", role: .destructive) { timer.stop() }
@@ -106,7 +112,7 @@ struct TimeView: View {
                 Text(L(note)).font(DS.meta).foregroundStyle(Color.text3)
             }
             Spacer()
-            Text(L(WorldClock.time(z, at: date))).font(.system(size: 20, weight: .regular).monospacedDigit())
+            Text(L(WorldClock.time(z, at: date))).font(.system(size: 20 * TextSize.current.scale, weight: .regular).monospacedDigit())
         }
         .contextMenu {
             Button("Subir") { clock.move(z, by: -1) }

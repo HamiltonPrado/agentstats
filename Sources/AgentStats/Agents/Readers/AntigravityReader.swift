@@ -24,22 +24,11 @@ final class AntigravityReader {
         var timestamp: Date?
     }
 
-    private var tailCache: [String: (mtime: Date, size: UInt64, info: TailInfo)] = [:]
+    private let tailCache = FileCache<TailInfo>()
     private var logged = Set<String>()
 
-    private let iso: ISO8601DateFormatter = {
-        let f = ISO8601DateFormatter()
-        f.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-        return f
-    }()
 
-    private let isoSimple: ISO8601DateFormatter = {
-        let f = ISO8601DateFormatter()
-        f.formatOptions = [.withInternetDateTime]
-        return f
-    }()
-
-    func sessions(processes: [AgentProcess] = [], recentWindow: TimeInterval = 20 * 60) -> [AgentSession] {
+    func sessions(processes: [AgentProcess] = [], recentWindow: TimeInterval = AgentSession.recentWindow) -> [AgentSession] {
         guard FileManager.default.fileExists(atPath: home.path) else { return [] }
         let summaries = recentSummaries()
         let antigravityProcs = processes.filter { $0.kind == "Antigravity" && !$0.isSubagent }
@@ -108,7 +97,7 @@ final class AntigravityReader {
             let title = text(stmt, 1) ?? ""
             let preview = text(stmt, 2) ?? ""
             let timeStr = text(stmt, 3) ?? ""
-            let date = parseDate(timeStr)
+            guard let date = parseDate(timeStr) else { return }
             let uris = text(stmt, 4) ?? ""
             let cwd = parseCwd(uris)
             let notFullyIdle = sqlite3_column_int(stmt, 5) != 0
@@ -162,13 +151,13 @@ final class AntigravityReader {
         Log.readers.error("Antigravity: \(message, privacy: .public)")
     }
 
-    func parseDate(_ s: String) -> Date {
-        if let d = iso.date(from: s) { return d }
-        if let d = isoSimple.date(from: s) { return d }
-        let cleaned = s.replacingOccurrences(of: " ", with: "T")
-        if let d = iso.date(from: cleaned) { return d }
-        if let d = isoSimple.date(from: cleaned) { return d }
-        return Date()
+    /// ISO 8601 (com espaço ou "T"), ou época em segundos ou milissegundos. Uma data que não se lê é nil:
+    /// usar "agora" punha a conversa como "a pensar" para sempre.
+    func parseDate(_ s: String) -> Date? {
+        let trimmed = s.trimmingCharacters(in: .whitespaces)
+        if let d = ISODate.shared.parse(trimmed) ?? ISODate.shared.parse(trimmed.replacingOccurrences(of: " ", with: "T")) { return d }
+        if let n = Double(trimmed), n > 0 { return Date(timeIntervalSince1970: n > 1e12 ? n / 1000 : n) }
+        return nil
     }
 
     func parseCwd(_ raw: String) -> String? {
@@ -190,20 +179,7 @@ final class AntigravityReader {
     // MARK: - Tail & Parsing de Transcripts
 
     private func tail(_ url: URL, mtime: Date, size: UInt64) -> TailInfo {
-        if let c = tailCache[url.path], c.mtime == mtime, c.size == size { return c.info }
-
-        var info = TailInfo()
-        guard let h = try? FileHandle(forReadingFrom: url) else { return info }
-        defer { try? h.close() }
-        let chunk: UInt64 = 256 * 1024
-        let start = size > chunk ? size - chunk : 0
-        try? h.seek(toOffset: start)
-        let data = (try? h.readToEnd()) ?? Data()
-        var lines = data.split(separator: UInt8(ascii: "\n"))
-        if start > 0, !lines.isEmpty { lines.removeFirst() }
-        info = parseTail(lines)
-        tailCache[url.path] = (mtime, size, info)
-        return info
+        tailCache.value(url.path, mtime: mtime, size: size) { parseTail(TextTail.lines(url.path, maxBytes: 256 * 1024)) }
     }
 
     /// Analisa as linhas do transcript do Antigravity (do mais recente para trás).

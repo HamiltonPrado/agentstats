@@ -139,8 +139,7 @@ enum DiskStorage {
 /// abrir logo com cores. Vive fora da vista: o pedido de permissão do macOS fecha o painel e a medição continua.
 @MainActor
 final class DiskScanStore: ObservableObject {
-    static let shared = DiskScanStore(cacheFile: FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-        .appendingPathComponent("AgentStats/disk.json"))
+    static let shared = DiskScanStore(cacheFile: AppPaths.support("disk.json"))
 
     /// Com uma medição mais velha do que isto, abrir o Disco volta a medir.
     static let maxAge: TimeInterval = 6 * 3600
@@ -300,7 +299,7 @@ struct DiskCard: View {
     let disk: DiskSample
     @ObservedObject var store: DiskScanStore
     @AppStorage("panel.tab2") private var tab: Tab = .agents
-    @AppStorage("tools.section") private var toolSection: ToolSection = .ports
+    @AppStorage(PrefKey.toolsSection) private var toolSection: ToolSection = .ports
     @AppStorage(TabLayout.orderKey) private var tabOrder = ""
     @AppStorage(TabLayout.hiddenKey) private var hiddenTabs = ""
 

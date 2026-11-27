@@ -94,7 +94,7 @@ final class AccessoryBatteryStore: ObservableObject {
         guard !demo else { return }
         let profiler = await ToolRunner.run("/usr/sbin/system_profiler", ["SPBluetoothDataType", "-json"], timeout: 20)
         let fromProfiler = AccessoryBatteryReader.parse(profiler: Data(profiler.out.utf8))
-        let fromHID = await Task.detached { AccessoryBatteryReader.appleHID() }.value
+        let fromHID = await Blocking.run { AccessoryBatteryReader.appleHID() }
         accessories = AccessoryBatteryReader.merged(fromProfiler, fromHID)
         loaded = true
     }

@@ -17,8 +17,9 @@ enum URLCommand: Equatable {
         guard url.scheme?.lowercased() == "agentstats" else { return nil }
         let host = (url.host ?? "").lowercased()
         let path = url.pathComponents.filter { $0 != "/" }.map { $0.lowercased() }
-        let query = Dictionary(uniqueKeysWithValues: (URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems ?? [])
-            .compactMap { item in item.value.map { (item.name.lowercased(), $0) } })
+        // Um link vem de qualquer lado: com chaves repetidas fica a primeira (`uniqueKeysWithValues` ia abaixo).
+        let query = Dictionary((URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems ?? [])
+            .compactMap { item in item.value.map { (item.name.lowercased(), $0) } }, uniquingKeysWith: { first, _ in first })
         switch host {
         case "open":
             guard let raw = path.first ?? query["tab"], let tab = Tab(rawValue: raw), Tab.main.contains(tab) else { return nil }
@@ -61,8 +62,24 @@ enum URLCommand: Equatable {
         return today + " · " + week
     }
 
+    /// Os comandos com efeitos visíveis (reiniciar o Finder, mudar o tema, escrever no Clipboard) podem vir de
+    /// qualquer página web: no máximo um a cada 3 s, para uma página não os repetir sem parar.
+    var hasSideEffects: Bool {
+        switch self {
+        case .darkMode, .desktopIcons, .copyUsage: true
+        default: false
+        }
+    }
+
+    @MainActor private static var lastSideEffect = Date.distantPast
+    static let sideEffectInterval: TimeInterval = 3
+
     @MainActor
     func run(monitor: Monitor) {
+        if hasSideEffects {
+            guard Date().timeIntervalSince(Self.lastSideEffect) >= Self.sideEffectInterval else { return }
+            Self.lastSideEffect = Date()
+        }
         let controller = AppState.controller
         switch self {
         case .open(let tab): controller?.show(tab)
@@ -76,9 +93,7 @@ enum URLCommand: Equatable {
         case .darkMode: Task { await QuickTogglesStore.shared.toggleDarkMode() }
         case .desktopIcons: Task { await QuickTogglesStore.shared.toggleDesktopIcons() }
         case .window(let action): WindowMover.apply(action)
-        case .copyUsage:
-            NSPasteboard.general.clearContents()
-            NSPasteboard.general.setString(Self.usageText(monitor.usage), forType: .string)
+        case .copyUsage: ClipboardStore.shared.copy(Self.usageText(monitor.usage))
         }
     }
 }

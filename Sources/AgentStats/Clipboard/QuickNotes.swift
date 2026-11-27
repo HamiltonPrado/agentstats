@@ -3,8 +3,7 @@ import SwiftUI
 /// Um bloco de notas no painel. Fica num ficheiro só teu (0600), gravado pouco depois de parares de escrever.
 @MainActor
 final class QuickNotesStore: ObservableObject {
-    static let shared = QuickNotesStore(file: FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-        .appendingPathComponent("AgentStats/notes.json"))
+    static let shared = QuickNotesStore(file: AppPaths.support("notes.json"))
 
     @Published var text: String { didSet { scheduleSave() } }
     private let file: URL?
@@ -52,10 +51,7 @@ struct QuickNotesCard: View {
                 Text("Notas").font(DS.body.weight(.medium))
                 Spacer()
                 if !store.text.isEmpty {
-                    textLink("Copiar") {
-                        NSPasteboard.general.clearContents()
-                        NSPasteboard.general.setString(store.text, forType: .string)
-                    }
+                    textLink("Copiar") { ClipboardStore.shared.copy(store.text) }
                 }
             }
             TextEditor(text: $store.text)

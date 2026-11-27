@@ -115,22 +115,18 @@ enum AgentActivityHistoryStore {
     static let limit = 500
 
     static var file: URL {
-        FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-            .appendingPathComponent("AgentStats/agent-activity.json")
+        AppPaths.support("agent-activity.json")
     }
 
     static func load(from url: URL = file, now: Date = Date()) -> [AgentActivityRecord] {
-        guard let data = try? Data(contentsOf: url),
-              let records = try? JSONDecoder().decode([AgentActivityRecord].self, from: data) else { return [] }
+        guard case .value(let records) = PrivateFile.load([AgentActivityRecord].self, from: url) else { return [] }
         return pruned(records, now: now)
     }
 
+    /// Tem nomes de projetos e títulos de sessões: só o utilizador lê, e fica fora do Time Machine.
     static func save(_ records: [AgentActivityRecord], to url: URL = file) {
-        do {
-            try FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
-            try JSONEncoder().encode(records).write(to: url, options: .atomic)
-        } catch {
-            Log.readers.error("Não foi possível gravar o histórico dos agentes: \(error.localizedDescription, privacy: .public)")
+        if !PrivateFile.save(records, to: url, backup: false) {
+            Log.readers.error("Não foi possível gravar o histórico dos agentes")
         }
     }
 

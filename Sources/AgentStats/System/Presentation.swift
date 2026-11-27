@@ -31,7 +31,18 @@ final class PresentationMode: ObservableObject {
 
     func toggle() async { await set(!active) }
 
+    /// A última mudança pedida: as mudanças correm uma de cada vez, porque esconder os ícones espera pelo Finder
+    /// e um desligar a meio deixava a asserção do ecrã ativa e o Clipboard pausado.
+    private var pending: Task<Void, Never>?
+
     func set(_ on: Bool) async {
+        let previous = pending
+        let task = Task { await previous?.value; await apply(on) }
+        pending = task
+        await task.value
+    }
+
+    private func apply(_ on: Bool) async {
         let d = UserDefaults.standard
         if on {
             guard !active else { return }

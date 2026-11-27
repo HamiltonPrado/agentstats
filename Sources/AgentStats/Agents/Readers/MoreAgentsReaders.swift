@@ -32,22 +32,47 @@ enum TextTail {
     }
 }
 
+/// O que se leu de cada ficheiro, válido enquanto a data e o tamanho forem os mesmos.
+/// As entradas que ninguém pede há 10 minutos saem: numa app ligada semanas, a cache não cresce para sempre.
+final class FileCache<Info> {
+    private var entries: [String: (mtime: Date, size: UInt64, info: Info, used: Date)] = [:]
+    private var lastSweep = Date()
+    private let maxIdle: TimeInterval
+
+    init(maxIdle: TimeInterval = 10 * 60) { self.maxIdle = maxIdle }
+
+    func value(_ path: String, mtime: Date = .distantPast, size: UInt64 = 0, now: Date = Date(), compute: () -> Info) -> Info {
+        sweep(now: now)
+        if let c = entries[path], c.mtime == mtime, c.size == size {
+            entries[path]!.used = now
+            return c.info
+        }
+        let info = compute()
+        entries[path] = (mtime, size, info, now)
+        return info
+    }
+
+    var count: Int { entries.count }
+
+    private func sweep(now: Date) {
+        guard now.timeIntervalSince(lastSweep) >= maxIdle else { return }
+        lastSweep = now
+        entries = entries.filter { now.timeIntervalSince($0.value.used) < maxIdle }
+    }
+}
+
 /// Uma sessão parada há muito num estado "a trabalhar" já não está a trabalhar (o agente foi fechado
 /// a meio). Estes agentes não têm um processo a que ligar a sessão, por isso é por tempo.
+private let staleAfter: TimeInterval = 10 * 60
+
 private func settle(_ state: AgentState, age: TimeInterval) -> AgentState {
-    if (state.isWorking || state.needsAttention) && age > 10 * 60 { return .finished }
+    if (state.isWorking || state.needsAttention) && age > staleAfter { return .finished }
     if state == .unknown { return age < 30 ? .thinking : .waitingUser }
     return state
 }
 
-/// ISO8601DateFormatter é seguro entre threads (documentado pela Apple).
-nonisolated(unsafe) private let isoFrac: ISO8601DateFormatter = {
-    let f = ISO8601DateFormatter()
-    f.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-    return f
-}()
 private func parseDate(_ v: Any?) -> Date? {
-    if let s = v as? String { return isoFrac.date(from: s) ?? ISO8601DateFormatter().date(from: s) }
+    if let s = v as? String { return ISODate.shared.parse(s) }
     if let n = v as? NSNumber { return Date(timeIntervalSince1970: n.doubleValue > 1e12 ? n.doubleValue / 1000 : n.doubleValue) }
     return nil
 }
@@ -67,20 +92,16 @@ private func describeArgs(_ args: Any?) -> String? {
 /// `permission.requested/completed`, `session.usage_record`, `session.shutdown`).
 final class CopilotReader {
     private let base = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".copilot/session-state")
-    private var headCache: [String: (title: String, cwd: String?)] = [:]
+    private let headCache = FileCache<(title: String, cwd: String?)>()
 
-    func sessions(recentWindow: TimeInterval = 20 * 60, now: Date = Date()) -> [AgentSession] {
+    func sessions(recentWindow: TimeInterval = AgentSession.recentWindow, now: Date = Date()) -> [AgentSession] {
         guard let dirs = try? FileManager.default.contentsOfDirectory(at: base, includingPropertiesForKeys: nil) else { return [] }
         var out: [AgentSession] = []
         for dir in dirs where !dir.lastPathComponent.hasPrefix(".") {
             let file = dir.appendingPathComponent("events.jsonl")
             guard let mtime = (try? file.resourceValues(forKeys: [.contentModificationDateKey]))?.contentModificationDate,
                   now.timeIntervalSince(mtime) < recentWindow else { continue }
-            let head = headCache[file.path] ?? {
-                let h = Self.head(TextTail.head(file.path).compactMap(TextTail.json))
-                headCache[file.path] = h
-                return h
-            }()
+            let head = headCache.value(file.path) { Self.head(TextTail.head(file.path).compactMap(TextTail.json)) }
             let tail = Self.parse(TextTail.lines(file.path).compactMap(TextTail.json), now: now)
             let last = tail.date ?? mtime
             out.append(AgentSession(id: file.path, kind: "Copilot", title: head.title, cwd: tail.cwd ?? head.cwd,
@@ -172,10 +193,10 @@ final class CopilotReader {
 /// Não traz tokens.
 final class CursorReader {
     private let home = FileManager.default.homeDirectoryForCurrentUser
-    private var titleCache: [String: String] = [:]
-    private var projectCache: [String: String] = [:]
+    private let titleCache = FileCache<String>()
+    private let projectCache = FileCache<String>()
 
-    func sessions(recentWindow: TimeInterval = 20 * 60, now: Date = Date()) -> [AgentSession] {
+    func sessions(recentWindow: TimeInterval = AgentSession.recentWindow, now: Date = Date()) -> [AgentSession] {
         let projects = home.appendingPathComponent(".cursor/projects")
         let fm = FileManager.default
         guard let dirs = try? fm.contentsOfDirectory(at: projects, includingPropertiesForKeys: nil) else { return [] }
@@ -188,16 +209,8 @@ final class CursorReader {
                 guard let mtime = (try? f.resourceValues(forKeys: [.contentModificationDateKey]))?.contentModificationDate,
                       now.timeIntervalSince(mtime) < recentWindow else { continue }
                 let slug = dir.lastPathComponent
-                let cwd = projectCache[slug] ?? {
-                    let p = Self.decodeProject(slug, home: home.path)
-                    projectCache[slug] = p
-                    return p
-                }()
-                let title = titleCache[f.path] ?? {
-                    let t = Self.title(TextTail.head(f.path).compactMap(TextTail.json))
-                    titleCache[f.path] = t
-                    return t
-                }()
+                let cwd = projectCache.value(slug) { Self.decodeProject(slug, home: home.path) }
+                let title = titleCache.value(f.path) { Self.title(TextTail.head(f.path).compactMap(TextTail.json)) }
                 let tail = Self.parse(TextTail.lines(f.path).compactMap(TextTail.json), age: now.timeIntervalSince(mtime))
                 out.append(AgentSession(id: f.path, kind: "Cursor", title: title, cwd: cwd, model: nil,
                                         state: settle(tail.state, age: now.timeIntervalSince(mtime)), detail: tail.detail,
@@ -281,7 +294,7 @@ final class OpenCodeReader {
         FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".local/share/opencode/opencode.db").path
     }
 
-    func sessions(recentWindow: TimeInterval = 20 * 60, now: Date = Date(), path: String = OpenCodeReader.databasePath) -> [AgentSession] {
+    func sessions(recentWindow: TimeInterval = AgentSession.recentWindow, now: Date = Date(), path: String = OpenCodeReader.databasePath) -> [AgentSession] {
         let since = Int64((now.timeIntervalSince1970 - recentWindow) * 1000)
         var found: [(id: String, title: String, dir: String?, updated: Date)] = []
         SQLiteRead.query(path, "SELECT id, title, directory, time_updated FROM session WHERE time_updated > \(since) ORDER BY time_updated DESC LIMIT 20") { s in
@@ -289,11 +302,21 @@ final class OpenCodeReader {
             found.append((id, SQLiteRead.text(s, 1) ?? "Sessão do OpenCode", SQLiteRead.text(s, 2),
                           Date(timeIntervalSince1970: Double(sqlite3_column_int64(s, 3)) / 1000)))
         }
-        return found.map { sess in
-            var last: [String: Any] = [:]
-            SQLiteRead.query(path, "SELECT data FROM message WHERE session_id = '\(sess.id.replacingOccurrences(of: "'", with: "''"))' ORDER BY time_created DESC LIMIT 1") { s in
-                if let d = SQLiteRead.text(s, 0), let j = TextTail.json(Data(d.utf8)) { last = j }
+        // A última mensagem de cada sessão numa só consulta (antes era uma ligação à base de dados por sessão).
+        var lastBySession: [String: [String: Any]] = [:]
+        if !found.isEmpty {
+            let marks = Array(repeating: "?", count: found.count).joined(separator: ",")
+            let sql = """
+            SELECT m.session_id, m.data FROM message m
+            JOIN (SELECT session_id, MAX(time_created) AS t FROM message WHERE session_id IN (\(marks)) GROUP BY session_id) x
+              ON x.session_id = m.session_id AND x.t = m.time_created
+            """
+            SQLiteRead.query(path, sql, bind: found.map(\.id)) { s in
+                if let id = SQLiteRead.text(s, 0), let d = SQLiteRead.text(s, 1), let j = TextTail.json(Data(d.utf8)) { lastBySession[id] = j }
             }
+        }
+        return found.map { sess in
+            let last = lastBySession[sess.id] ?? [:]
             let parsed = Self.parse(last)
             let cwd = ((last["path"] as? [String: Any])?["cwd"] as? String) ?? sess.dir
             return AgentSession(id: "opencode:" + sess.id, kind: "OpenCode", title: sess.title, cwd: cwd,
@@ -333,7 +356,8 @@ final class OpenCodeReader {
 /// Consultas só de leitura a bases de dados de outras apps (também em modo imutável, se a app
 /// estiver fechada e faltarem os ficheiros -wal/-shm).
 enum SQLiteRead {
-    static func query(_ path: String, _ sql: String, _ row: (OpaquePointer) -> Void) {
+    /// `bind`: os valores dos `?`, ligados pelo SQLite (nunca colados no SQL).
+    static func query(_ path: String, _ sql: String, bind: [String] = [], _ row: (OpaquePointer) -> Void) {
         guard FileManager.default.fileExists(atPath: path) else { return }
         var db: OpaquePointer?
         if sqlite3_open_v2(path, &db, SQLITE_OPEN_READONLY, nil) != SQLITE_OK
@@ -347,6 +371,11 @@ enum SQLiteRead {
         var stmt: OpaquePointer?
         guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK, let stmt else { return }
         defer { sqlite3_finalize(stmt) }
+        // SQLITE_TRANSIENT: o SQLite copia o texto (a String do Swift não vive até ao fim da consulta).
+        let transient = unsafeBitCast(-1, to: sqlite3_destructor_type.self)
+        for (i, value) in bind.enumerated() {
+            guard sqlite3_bind_text(stmt, Int32(i + 1), value, -1, transient) == SQLITE_OK else { return }
+        }
         while sqlite3_step(stmt) == SQLITE_ROW { row(stmt) }
     }
 

@@ -45,11 +45,10 @@ struct QRMakerCard: View {
             TextField("Link ou texto", text: $text.value).textFieldStyle(.roundedBorder).font(DS.body)
             if let image {
                 HStack(alignment: .top, spacing: DS.md) {
-                    Image(decorative: image, scale: 1).interpolation(.none).resizable()
-                        .frame(width: 132, height: 132).background(Color.white).clipShape(RoundedRectangle(cornerRadius: 6))
+                    QRImage(image: image)
                     VStack(alignment: .leading, spacing: DS.sm) {
                         Button("Copiar imagem") { copy(image) }.controlSize(.small)
-                        Button("Guardar PNG…") { save(image) }.controlSize(.small)
+                        Button("Guardar PNG…") { Task { await save(image) } }.controlSize(.small)
                         if let n = note.value { AgentStats.note(n, color: .text2) }
                     }
                 }
@@ -70,17 +69,12 @@ struct QRMakerCard: View {
     }
 
     private func copy(_ image: CGImage) {
-        NSPasteboard.general.clearContents()
-        NSPasteboard.general.writeObjects([NSImage(cgImage: image, size: NSSize(width: image.width, height: image.height))])
+        ClipboardStore.shared.copy(image: NSImage(cgImage: image, size: NSSize(width: image.width, height: image.height)))
         note.value = L("Copiado")
     }
 
-    private func save(_ image: CGImage) {
-        let panel = NSSavePanel()
-        panel.nameFieldStringValue = L("Código QR") + ".png"
-        panel.allowedContentTypes = [.png]
-        NSApp.activate(ignoringOtherApps: true)
-        guard panel.runModal() == .OK, let url = panel.url, let data = QRMaker.png(image) else { return }
+    private func save(_ image: CGImage) async {
+        guard let url = await FilePanels.save(name: L("Código QR") + ".png", types: [.png]), let data = QRMaker.png(image) else { return }
         note.value = (try? data.write(to: url, options: .atomic)) != nil ? L("Guardado") : L("Não consegui guardar o ficheiro.")
     }
 }

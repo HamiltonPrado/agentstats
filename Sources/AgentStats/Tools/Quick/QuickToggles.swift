@@ -91,7 +91,7 @@ struct QuickTogglesView: View {
                      help: store.dark ? "Passar para o modo claro" : "Passar para o modo escuro") {
                     Task { await store.toggleDarkMode() }
                 }
-                pill(store.iconsShown ? "Ícones" : "Ícones", store.iconsShown ? "eye" : "eye.slash", on: !store.iconsShown,
+                pill("Ícones", store.iconsShown ? "eye" : "eye.slash", on: !store.iconsShown,
                      help: store.iconsShown ? "Esconder os ícones da secretária (o Finder reinicia)" : "Mostrar os ícones da secretária") {
                     Task { await store.toggleDesktopIcons() }
                 }
@@ -113,9 +113,7 @@ struct QuickTogglesView: View {
                 Text(L(title)).font(DS.meta).lineLimit(1)
             }
             .foregroundStyle(on ? Color.accentColor : Color.primary)
-            .frame(maxWidth: .infinity).frame(height: 26)
-            .background(RoundedRectangle(cornerRadius: DS.rSmall, style: .continuous).fill(DS.raised))
-            .contentShape(Rectangle())
+            .raisedTile(height: 26)
         }
         .buttonStyle(.plain)
         .help(L(help))

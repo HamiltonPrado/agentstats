@@ -5,7 +5,7 @@ struct AgentsView: View {
     @Environment(Monitor.self) private var m
     @AppStorage("agents.showRecent") private var showRecent = false
     @AppStorage("panel.showUsage") private var showUsage = true
-    @AppStorage("panel.showLimits") private var showLimits = true
+    @AppStorage(PrefKey.showLimits) private var showLimits = true
     @AppStorage("panel.showActivity") private var showActivity = true
     @AppStorage("agents.showRecentSection") private var showRecentSection = true
     @AppStorage("agents.showHistorySection") private var showHistorySection = true
@@ -210,7 +210,7 @@ struct EmptyAgents: View {
     var body: some View {
         VStack(spacing: DS.sm) {
             Image(systemName: "moon.zzz")
-                .font(.system(size: 20)).foregroundStyle(Color.text3)
+                .font(.system(size: 20 * TextSize.current.scale)).foregroundStyle(Color.text3)
                 .frame(width: 48, height: 48)
                 .background(Circle().fill(DS.surface))
             Text("Nenhum agente a trabalhar").font(DS.title)

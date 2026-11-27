@@ -41,8 +41,7 @@ enum AppUsage {
 
 @MainActor
 final class AppUsageStore: ObservableObject {
-    static let shared = AppUsageStore(file: FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-        .appendingPathComponent("AgentStats/app-usage.json"))
+    static let shared = AppUsageStore(file: AppPaths.support("app-usage.json"))
     static let enabledKey = "appUsage.enabled"
 
     @Published private(set) var days: [AppUsageDay] = []
@@ -75,7 +74,7 @@ final class AppUsageStore: ObservableObject {
             ws.addObserver(forName: name, object: nil, queue: .main) { _ in MainActor.assumeIsolated { AppUsageStore.shared.pause(false) } }
         }
         // De minuto a minuto: grava e corta o tempo parado.
-        timer = Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { _ in MainActor.assumeIsolated { AppUsageStore.shared.flush() } }
+        timer = Timer.common(withTimeInterval: 60, repeats: true) { _ in MainActor.assumeIsolated { AppUsageStore.shared.flush() } }
         restart()
     }
 

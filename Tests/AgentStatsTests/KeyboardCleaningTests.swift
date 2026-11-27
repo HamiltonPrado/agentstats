@@ -77,10 +77,10 @@ import Testing
     }
 
     @Test func countdownText() {
-        #expect(CleaningScreen.clock(120) == "2:00")
-        #expect(CleaningScreen.clock(59.2) == "1:00")
-        #expect(CleaningScreen.clock(5) == "0:05")
-        #expect(CleaningScreen.clock(-3) == "0:00")
+        #expect(Fmt.clock(120) == "2:00")
+        #expect(Fmt.clock(59.2) == "1:00")
+        #expect(Fmt.clock(5) == "0:05")
+        #expect(Fmt.clock(-3) == "0:00")
     }
 }
 

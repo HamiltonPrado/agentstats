@@ -13,6 +13,16 @@ enum GifMaker {
     }
 
     /// Os instantes das imagens, com o fim limitado.
+    /// As imagens ficam todas em memória até o GIF ser fechado: no total, cerca de 400 MB no máximo.
+    static let memoryBudget = 400_000_000
+
+    /// A largura pedida, e uma altura máxima que cabe no orçamento (os vídeos verticais e longos é que pesam).
+    static func frameSize(maxWidth: Int, frames: Int) -> CGSize {
+        let perFrame = Double(memoryBudget) / Double(max(frames, 1)) / 4   // 4 bytes por píxel
+        let height = min(Double(maxWidth) * 4, perFrame / Double(max(maxWidth, 1)))
+        return CGSize(width: CGFloat(maxWidth), height: CGFloat(max(64, height.rounded(.down))))
+    }
+
     static func times(duration: Double, options: Options) -> [Double] {
         let length = min(max(duration, 0), options.maxSeconds)
         let count = max(1, Int((length * options.fps).rounded(.down)))
@@ -39,12 +49,12 @@ enum GifMaker {
         guard let duration = try? await asset.load(.duration).seconds, duration.isFinite, duration > 0 else { throw Failure.unreadable }
         let generator = AVAssetImageGenerator(asset: asset)
         generator.appliesPreferredTrackTransform = true
-        generator.maximumSize = CGSize(width: options.maxWidth, height: options.maxWidth * 4)
+        let instants = times(duration: duration, options: options)
+        generator.maximumSize = Self.frameSize(maxWidth: options.maxWidth, frames: instants.count)
         let tolerance = CMTime(seconds: 0.5 / options.fps, preferredTimescale: 600)
         generator.requestedTimeToleranceBefore = tolerance
         generator.requestedTimeToleranceAfter = tolerance
 
-        let instants = times(duration: duration, options: options)
         let out = outputURL(for: video)
         guard let dest = CGImageDestinationCreateWithURL(out as CFURL, UTType.gif.identifier as CFString, instants.count, nil) else {
             throw Failure.notWritten

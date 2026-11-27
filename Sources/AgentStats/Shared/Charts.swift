@@ -99,9 +99,5 @@ struct DayChart: View {
         }
     }
 
-    static func hour(_ t: TimeInterval) -> String {
-        let f = DateFormatter()
-        f.dateFormat = "HH:mm"
-        return f.string(from: Date(timeIntervalSince1970: t))
-    }
+    static func hour(_ t: TimeInterval) -> String { Fmt.hm(Date(timeIntervalSince1970: t)) }
 }

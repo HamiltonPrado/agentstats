@@ -82,10 +82,13 @@ final class UpdateStore: ObservableObject {
     func start() {
         guard !demo, timer == nil else { return }
         // Não à pressa no arranque: o resto da app primeiro.
-        timer = Timer.scheduledTimer(withTimeInterval: 3600, repeats: true) { _ in
+        timer = Timer.common(withTimeInterval: 3600, repeats: true) { _ in
             Task { @MainActor in UpdateStore.shared.check() }
         }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 20) { self.check() }
+        Task {
+            try? await Task.sleep(for: .seconds(20))
+            check()
+        }
     }
 
     func check(force: Bool = false) {
@@ -128,8 +131,7 @@ final class UpdateStore: ObservableObject {
     }
 
     func copyBrewCommand() {
-        NSPasteboard.general.clearContents()
-        NSPasteboard.general.setString(UpdateCheck.brewCommand, forType: .string)
+        ClipboardStore.shared.copy(UpdateCheck.brewCommand)
     }
 
     func loadDemo(_ release: Release?) {

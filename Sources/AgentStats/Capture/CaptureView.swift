@@ -30,7 +30,7 @@ struct CaptureView: View {
             Text("Falta a permissão").font(DS.body.weight(.medium))
             note("Autoriza o AgentStats em Privacidade e Segurança → Gravação de ecrã e áudio do sistema (a lista de cima; a do mixer é outra). Depois fecha e volta a abrir o AgentStats.")
             Button("Abrir Definições do Sistema") {
-                open("x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture")
+                SystemSettings.open(.screenCapture)
             }
             .controlSize(.small)
         }
@@ -61,14 +61,8 @@ struct CaptureView: View {
                 action("Cor", "eyedropper") { closePanel(); reading.pickColor() }
             }
             .disabled(reading.busy || store.phase != .idle)
-            HStack(spacing: DS.sm) {
-                Text("Cor em").font(DS.body)
-                Spacer(minLength: DS.sm)
-                Picker("", selection: $reading.colorFormat) { Text("HEX").tag("hex"); Text("RGB").tag("rgb") }
-                    .pickerStyle(.segmented).labelsHidden().frame(width: 110)
-            }
             if let r = reading.result { readingResult(r) }
-            note("Seleciona uma área (ou um ponto, na cor) e o resultado vai para o clipboard. Tudo neste Mac, sem rede.")
+            note("O resultado vai para o clipboard. Tudo neste Mac, sem rede.")
         }
         .cardStyle()
     }
@@ -95,15 +89,27 @@ struct CaptureView: View {
             HStack(spacing: DS.sm) {
                 RoundedRectangle(cornerRadius: 4).fill(Color(hexString: hex)).frame(width: 20, height: 20)
                     .overlay(RoundedRectangle(cornerRadius: 4).stroke(Color.primary.opacity(0.2)))
-                Text(L(hex)).font(DS.body.monospaced()).textSelection(.enabled)
-                Text(L(rgb)).font(DS.meta.monospaced()).foregroundStyle(Color.text2).lineLimit(1)
-                Spacer(minLength: DS.xs)
-                textLink("HEX") { reading.copy(hex) }
-                textLink("RGB") { reading.copy(rgb) }
+                // Clicar num dos formatos copia-o e passa a ser o que a próxima cor copia (era um seletor à parte).
+                colorValue(hex, format: "hex")
+                colorValue(rgb, format: "rgb")
+                Spacer(minLength: 0)
             }
         case .nothing(let why):
             note(why, color: .text2)
         }
+    }
+
+    private func colorValue(_ text: String, format: String) -> some View {
+        let chosen = reading.colorFormat == format
+        return Button {
+            reading.colorFormat = format
+            reading.copy(text)
+        } label: {
+            Text(L(text)).font((chosen ? DS.body : DS.meta).monospaced())
+                .foregroundStyle(chosen ? Color.primary : Color.text2).lineLimit(1)
+        }
+        .buttonStyle(.plain)
+        .help(chosen ? "Copiado. As próximas cores são copiadas neste formato." : "Copiar neste formato (e usá-lo nas próximas cores)")
     }
 
     private var recordingCard: some View {
@@ -127,7 +133,8 @@ struct CaptureView: View {
                 option("Gravar o microfone", $microphone)
                 option("Mostrar os cliques", $clicks)
             }
-            note("O ecrã inteiro guarda em Filmes → AgentStats; para parar, clica no AgentStats na barra de menus. A área abre a ferramenta do macOS, que guarda onde estiver configurada.")
+            note("Para parar, clica no AgentStats na barra de menus.",
+                 more: "O ecrã inteiro guarda em Filmes → AgentStats; para parar, clica no AgentStats na barra de menus. A área abre a ferramenta do macOS, que guarda onde estiver configurada.")
         }
         .cardStyle()
     }
@@ -151,7 +158,7 @@ struct CaptureView: View {
                         IconButton(systemName: "photo.stack", help: "Converter em GIF") { Task { await images.makeGIF(from: file) } }
                     }
                 }
-                IconButton(systemName: "folder", help: "Mostrar no Finder") { NSWorkspace.shared.activateFileViewerSelecting([file]) }
+                IconButton(systemName: "folder", help: "Mostrar no Finder") { Finder.reveal([file]) }
             }
             if let m = images.gifMessage {
                 HStack {
@@ -175,9 +182,7 @@ struct CaptureView: View {
                     .frame(height: 20)
                 Text(L(title)).font(DS.meta).lineLimit(1)
             }
-            .frame(maxWidth: .infinity).frame(height: 56)
-            .background(RoundedRectangle(cornerRadius: DS.rControl, style: .continuous).fill(DS.raised))
-            .contentShape(Rectangle())
+            .raisedTile(height: 56, radius: DS.rControl)
         }
         .buttonStyle(.plain)
         .accessibilityLabel(L(title))
@@ -191,7 +196,4 @@ struct CaptureView: View {
         }
     }
 
-    private func open(_ address: String) {
-        if let url = URL(string: address) { NSWorkspace.shared.open(url) }
-    }
 }

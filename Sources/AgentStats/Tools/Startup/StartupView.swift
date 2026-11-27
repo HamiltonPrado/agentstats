@@ -66,10 +66,7 @@ struct StartupView: View {
         .help(L(item.program ?? item.label))
         .contextMenu {
             Button("Mostrar no Finder") { store.reveal(item) }
-            Button("Copiar label") {
-                NSPasteboard.general.clearContents()
-                NSPasteboard.general.setString(item.label, forType: .string)
-            }
+            Button("Copiar label") { ClipboardStore.shared.copy(item.label) }
         }
     }
 

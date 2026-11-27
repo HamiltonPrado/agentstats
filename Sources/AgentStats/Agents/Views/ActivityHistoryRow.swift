@@ -38,16 +38,21 @@ struct ActivityHistoryRow: View {
         .padding(.horizontal, DS.md).padding(.vertical, DS.sm)
         .background(RoundedRectangle(cornerRadius: DS.rControl, style: .continuous).fill(DS.surface))
         .contentShape(Rectangle())
-        .onTapGesture {
-            if let session = m.sessions.first(where: { $0.id == record.id }) {
-                AppState.controller?.open(session)
-            } else if let cwd = record.cwd {
-                AgentActions.openFolder(cwd)
-            } else if let path = AgentActions.transcriptPath(record.id) {
-                AgentActions.revealTranscript(path)
-            }
-        }
+        .onTapGesture { open() }
         .help("Observada pela primeira vez \(Fmt.ago(record.firstSeen)); duração medida pela app")
         .accessibilityElement(children: .combine)
+        // VoiceOver: a linha abre-se como um botão, igual ao toque.
+        .accessibilityAddTraits(.isButton)
+        .accessibilityAction { open() }
+    }
+
+    private func open() {
+        if let session = m.sessions.first(where: { $0.id == record.id }) {
+            AppState.controller?.open(session)
+        } else if let cwd = record.cwd {
+            AgentActions.openFolder(cwd)
+        } else if let path = AgentActions.transcriptPath(record.id) {
+            AgentActions.revealTranscript(path)
+        }
     }
 }

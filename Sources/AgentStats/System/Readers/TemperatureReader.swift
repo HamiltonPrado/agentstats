@@ -69,8 +69,6 @@ final class TemperatureReader {
         }
     }
 
-    var isAvailable: Bool { !services.isEmpty }
-
     func read() -> TemperatureSample? {
         guard let copyEvent, let getFloat, !services.isEmpty else { return nil }
         var s = TemperatureSample()

@@ -41,7 +41,7 @@ struct DisksView: View {
         }
         .padding(.vertical, DS.xs)
         .contextMenu {
-            Button("Mostrar no Finder") { NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: v.path)]) }
+            Button("Mostrar no Finder") { Finder.reveal(path: v.path) }
         }
     }
 

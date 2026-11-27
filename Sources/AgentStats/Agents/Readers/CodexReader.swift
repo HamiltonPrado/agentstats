@@ -22,17 +22,13 @@ final class CodexReader {
         var detail: String?
         var timestamp: Date?
     }
-    private var tailCache: [String: (mtime: Date, size: UInt64, info: TailInfo)] = [:]
+    private let tailCache = FileCache<TailInfo>()
     private var fallbackCache: [Thread] = []
     private var fallbackAt = Date.distantPast
 
-    private let iso: ISO8601DateFormatter = {
-        let f = ISO8601DateFormatter()
-        f.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-        return f
-    }()
+    private let iso = ISODate.shared
 
-    func sessions(recentWindow: TimeInterval = 20 * 60) -> [AgentSession] {
+    func sessions(recentWindow: TimeInterval = AgentSession.recentWindow) -> [AgentSession] {
         guard FileManager.default.fileExists(atPath: home.path) else { return [] }
         let active = activeThreadIDs()
         var threads = recentThreads()
@@ -178,18 +174,7 @@ final class CodexReader {
     // MARK: Rollout
 
     private func tail(_ path: String, mtime: Date, size: UInt64) -> TailInfo {
-        if let c = tailCache[path], c.mtime == mtime, c.size == size { return c.info }
-        var info = TailInfo()
-        guard let h = FileHandle(forReadingAtPath: path) else { return info }
-        defer { try? h.close() }
-        let chunk: UInt64 = 384 * 1024
-        let start = size > chunk ? size - chunk : 0
-        try? h.seek(toOffset: start)
-        var lines = ((try? h.readToEnd()) ?? Data()).split(separator: UInt8(ascii: "\n"))
-        if start > 0, !lines.isEmpty { lines.removeFirst() }
-        info = parseTail(lines)
-        tailCache[path] = (mtime, size, info)
-        return info
+        tailCache.value(path, mtime: mtime, size: size) { parseTail(TextTail.lines(path, maxBytes: 384 * 1024)) }
     }
 
     /// Interpreta as linhas de um rollout do Codex, da mais recente para trás (testável sem ficheiros).
@@ -238,7 +223,7 @@ final class CodexReader {
                 matched = false
             }
             if matched {
-                if let ts = j["timestamp"] as? String { info.timestamp = iso.date(from: ts) }
+                if let ts = j["timestamp"] as? String { info.timestamp = iso.parse(ts) }
                 break
             }
         }

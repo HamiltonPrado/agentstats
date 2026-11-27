@@ -45,25 +45,11 @@ enum BatteryHistory {
     static let minimumSpan = 7
 
     static var file: URL {
-        FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-            .appendingPathComponent("AgentStats/battery-history.json")
+        AppPaths.support("battery-history.json")
     }
 
-    static func dayString(_ d: Date) -> String {
-        let f = DateFormatter()
-        f.dateFormat = "yyyy-MM-dd"
-        f.locale = Locale(identifier: "en_US_POSIX")
-        f.timeZone = .current
-        return f.string(from: d)
-    }
-
-    static func date(_ day: String) -> Date? {
-        let f = DateFormatter()
-        f.dateFormat = "yyyy-MM-dd"
-        f.locale = Locale(identifier: "en_US_POSIX")
-        f.timeZone = .current
-        return f.date(from: day)
-    }
+    static func dayString(_ d: Date) -> String { DayKey.string(d) }
+    static func date(_ day: String) -> Date? { DayKey.date(day) }
 
     /// Junta a leitura de hoje (substitui a de hoje, se já houver). Os dias mais antigos saem.
     static func recording(_ days: [BatteryDay], health: Double?, cycles: Int, now: Date) -> [BatteryDay] {
@@ -82,16 +68,12 @@ enum BatteryHistory {
     }
 
     static func load(from url: URL = file) -> [BatteryDay] {
-        guard let data = try? Data(contentsOf: url), let days = try? JSONDecoder().decode([BatteryDay].self, from: data) else { return [] }
+        guard case .value(let days) = PrivateFile.load([BatteryDay].self, from: url) else { return [] }
         return days.sorted { $0.day < $1.day }
     }
 
+    /// 400 dias de saúde da bateria: entra nas cópias de segurança (não tem nada sensível), mas só o utilizador lê.
     static func save(_ days: [BatteryDay], to url: URL = file) {
-        do {
-            try FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
-            try JSONEncoder().encode(days).write(to: url, options: .atomic)
-        } catch {
-            Log.readers.error("Não foi possível gravar o histórico da bateria: \(error.localizedDescription, privacy: .public)")
-        }
+        if !PrivateFile.save(days, to: url, backup: true) { Log.readers.error("Não foi possível gravar o histórico da bateria") }
     }
 }

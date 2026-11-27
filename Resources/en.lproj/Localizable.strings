@@ -1,20 +1,16 @@
 /* AgentStats: inglês. Chave = texto em português (a língua de origem). */
 
 " Wh" = " Wh";
-" com agentes a trabalhar" = " while agents are working";
 " de " = " of ";
 " e %lld restos" = " and %lld leftovers";
 " e 1 resto" = " and 1 leftover";
 " em API" = " in API";
-" livre" = " free";
-" livres" = " free";
 " min" = " min";
 " tokens" = " tokens";
 " · app ChatGPT" = " · ChatGPT app";
 " · em curso" = " · in progress";
 " · executor" = " · executor";
 " · fim %@" = " · ended %@";
-" · renova " = " · resets ";
 " · subagente" = " · subagent";
 "% usada e quando renova" = "% used and when it resets";
 "%@ %@ (PID %@)? O que não tiver gravado pode perder-se." = "%@ %@ (PID %@)? Anything unsaved may be lost.";
@@ -58,10 +54,7 @@
 "))) O brew pode atualizar também as dependências." = "))) brew may also update dependencies.";
 ")). Nada é apagado de vez." = ")). Nothing is deleted for good.";
 "). Fecha e tenta outra vez." = "). Close it and try again.";
-", a este ritmo acaba " = ", at this pace it runs out ";
-", antes de renovar" = ", before it resets";
 ", cerca de %@ em API" = ", about %@ in API";
-", renova " = ", resets ";
 ", sem os restos," = ", without the leftovers,";
 "1 hora" = "1 hour";
 "1–9 ou ↑↓ e Enter colam na app onde estavas." = "1–9 or ↑↓ and Enter paste into the app you were using.";
@@ -76,7 +69,6 @@
 "A carregar" = "Loading";
 "A confirmar tamanhos e o que está em uso…" = "Checking sizes and what is in use…";
 "A editar código" = "Editing code";
-"A este ritmo acaba " = "At this pace it runs out ";
 "A executar %@" = "Running %@";
 "A executar tarefas" = "Running tasks";
 "A fechar…" = "Closing…";
@@ -151,7 +143,6 @@
 "Apagar do histórico" = "Delete from history";
 "Apagar o histórico todo?" = "Delete the whole history?";
 "Apagar snippet" = "Delete snippet";
-"Aparência" = "Appearance";
 "Aplica Trabalho ou Monitorização e guarda aqui as alterações feitas." = "Applies Work or Monitoring and saves the changes you make here.";
 "Aplicações" = "Applications";
 "Aponta para uma cópia da app que já não existe" = "Points to a copy of the app that no longer exists";
@@ -168,7 +159,6 @@
 "Atalhos para cada separador" = "Shortcuts for each tab";
 "Ativa" = "Active";
 "Ativar som" = "Unmute";
-"Atividade dos agentes nas últimas 24 horas: " = "Agent activity in the last 24 hours: ";
 "Atividade nas últimas 24 h" = "Activity in the last 24 h";
 "Ativo" = "Active";
 "Atualiza com: %@" = "Update with: %@";
@@ -246,7 +236,6 @@
 "Cor" = "Color";
 "Cor copiada" = "Color copied";
 "Cor de destaque" = "Accent color";
-"Cor em" = "Color as";
 "Corrigir o checkout" = "Fix the checkout";
 "Cortar" = "Cut";
 "Crítica" = "Critical";
@@ -590,7 +579,6 @@
 "Remover %@ com o Homebrew? Não vai para o Lixo." = "Remove %@ with Homebrew? It doesn't go to the Trash.";
 "Remover %@…" = "Remove %@…";
 "Remover não leva dependências nem os dados das apps. O que precisar de password de administrador falha: corre-o no Terminal." = "Removing doesn't take dependencies or app data. Anything that needs an administrator password fails: run it in Terminal.";
-"Renova " = "Resets ";
 "Reparar" = "Repair";
 "Repetir teste" = "Test again";
 "Repor tudo" = "Reset all";
@@ -599,7 +587,6 @@
 "Resumo semanal" = "Weekly summary";
 "Reunião passada para as 15:00, sala 2." = "Meeting moved to 15:00, room 2.";
 "Rever o guia de instalação" = "Review the install guide";
-"Sai sozinho em " = "Leaves on its own in ";
 "Sair da limpeza" = "Leave cleaning";
 "Sair do AgentStats" = "Quit AgentStats";
 "Sair sozinho após" = "Leave on its own after";
@@ -609,7 +596,6 @@
 "Se o AgentStats já aparece ligado, é de uma versão anterior: tira-o da lista com − e volta a juntá-lo." = "If AgentStats already shows as on, it's from an earlier version: remove it from the list with − and add it again.";
 "Segura 2 segundos para sair" = "Hold for 2 seconds to leave";
 "Seguras" = "Safe";
-"Seleciona uma área (ou um ponto, na cor) e o resultado vai para o clipboard. Tudo neste Mac, sem rede." = "Select an area (or a point, for color) and the result goes to the clipboard. All on this Mac, with no network.";
 "Selecionado" = "Selected";
 "Selecionar tudo" = "Select All";
 "Sem código QR" = "No QR code";
@@ -617,7 +603,6 @@
 "Sem nova atividade há %lld min. %@" = "No new activity for %lld min. %@";
 "Sem projeto" = "No project";
 "Sem texto" = "No text";
-"Sem uso há 6 meses" = "Unused for 6 months";
 "Sem áudio" = "No audio";
 "Semana" = "Week";
 "Semana · Opus" = "Week · Opus";
@@ -681,7 +666,6 @@
 "Tokens nesta sessão: %@ · saída %@ · entrada %@ · cache lida %@ · cache escrita %@" = "Tokens in this session: %@ · output %@ · input %@ · cache read %@ · cache write %@";
 "Tokens, custo e projetos da semana, numa notificação" = "The week's tokens, cost and projects, in a notification";
 "Trabalho" = "Work";
-"Trabalhou " = "Worked ";
 "Tudo atualizado" = "Everything up to date";
 "Um ficheiro com as tuas escolhas, sem histórico" = "A file with your choices, without history";
 "Uma app tem a entrada segura ligada (um campo de password ou o Terminal), por isso as teclas passavam. Fecha-a e tenta de novo." = "An app has secure input on (a password field or Terminal), so keys got through. Close it and try again.";
@@ -708,15 +692,11 @@
 "Volume de saída" = "Output volume";
 "a carregar" = "loading";
 "a correr" = "running";
-"agentes ativos " = "agents active ";
 "agora" = "now";
 "amanhã" = "tomorrow";
-"amanhã às " = "tomorrow at ";
 "ao arrancar" = "at startup";
 "arrancar o áudio" = "start audio";
 "arranque ok" = "startup ok";
-"carga " = "load ";
-"comando: " = "command: ";
 "criar o aparelho" = "create the device";
 "criar o tap" = "create the tap";
 "crítico" = "critical";
@@ -739,7 +719,6 @@
 "memória %@" = "memory %@";
 "mesma hora" = "same time";
 "mudou entretanto, não mexi." = "changed in the meantime, left alone.";
-"máximo " = "max ";
 "na bateria" = "on battery";
 "na corrente" = "plugged in";
 "o macOS não deixou mover." = "macOS didn't allow moving it.";
@@ -766,7 +745,6 @@
 "utilização" = "usage";
 "~%@ de %@ %@, estimado a preços de API." = "~%@ of %@ %@, estimated at API prices.";
 "· %lld de %lld" = "· %lld of %lld";
-"· renova " = "· resets ";
 "À escuta" = "Listening";
 "À espera de comandos no terminal" = "Waiting for commands in the terminal";
 "À espera de som" = "Waiting for sound";
@@ -784,7 +762,6 @@
 "Últimas 24 h" = "Last 24 h";
 "Último usado" = "Last used";
 "Últimos 7 dias" = "Last 7 days";
-"às " = "at ";
 "órfãos" = "orphaned";
 "⌘1–7 mudam de separador dentro do painel; ⌘, abre as Definições." = "⌘1–7 switch tabs inside the panel; ⌘, opens Settings.";
 "⌥⌘1 a ⌥⌘%lld, pela ordem acima. Funcionam em qualquer app" = "⌥⌘1 to ⌥⌘%lld, in the order above. They work in any app";
@@ -936,9 +913,9 @@
 "Não consegui partilhar o ficheiro na rede local." = "Couldn't share the file on the local network.";
 "Não estás ligado a nenhuma rede local. Liga o Mac ao mesmo Wi-Fi do telemóvel." = "You're not on a local network. Connect the Mac to the same Wi-Fi as your phone.";
 "O envio falhou. Tenta outra vez." = "Sending failed. Try again.";
-"O telemóvel tem de estar no mesmo Wi-Fi. O link tem um código secreto, serve uma vez e expira em 10 minutos." = "Your phone must be on the same Wi-Fi. The link has a secret code, works once and expires in 10 minutes.";
+"O telemóvel tem de estar no mesmo Wi-Fi. O link tem um código secreto, serve uma vez e expira em %lld minutos. Não é cifrado: usa-o só em redes em que confias." = "Your phone must be on the same Wi-Fi. The link has a secret code, works once and expires in %lld minutes. It isn't encrypted: only use it on networks you trust.";
+"Só dá para enviar ficheiros, não pastas." = "Only files can be sent, not folders.";
 "Organizar a janela da frente" = "Arrange the front window";
-"Os convidados apontam a câmara e entram, sem escrever a password. A password não fica guardada." = "Guests point their camera and join, without typing the password. The password isn't saved.";
 "Password da rede" = "Network password";
 "Próxima reunião" = "Next meeting";
 "Quando" = "When";
@@ -979,8 +956,24 @@
 "O Mac não tem guardada a password de “%@”. Confirma o nome da rede." = "This Mac has no saved password for “%@”. Check the network name.";
 "Não consegui ler a password guardada." = "Couldn't read the saved password.";
 "Esquecer a password" = "Forget the password";
-"Os convidados apontam a câmara e entram, sem escrever a password. A password fica só em memória e é esquecida ao fim de 10 minutos." = "Guests point their camera and join, without typing the password. The password stays in memory only and is forgotten after 10 minutes.";
+"Os convidados apontam a câmara e entram, sem escrever a password. A password fica só em memória e é esquecida ao fim de %lld minutos." = "Guests point their camera and join, without typing the password. The password stays in memory only and is forgotten after %lld minutes.";
 "Manter também o ecrã ligado" = "Also keep the display on";
 "O ecrã não se apaga enquanto o Mac estiver acordado" = "The display doesn't turn off while the Mac is kept awake";
 "Agora: o Mac e o ecrã ficam acordados" = "Now: the Mac and the display stay awake";
 "Agora: o Mac fica acordado; o ecrã pode apagar-se" = "Now: the Mac stays awake; the display may turn off";
+"Este processo é do macOS, de outro utilizador ou da própria AgentStats: não o termino daqui." = "This process belongs to macOS, another user or AgentStats itself: I won't quit it from here.";
+"O processo já tinha terminado. Não mexi em nada." = "The process had already quit. Nothing was changed.";
+"%@ mudou desde a análise. Não mexi; analisa outra vez." = "%@ changed since the scan. Nothing was moved; scan again.";
+"Passaram %lld minutos: o link expirou." = "%lld minutes passed: the link expired.";
+"A password fica só em memória, %lld minutos." = "The password stays in memory only, %lld minutes.";
+"Ações" = "Actions";
+"Copiado. As próximas cores são copiadas neste formato." = "Copied. Next colors are copied in this format.";
+"Copiar neste formato (e usá-lo nas próximas cores)" = "Copy in this format (and use it for next colors)";
+"Medido às %@" = "Measured at %@";
+"No mesmo Wi-Fi. Serve uma vez e expira em %lld minutos." = "Same Wi-Fi only. Works once and expires in %lld minutes.";
+"Para parar, clica no AgentStats na barra de menus." = "To stop, click AgentStats in the menu bar.";
+"Ao fechar o AgentStats, tudo volta a 100%." = "When AgentStats quits, everything goes back to 100%.";
+"Carregar outra vez numa metade alterna entre ½, ⅔ e ⅓." = "Pressing a half again cycles through ½, ⅔ and ⅓.";
+"A cópia fica ao lado do original, sem a localização." = "The copy goes next to the original, without the location.";
+"Na tua pasta pessoal, sem a Library nem o interior das apps." = "In your home folder, without Library or the inside of apps.";
+"O resultado vai para o clipboard. Tudo neste Mac, sem rede." = "The result goes to the clipboard. All on this Mac, offline.";

@@ -57,12 +57,21 @@ final class DisksStore: ObservableObject {
         }
     }
 
+    /// Um volume de rede pendurado pode demorar segundos a responder: lê-se fora do main thread.
     func refresh() {
         guard !demo else { return }
+        Task {
+            let found = await Blocking.run { DisksStore.readVolumes() }
+            volumes = found
+            messages = messages.filter { key, _ in found.contains { $0.path == key } }
+        }
+    }
+
+    nonisolated static func readVolumes() -> [Volume] {
         let keys: [URLResourceKey] = [.volumeNameKey, .volumeIsEjectableKey, .volumeIsRemovableKey, .volumeIsInternalKey,
                                       .volumeIsLocalKey, .volumeIsBrowsableKey, .volumeTotalCapacityKey, .volumeAvailableCapacityKey]
         let urls = FileManager.default.mountedVolumeURLs(includingResourceValuesForKeys: keys, options: [.skipHiddenVolumes]) ?? []
-        volumes = urls.compactMap { url in
+        return urls.compactMap { url in
             guard let v = try? url.resourceValues(forKeys: Set(keys)), v.volumeIsBrowsable != false,
                   DiskRules.isEjectable(path: url.path, ejectable: v.volumeIsEjectable ?? false, removable: v.volumeIsRemovable ?? false,
                                         onInternalDisk: v.volumeIsInternal ?? true, local: v.volumeIsLocal ?? true) else { return nil }
@@ -72,7 +81,6 @@ final class DisksStore: ObservableObject {
                           network: v.volumeIsLocal == false)
         }
         .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
-        messages = messages.filter { key, _ in volumes.contains { $0.path == key } }
     }
 
     func eject(_ v: Volume) async {
@@ -80,14 +88,14 @@ final class DisksStore: ObservableObject {
         ejecting.insert(v.path)
         messages[v.path] = nil
         let url = URL(fileURLWithPath: v.path)
-        let error: String? = await Task.detached {
+        let error: String? = await Blocking.run {
             do {
                 try NSWorkspace.shared.unmountAndEjectDevice(at: url)
                 return nil
             } catch {
                 return error.localizedDescription
             }
-        }.value
+        }
         if error != nil {
             // Quem está a usá-lo: é o que se quer saber quando o macOS só diz "em uso".
             let found = await ToolRunner.run("/usr/sbin/lsof", ["-F", "pc", v.path], timeout: 20)

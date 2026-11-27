@@ -128,7 +128,8 @@ struct MixerCard: View {
                 if mixer.rows.contains(where: { $0.status == .noSignal }) {
                     permissionHelp
                 } else {
-                    note("Ajustar uma app pede permissão para gravar o áudio do sistema; nada é gravado nem enviado. Ao fechar o AgentStats, tudo volta a 100%.")
+                    note("Ao fechar o AgentStats, tudo volta a 100%.",
+                         more: "Ajustar uma app pede permissão para gravar o áudio do sistema; nada é gravado nem enviado. Ao fechar o AgentStats, tudo volta a 100%.")
                 }
             }
         }
@@ -146,9 +147,7 @@ struct MixerCard: View {
         VStack(alignment: .leading, spacing: DS.sm) {
             note("Só chega silêncio, por isso não mexi no som dessa app. Se ela está mesmo a tocar, autoriza o AgentStats em Privacidade e Segurança → Gravação de ecrã e áudio do sistema. Vídeo protegido (DRM) pode não deixar ajustar.")
             Button("Abrir Definições do Sistema") {
-                if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture") {
-                    NSWorkspace.shared.open(url)
-                }
+                SystemSettings.open(.screenCapture)
             }
             .controlSize(.small)
         }

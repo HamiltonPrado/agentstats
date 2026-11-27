@@ -1,7 +1,5 @@
 import Foundation
-import Combine
 import IOKit.pwr_mgt
-import CoreAudio
 
 @MainActor
 final class KeepAwakeController {
@@ -59,7 +57,7 @@ final class KeepAwakeController {
     }
 
     private func schedule(minutes: Double) {
-        timeout = Timer.scheduledTimer(withTimeInterval: minutes * 60, repeats: false) { [weak self] _ in
+        timeout = Timer.common(withTimeInterval: minutes * 60, repeats: false) { [weak self] _ in
             Task { @MainActor in
                 self?.setEnabled(false, minutes: 0)
                 self?.onTimeout?()

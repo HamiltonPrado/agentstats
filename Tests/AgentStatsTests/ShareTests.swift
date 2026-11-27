@@ -1,4 +1,5 @@
 import Foundation
+import Network
 import Testing
 @testable import AgentStats
 
@@ -74,5 +75,51 @@ struct ShareTests {
         let (again, r2) = try await session.data(from: URL(string: "\(base)/\(server.token)/nota.txt")!)
         #expect((r2 as? HTTPURLResponse)?.statusCode == 200 && again == body)
         server.stop()
+    }
+    @Test func requestLineNeedsTheWholeLine() {
+        #expect(FileDrop.requestLine(Data("GET /abc/x HTT".utf8)) == nil)
+        #expect(FileDrop.requestLine(Data("GET /abc/x HTTP/1.1\r\nHost: y\r\n".utf8)) == "GET /abc/x HTTP/1.1")
+    }
+
+    /// O Parar fecha também as ligações abertas, e um pedido partido em dois pacotes ainda é servido.
+    @Test func stopClosesOpenConnectionsAndSplitRequestsWork() async throws {
+        let dir = FileManager.default.temporaryDirectory.appendingPathComponent("drop-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let file = dir.appendingPathComponent("a.txt")
+        try Data("ola".utf8).write(to: file)
+        let server = FileDropServer(file: file, host: "127.0.0.1") { _ in }
+        let port = try #require(await server.start())
+
+        // Um pedido em dois bocados
+        let conn = NWConnection(host: "127.0.0.1", port: NWEndpoint.Port(rawValue: port)!, using: .tcp)
+        let q = DispatchQueue(label: "test")
+        conn.start(queue: q)
+        conn.send(content: Data("GET /\(server.token)/a.txt".utf8), completion: .contentProcessed { _ in })
+        try await Task.sleep(for: .milliseconds(100))
+        conn.send(content: Data(" HTTP/1.1\r\n\r\n".utf8), completion: .contentProcessed { _ in })
+        let reply: Data = await withCheckedContinuation { c in
+            conn.receive(minimumIncompleteLength: 1, maximumLength: 65_536) { data, _, _, _ in c.resume(returning: data ?? Data()) }
+        }
+        #expect(String(decoding: reply, as: UTF8.self).hasPrefix("HTTP/1.1 200"))
+        conn.cancel()
+
+        // Uma ligação que não diz nada é fechada pelo Parar
+        let idle = NWConnection(host: "127.0.0.1", port: NWEndpoint.Port(rawValue: port)!, using: .tcp)
+        let closed = AsyncStream<Void>.makeStream()
+        idle.stateUpdateHandler = { if case .ready = $0 { idle.receive(minimumIncompleteLength: 1, maximumLength: 10) { _, _, done, err in if done || err != nil { closed.continuation.yield() } } } }
+        idle.start(queue: q)
+        try await Task.sleep(for: .milliseconds(200))
+        server.stop()
+        var it = closed.stream.makeAsyncIterator()
+        _ = await it.next()
+        idle.cancel()
+    }
+
+    /// Parado antes de abrir: quem espera pela porta recebe nil, em vez de ficar à espera para sempre.
+    @Test func stoppedBeforeStartReturnsNil() async {
+        let server = FileDropServer(file: URL(fileURLWithPath: "/dev/null")) { _ in }
+        server.stop()
+        #expect(await server.start() == nil)
     }
 }

@@ -7,6 +7,19 @@ import UniformTypeIdentifiers
 enum FileDrop {
     static let lifetime: TimeInterval = 10 * 60
     static let chunk = 1 << 20
+    /// Ligações abertas ao mesmo tempo: um telemóvel usa uma ou duas; o resto é ruído (ou abuso) da rede.
+    static let maxConnections = 8
+    /// Tempo para chegar a linha do pedido, e tempo máximo sem progresso durante o envio.
+    static let requestTimeout: TimeInterval = 10
+    static let stallTimeout: TimeInterval = 30
+    /// A linha do pedido nunca é maior do que isto (o caminho é o código mais o nome).
+    static let maxRequest = 8 * 1024
+
+    /// A primeira linha de um pedido HTTP, quando já chegou inteira.
+    static func requestLine(_ buffer: Data) -> String? {
+        guard let end = buffer.range(of: Data("\r\n".utf8)) else { return nil }
+        return String(decoding: buffer[buffer.startIndex..<end.lowerBound], as: UTF8.self)
+    }
 
     /// 128 bits aleatórios, em hexadecimal: impossível de adivinhar na rede local.
     static func token() -> String {
@@ -55,23 +68,7 @@ enum FileDrop {
 
     /// O IPv4 da rede local (Wi-Fi ou cabo), onde o telemóvel chega.
     static func localAddress() -> String? {
-        var ifaddr: UnsafeMutablePointer<ifaddrs>?
-        guard getifaddrs(&ifaddr) == 0 else { return nil }
-        defer { freeifaddrs(ifaddr) }
-        var found: [(String, String)] = []
-        var p = ifaddr
-        while let a = p {
-            let i = a.pointee
-            if let addr = i.ifa_addr, Int32(addr.pointee.sa_family) == AF_INET, (i.ifa_flags & UInt32(IFF_UP)) != 0,
-               (i.ifa_flags & UInt32(IFF_LOOPBACK)) == 0 {
-                var host = [CChar](repeating: 0, count: Int(NI_MAXHOST))
-                if getnameinfo(addr, socklen_t(addr.pointee.sa_len), &host, socklen_t(host.count), nil, 0, NI_NUMERICHOST) == 0 {
-                    found.append((String(cString: i.ifa_name), Sys.string(host)))
-                }
-            }
-            p = i.ifa_next
-        }
-        return preferred(found)
+        preferred(Interfaces.ipv4().filter { !$0.loopback }.map { ($0.name, $0.ip) })
     }
 
     /// en0, en1… antes de túneis (VPN) e endereços de ligação local.
@@ -87,8 +84,12 @@ final class FileDropServer: @unchecked Sendable {
 
     let file: URL
     let token = FileDrop.token()
+    /// O endereço onde escuta (o da rede local que o URL anuncia); nil = todos.
+    private let host: String?
     private let queue = DispatchQueue(label: "agentstats.filedrop")
     private var listener: NWListener?
+    /// As ligações abertas, para as fechar todas no fim (e não as deixar a enviar depois do Parar).
+    private var connections: [ObjectIdentifier: NWConnection] = [:]
     /// O primeiro aparelho que pediu o ficheiro: os outros ficam de fora.
     private var firstClient: String?
     private var deliveredAt: Date?
@@ -99,16 +100,24 @@ final class FileDropServer: @unchecked Sendable {
     private let started = Date()
     private let onEnd: @Sendable (End) -> Void
 
-    init(file: URL, onEnd: @escaping @Sendable (End) -> Void) {
+    init(file: URL, host: String? = nil, onEnd: @escaping @Sendable (End) -> Void) {
         self.file = file
+        self.host = host
         self.onEnd = onEnd
+    }
+
+    private func parameters() -> NWParameters {
+        let p = NWParameters.tcp
+        // Só no endereço da rede local: nem na VPN, nem noutras interfaces.
+        if let host { p.requiredLocalEndpoint = .hostPort(host: NWEndpoint.Host(host), port: .any) }
+        return p
     }
 
     /// Devolve a porta, ou nil se não conseguir abrir.
     func start() async -> UInt16? {
         await withCheckedContinuation { (cont: CheckedContinuation<UInt16?, Never>) in
             queue.async {
-                guard let l = try? NWListener(using: .tcp, on: .any) else { cont.resume(returning: nil); return }
+                guard !self.closed, let l = try? NWListener(using: self.parameters()) else { cont.resume(returning: nil); return }
                 self.listener = l
                 self.ready = cont
                 l.stateUpdateHandler = { state in
@@ -123,6 +132,10 @@ final class FileDropServer: @unchecked Sendable {
                         } else {
                             self.finish(.failed(e.localizedDescription))
                         }
+                    case .waiting(let e):
+                        // Sem rede utilizável: não fica à espera para sempre.
+                        guard self.ready != nil else { break }
+                        self.finish(.failed(e.localizedDescription))
                     default: break
                     }
                 }
@@ -152,24 +165,57 @@ final class FileDropServer: @unchecked Sendable {
         closed = true
         listener?.cancel()
         listener = nil
+        for conn in connections.values { conn.cancel() }
+        connections = [:]
+        // Fechado antes de estar pronto: quem espera pela porta recebe nil.
+        ready?.resume(returning: nil)
+        ready = nil
     }
 
     private func handle(_ conn: NWConnection) {
+        guard !closed, connections.count < FileDrop.maxConnections else { conn.cancel(); return }
+        let id = ObjectIdentifier(conn)
+        connections[id] = conn
+        conn.stateUpdateHandler = { state in
+            switch state {
+            case .cancelled, .failed: self.connections[id] = nil
+            default: break
+            }
+        }
         conn.start(queue: queue)
         let client: String = {
             if case .hostPort(let host, _) = conn.endpoint { return "\(host)" }
             return "?"
         }()
-        conn.receive(minimumIncompleteLength: 1, maximumLength: 16_384) { data, _, _, _ in
-            let line = data.flatMap { String(data: $0, encoding: .utf8) }?.components(separatedBy: "\r\n").first ?? ""
-            switch FileDrop.decide(requestLine: line, token: self.token, client: client, firstClient: self.firstClient,
-                                   deliveredAt: self.deliveredAt, closed: self.closed, now: Date(), started: self.started) {
-            case .notFound: self.reply(conn, FileDrop.status(404, "Not Found"))
-            case .gone: self.reply(conn, FileDrop.status(410, "Gone"))
-            case .serve:
-                if self.firstClient == nil { self.firstClient = client }
-                self.send(conn)
-            }
+        // Quem abre e não diz nada é fechado.
+        let answered = Flag()
+        queue.asyncAfter(deadline: .now() + FileDrop.requestTimeout) { if !answered.value { conn.cancel() } }
+        readRequest(conn, Data()) { line in
+            answered.value = true
+            guard let line else { conn.cancel(); return }
+            self.answer(conn, line: line, client: client)
+        }
+    }
+
+    /// Junta os bocados até chegar a linha do pedido inteira (pode vir em vários pacotes).
+    private func readRequest(_ conn: NWConnection, _ buffer: Data, _ done: @escaping @Sendable (String?) -> Void) {
+        conn.receive(minimumIncompleteLength: 1, maximumLength: 16_384) { data, _, isComplete, error in
+            var buffer = buffer
+            if let data { buffer.append(data) }
+            if let line = FileDrop.requestLine(buffer) { return done(line) }
+            if error != nil || isComplete || buffer.count > FileDrop.maxRequest { return done(nil) }
+            self.readRequest(conn, buffer, done)
+        }
+    }
+
+    private func answer(_ conn: NWConnection, line: String, client: String) {
+        switch FileDrop.decide(requestLine: line, token: token, client: client, firstClient: firstClient,
+                               deliveredAt: deliveredAt, closed: closed, now: Date(), started: started) {
+        case .notFound: reply(conn, FileDrop.status(404, "Not Found"))
+        case .gone: reply(conn, FileDrop.status(410, "Gone"))
+        case .serve:
+            if firstClient == nil { firstClient = client }
+            send(conn)
         }
     }
 
@@ -178,14 +224,15 @@ final class FileDropServer: @unchecked Sendable {
     }
 
     private func send(_ conn: NWConnection) {
-        guard let handle = try? FileHandle(forReadingFrom: file) else {
+        let regular = (try? file.resourceValues(forKeys: [.isRegularFileKey]).isRegularFile) == true
+        guard regular, let handle = try? FileHandle(forReadingFrom: file) else {
             reply(conn, FileDrop.status(404, "Not Found"))
             finish(.failed("unreadable"))
             return
         }
         let size = Int64((try? file.resourceValues(forKeys: [.fileSizeKey]).fileSize) ?? 0)
         conn.send(content: FileDrop.header(fileName: file.lastPathComponent, size: size), completion: .contentProcessed { _ in })
-        Transfer(conn: conn, handle: handle) { [self] complete in
+        Transfer(conn: conn, handle: handle, queue: queue) { [self] complete in
             // Uma transferência cancelada a meio não mata o link: pode tentar-se outra vez.
             guard complete, deliveredAt == nil else { return }
             deliveredAt = Date()
@@ -194,36 +241,55 @@ final class FileDropServer: @unchecked Sendable {
         }.next()
     }
 
+    /// Só lido e escrito na fila do servidor.
+    private final class Flag: @unchecked Sendable { var value = false }
+
     /// Envia o ficheiro aos bocados, um a seguir ao outro, na fila do servidor.
     private final class Transfer: @unchecked Sendable {
         let conn: NWConnection
         let handle: FileHandle
+        let queue: DispatchQueue
         let done: (Bool) -> Void
+        /// Conta os bocados enviados: se não mexer durante `stallTimeout`, o outro lado parou de ler.
+        private var progress = 0
+        private var finished = false
 
-        init(conn: NWConnection, handle: FileHandle, done: @escaping (Bool) -> Void) {
+        init(conn: NWConnection, handle: FileHandle, queue: DispatchQueue, done: @escaping (Bool) -> Void) {
             self.conn = conn
             self.handle = handle
+            self.queue = queue
             self.done = done
         }
 
+        private func watch() {
+            let seen = progress
+            queue.asyncAfter(deadline: .now() + FileDrop.stallTimeout) {
+                guard !self.finished, self.progress == seen else { return }
+                self.end(false)
+            }
+        }
+
+        private func end(_ complete: Bool) {
+            guard !finished else { return }
+            finished = true
+            try? handle.close()
+            conn.cancel()
+            done(complete)
+        }
+
         func next() {
+            guard !finished else { return }
+            progress += 1
+            watch()
             let data = (try? handle.read(upToCount: FileDrop.chunk)) ?? Data()
             if data.isEmpty {
-                try? handle.close()
                 conn.send(content: nil, contentContext: .finalMessage, isComplete: true, completion: .contentProcessed { error in
-                    self.conn.cancel()
-                    self.done(error == nil)
+                    self.end(error == nil)
                 })
                 return
             }
             conn.send(content: data, completion: .contentProcessed { error in
-                if error != nil {
-                    try? self.handle.close()
-                    self.conn.cancel()
-                    self.done(false)
-                } else {
-                    self.next()
-                }
+                if error != nil { self.end(false) } else { self.next() }
             })
         }
     }

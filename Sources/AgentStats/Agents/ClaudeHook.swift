@@ -21,12 +21,28 @@ enum ClaudeHook {
 
     static let marker = "--hook"
 
+    /// Troca o ficheiro de uma vez (nunca fica meio escrito), com o ficheiro novo já nascido com `mode`.
+    static func write(_ data: Data, to url: URL, mode: Int16) throws {
+        let fm = FileManager.default
+        let temp = url.deletingLastPathComponent().appendingPathComponent(".\(url.lastPathComponent).\(UUID().uuidString)")
+        guard fm.createFile(atPath: temp.path, contents: data, attributes: [.posixPermissions: mode]) else {
+            throw Failure.notSaved
+        }
+        guard rename(temp.path, url.path) == 0 else {
+            try? fm.removeItem(at: temp)
+            throw Failure.notSaved
+        }
+    }
+
     static func command(executable: String) -> String {
         "'" + executable.replacingOccurrences(of: "'", with: "'\\''") + "' \(marker) 2>/dev/null || true"
     }
 
+    /// Nosso é o comando que corre o executável de uma AgentStats (mesmo com o pacote renomeado) com `--hook`.
+    /// Um hook do utilizador que só mencione as duas palavras não é apagado ao desligar.
     static func isOurs(_ command: String) -> Bool {
-        command.contains("AgentStats") && command.contains(marker)
+        guard let exe = executable(in: command) else { return false }
+        return exe.hasSuffix("/Contents/MacOS/AgentStats")
     }
 
     /// O executável a que um comando nosso aponta, com ou sem aspas.
@@ -122,6 +138,17 @@ final class ClaudeHookStore: ObservableObject {
         case .failure: state = claude ? .unreadable : .noClaude
         case .success(let json): state = ClaudeHook.state(settings: json, claudeExists: claude, exists: environment.exists)
         }
+        forgetEventsIfOff()
+    }
+
+    /// A pasta de eventos é o que diz aos leitores que o hook está ligado. Sem hook (desligado, ou a apontar para
+    /// uma app que já não existe) tem de desaparecer, senão a deteção pelos processos nunca mais volta.
+    private func forgetEventsIfOff() {
+        switch state {
+        case .off, .stale, .noClaude:
+            try? FileManager.default.removeItem(at: environment.claudeDir.appendingPathComponent("agentstats/events"))
+        case .on, .unreadable: break
+        }
     }
 
     func set(_ on: Bool) {
@@ -137,12 +164,15 @@ final class ClaudeHookStore: ObservableObject {
         let after = on ? ClaudeHook.installing(before, executable: environment.executable) : ClaudeHook.removing(before)
         do {
             try FileManager.default.createDirectory(at: environment.claudeDir, withIntermediateDirectories: true)
-            // A cópia é do ficheiro tal como estava, byte a byte.
+            // A cópia é do ficheiro tal como estava, byte a byte, e só o utilizador a lê (pode ter chaves em `env`).
             if current != nil, let original = try? Data(contentsOf: file) {
-                try original.write(to: environment.claudeDir.appendingPathComponent("settings.json.agentstats-backup"), options: .atomic)
+                try ClaudeHook.write(original, to: environment.claudeDir.appendingPathComponent("settings.json.agentstats-backup"), mode: 0o600)
             }
             let data = try JSONSerialization.data(withJSONObject: after, options: [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes])
-            try data.write(to: file, options: .atomic)
+            // Num symlink (dotfiles) escreve-se no ficheiro real, e as permissões ficam as que eram.
+            let target = file.resolvingSymlinksInPath()
+            let mode = ((try? FileManager.default.attributesOfItem(atPath: target.path))?[.posixPermissions] as? NSNumber)?.int16Value ?? 0o644
+            try ClaudeHook.write(data, to: target, mode: mode)
         } catch {
             message = "Não consegui gravar o ~/.claude/settings.json."
         }

@@ -8,6 +8,8 @@ struct BigFile: Identifiable, Equatable, Sendable {
     let size: UInt64
     let modified: Date
     var lastUsed: Date?
+    /// O ficheiro visto na análise: ir para o Lixo só se ainda for esse (não um que o substituiu entretanto).
+    var signature: UninstallRules.Signature? = nil
     var name: String { (path as NSString).lastPathComponent }
     /// A última vez que se lhe mexeu ou que foi aberto.
     var lastTouched: Date { max(modified, lastUsed ?? .distantPast) }
@@ -54,7 +56,8 @@ enum LargeFilesRules {
             guard v.isRegularFile == true, v.isSymbolicLink != true else { continue }
             let size = UInt64(v.totalFileAllocatedSize ?? v.fileSize ?? 0)
             guard size >= minSize else { continue }
-            found.append(BigFile(path: url.path, size: size, modified: v.contentModificationDate ?? .distantPast))
+            found.append(BigFile(path: url.path, size: size, modified: v.contentModificationDate ?? .distantPast,
+                                 signature: UninstallRules.signature(url.path)))
         }
         found.sort { $0.size > $1.size }
         return Array(found.prefix(limit)).map { f in
@@ -96,7 +99,7 @@ final class LargeFilesStore: ObservableObject {
         scanning = true
         message = nil
         let home = FileManager.default.homeDirectoryForCurrentUser
-        files = await Task.detached(priority: .utility) { LargeFilesRules.scan(home: home) }.value
+        files = await Blocking.run(qos: .utility) { LargeFilesRules.scan(home: home) }
         scannedAt = Date()
         scanning = false
     }
@@ -104,8 +107,14 @@ final class LargeFilesStore: ObservableObject {
     func trash(_ f: BigFile) {
         confirming = nil
         guard !demo else { return }
+        let url = URL(fileURLWithPath: f.path)
+        let modified = (try? url.resourceValues(forKeys: [.contentModificationDateKey]))?.contentModificationDate
+        guard let expected = f.signature, UninstallRules.signature(f.path) == expected, modified == f.modified else {
+            message = String(localized: "\(f.name) mudou desde a análise. Não mexi; analisa outra vez.")
+            return
+        }
         do {
-            try FileManager.default.trashItem(at: URL(fileURLWithPath: f.path), resultingItemURL: nil)
+            try FileManager.default.trashItem(at: url, resultingItemURL: nil)
             files.removeAll { $0.id == f.id }
             message = String(localized: "\(f.name) foi para o Lixo. O espaço fica livre quando o esvaziares.")
         } catch {
@@ -114,7 +123,7 @@ final class LargeFilesStore: ObservableObject {
     }
 
     func reveal(_ f: BigFile) {
-        NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: f.path)])
+        Finder.reveal(path: f.path)
     }
 
     func loadDemo(now: Date = Date()) {

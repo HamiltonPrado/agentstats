@@ -38,10 +38,10 @@ struct TimeTests {
     }
 
     @Test func clockText() {
-        #expect(TimerPlan.clock(0) == "0:00")
-        #expect(TimerPlan.clock(59.2) == "1:00")
-        #expect(TimerPlan.clock(25 * 60) == "25:00")
-        #expect(TimerPlan.clock(3725) == "1:02:05")
+        #expect(Fmt.clock(0) == "0:00")
+        #expect(Fmt.clock(59.2) == "1:00")
+        #expect(Fmt.clock(25 * 60) == "25:00")
+        #expect(Fmt.clock(3725) == "1:02:05")
     }
 
     @Test func worldClock() {
@@ -137,6 +137,12 @@ struct URLCommandTests {
         #expect(cmd("agentstats://usage/copy") == .copyUsage)
         #expect(cmd("agentstats://apagar/tudo") == nil)
         #expect(cmd("https://open/system") == nil)
+    }
+
+    /// Um link de uma página qualquer com chaves repetidas não pode deitar a app abaixo.
+    @Test func repeatedKeysKeepTheFirst() {
+        #expect(cmd("agentstats://timer?minutes=5&minutes=6") == .timer(minutes: 5))
+        #expect(cmd("agentstats://open?Tab=time&tab=system") == .open(.time))
     }
 
     @Test func usageText() {

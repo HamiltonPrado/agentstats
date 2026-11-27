@@ -10,8 +10,12 @@ BUILD_NUMBER="${BUILD_NUMBER:-1}"
 swift build -c release
 BIN="$(swift build -c release --show-bin-path)/AgentStats"
 
-APP="build/AgentStats.app"
-rm -rf "$APP"
+OUT="build/AgentStats.app"
+# Monta e assina numa pasta temporária: numa pasta sincronizada (iCloud) o macOS junta atributos ao pacote
+# enquanto se escreve, e o codesign recusa-os ("detritus not allowed"). Só no fim é copiado para build/.
+STAGE="$(mktemp -d)"
+trap 'rm -rf "$STAGE"' EXIT
+APP="$STAGE/AgentStats.app"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 cp "$BIN" "$APP/Contents/MacOS/AgentStats"
 
@@ -59,5 +63,10 @@ cat > "$APP/Contents/Info.plist" <<PLIST
 </plist>
 PLIST
 
+# Atributos estendidos copiados das fontes (quarentena, File Provider do iCloud) impedem a assinatura.
+xattr -cr "$APP"
 Scripts/sign.sh "$APP"
-echo "✅ Criado: $PWD/$APP (versão $VERSION)"
+rm -rf "$OUT"
+mkdir -p build
+ditto --noextattr "$APP" "$OUT"
+echo "✅ Criado: $PWD/$OUT (versão $VERSION)"

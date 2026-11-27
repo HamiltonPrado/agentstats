@@ -5,7 +5,7 @@ import IOKit
 enum BatteryReader {
     /// `SystemLoad` vem em miliwatts. Zero ou valores impossíveis num portátil contam como "sem leitura".
     static func systemWatts(telemetry: [String: Any]?) -> Double? {
-        guard let mw = Sys.number(telemetry?["SystemLoad"])?.doubleValue, mw > 0, mw < 500_000 else { return nil }
+        guard let mw = (telemetry?["SystemLoad"] as? NSNumber)?.doubleValue, mw > 0, mw < 500_000 else { return nil }
         return mw / 1000
     }
 
@@ -13,8 +13,8 @@ enum BatteryReader {
     /// a nominal é a que se aproxima da "Capacidade máxima" das Definições do Sistema.
     static func health(properties: [String: Any]) -> Double? {
         func ratio(_ dict: [String: Any], _ keys: [String]) -> Double? {
-            guard let design = Sys.number(dict["DesignCapacity"])?.doubleValue, design > 0,
-                  let full = keys.lazy.compactMap({ Sys.number(dict[$0])?.doubleValue }).first, full > 0 else { return nil }
+            guard let design = (dict["DesignCapacity"] as? NSNumber)?.doubleValue, design > 0,
+                  let full = keys.lazy.compactMap({ (dict[$0] as? NSNumber)?.doubleValue }).first, full > 0 else { return nil }
             return Swift.min(full / design, 1)
         }
         if let top = ratio(properties, ["AppleRawMaxCapacity", "NominalChargeCapacity"]) { return top }
@@ -31,16 +31,16 @@ enum BatteryReader {
               let dict = props?.takeRetainedValue() as? [String: Any] else { return nil }
 
         var b = BatterySample()
-        let cur = Sys.number(dict["CurrentCapacity"])?.doubleValue ?? 0
-        let max = Sys.number(dict["MaxCapacity"])?.doubleValue ?? 100
+        let cur = (dict["CurrentCapacity"] as? NSNumber)?.doubleValue ?? 0
+        let max = (dict["MaxCapacity"] as? NSNumber)?.doubleValue ?? 100
         b.percent = max > 0 ? min(cur / max, 1) : 0
         b.isCharging = (dict["IsCharging"] as? Bool) ?? false
         b.externalPower = (dict["ExternalConnected"] as? Bool) ?? false
-        if let t = Sys.number(dict["TimeRemaining"])?.intValue, t > 0, t < 65535 { b.minutesRemaining = t }
-        b.cycles = Sys.number(dict["CycleCount"])?.intValue ?? 0
+        if let t = (dict["TimeRemaining"] as? NSNumber)?.intValue, t > 0, t < 65535 { b.minutesRemaining = t }
+        b.cycles = (dict["CycleCount"] as? NSNumber)?.intValue ?? 0
         b.health = health(properties: dict)
-        if let t = Sys.number(dict["Temperature"])?.doubleValue { b.temperature = t / 100 }
-        if let mv = Sys.number(dict["Voltage"])?.int64Value, let ma = Sys.number(dict["Amperage"])?.int64Value {
+        if let t = (dict["Temperature"] as? NSNumber)?.doubleValue { b.temperature = t / 100 }
+        if let mv = (dict["Voltage"] as? NSNumber)?.int64Value, let ma = (dict["Amperage"] as? NSNumber)?.int64Value {
             let amps = Double(Int32(truncatingIfNeeded: ma)) / 1000
             b.watts = abs(Double(mv) / 1000 * amps)
         }

@@ -3,45 +3,45 @@ import ServiceManagement
 
 struct SettingsView: View {
     @Environment(Monitor.self) private var m
-    @AppStorage("bar.agents") var showAgents = true
-    @AppStorage("bar.cpu") var showCPU = true
-    @AppStorage("bar.ram") var showRAM = true
-    @AppStorage("bar.temp") var showTemp = true
-    @AppStorage("bar.gpu") var showGPU = false
-    @AppStorage("bar.net") var showNet = true
-    @AppStorage("bar.battery") var showBattery = false
-    @AppStorage(MenuBarDrawer.metricOrderKey) private var barOrder = "agents,cpu,ram,gpu,temp,net,battery"
-    @AppStorage("panel.showUsage") private var showUsage = true
-    @AppStorage("panel.showLimits") private var showLimits = true
-    @AppStorage("panel.showActivity") private var showActivity = true
-    @AppStorage("agents.showRecentSection") private var showRecentSection = true
-    @AppStorage("agents.showHistorySection") private var showHistorySection = true
-    @AppStorage("panel.density") private var densityRawValue = PanelDensity.normal.rawValue
-    @AppStorage("appearance.theme") private var appearanceThemeRaw = PanelTheme.system.rawValue
-    @AppStorage("appearance.accentHex") private var accentHex = "#0A84FF"
-    @AppStorage("profiles.active") private var activeProfile = "custom"
-    @AppStorage("profiles.work") private var workProfileData = ""
-    @AppStorage("profiles.monitoring") private var monitoringProfileData = ""
+    @AppStorage(MenuBarMetric.agents.key) var showAgents = MenuBarMetric.agents.defaultOn
+    @AppStorage(MenuBarMetric.cpu.key) var showCPU = MenuBarMetric.cpu.defaultOn
+    @AppStorage(MenuBarMetric.ram.key) var showRAM = MenuBarMetric.ram.defaultOn
+    @AppStorage(MenuBarMetric.temp.key) var showTemp = MenuBarMetric.temp.defaultOn
+    @AppStorage(MenuBarMetric.gpu.key) var showGPU = MenuBarMetric.gpu.defaultOn
+    @AppStorage(MenuBarMetric.net.key) var showNet = MenuBarMetric.net.defaultOn
+    @AppStorage(MenuBarMetric.battery.key) var showBattery = MenuBarMetric.battery.defaultOn
+    @AppStorage(MenuBarDrawer.metricOrderKey) var barOrder = MenuBarMetric.defaultOrder
+    @AppStorage("panel.showUsage") var showUsage = true
+    @AppStorage(PrefKey.showLimits) var showLimits = true
+    @AppStorage("panel.showActivity") var showActivity = true
+    @AppStorage("agents.showRecentSection") var showRecentSection = true
+    @AppStorage("agents.showHistorySection") var showHistorySection = true
+    @AppStorage("panel.density") var densityRawValue = PanelDensity.normal.rawValue
+    @AppStorage("appearance.theme") var appearanceThemeRaw = PanelTheme.system.rawValue
+    @AppStorage(PrefKey.accentHex) var accentHex = PrefKey.defaultAccentHex
+    @AppStorage("profiles.active") var activeProfile = "custom"
+    @AppStorage("profiles.work") var workProfileData = ""
+    @AppStorage("profiles.monitoring") var monitoringProfileData = ""
     @AppStorage(GlobalHotKey.defaultsKey) var hotkey = GlobalHotKey.defaultPreset
-    @AppStorage(MicMute.hotkeyKey) private var micHotkey = MicMute.defaultPreset
-    @AppStorage(ShortcutsOverlay.holdKey) private var holdCommand = true
-    @AppStorage("settings.section") private var sectionRaw = SettingsSection.general.rawValue
-    @AppStorage(MenuBarStyle.defaultsKey) private var barStyle = MenuBarStyle.labeled.rawValue
-    @AppStorage(MenuBarDrawer.colorDotKey) private var colorDot = false
-    @AppStorage(PanelWidth.defaultsKey) private var panelWidth = PanelWidth.normal.rawValue
-    @AppStorage(TextSize.defaultsKey) private var textSize = TextSize.normal.rawValue
-    @AppStorage(TabLayout.orderKey) private var tabOrder = ""
-    @AppStorage(TabLayout.hiddenKey) private var hiddenTabs = ""
-    @AppStorage(TabLayout.startKey) private var startTab = TabLayout.lastUsed
-    @AppStorage(TabLayout.shortcutsKey) private var tabShortcuts = false
-    @ObservedObject private var hook = ClaudeHookStore.shared
-    @ObservedObject private var updates = UpdateStore.shared
-    @StateObject private var login = Box(SMAppService.mainApp.status == .enabled)
-    @StateObject private var loginErr = Box<String?>(nil)
-    @StateObject private var savedProfile = Box<String?>(nil)
-    @StateObject private var transferNote = Box<String?>(nil)
-    @StateObject private var language = Box(AppLanguage.current.rawValue)
-    @StateObject private var languageChanged = Box(false)
+    @AppStorage(MicMute.hotkeyKey) var micHotkey = MicMute.defaultPreset
+    @AppStorage(ShortcutsOverlay.holdKey) var holdCommand = true
+    @AppStorage("settings.section") var sectionRaw = SettingsSection.general.rawValue
+    @AppStorage(MenuBarStyle.defaultsKey) var barStyle = MenuBarStyle.labeled.rawValue
+    @AppStorage(MenuBarDrawer.colorDotKey) var colorDot = false
+    @AppStorage(PanelWidth.defaultsKey) var panelWidth = PanelWidth.normal.rawValue
+    @AppStorage(TextSize.defaultsKey) var textSize = TextSize.normal.rawValue
+    @AppStorage(TabLayout.orderKey) var tabOrder = ""
+    @AppStorage(TabLayout.hiddenKey) var hiddenTabs = ""
+    @AppStorage(TabLayout.startKey) var startTab = TabLayout.lastUsed
+    @AppStorage(TabLayout.shortcutsKey) var tabShortcuts = false
+    @ObservedObject var hook = ClaudeHookStore.shared
+    @ObservedObject var updates = UpdateStore.shared
+    @StateObject var login = Box(SMAppService.mainApp.status == .enabled)
+    @StateObject var loginErr = Box<String?>(nil)
+    @StateObject var savedProfile = Box<String?>(nil)
+    @StateObject var transferNote = Box<String?>(nil)
+    @StateObject var language = Box(AppLanguage.current.rawValue)
+    @StateObject var languageChanged = Box(false)
 
     var body: some View {
         VStack(alignment: .leading, spacing: DS.lg) {
@@ -78,7 +78,7 @@ struct SettingsView: View {
     }
 
     /// Bindings para as definições guardadas no Monitor.
-    private var bm: Bindable<Monitor> { Bindable(m) }
+    var bm: Bindable<Monitor> { Bindable(m) }
 
     private var keepAwakeSubtitle: String {
         guard m.keepAwake else { return L("Termina automaticamente após o período") }
@@ -112,13 +112,12 @@ struct SettingsView: View {
                 .accessibilityAddTraits(selected ? .isSelected : [])
             }
         }
-        .padding(2)
-        .background(RoundedRectangle(cornerRadius: DS.rControl, style: .continuous).fill(DS.surface))
+        .segmentTrack(DS.surface)   // numa janela própria: a calha é a superfície e a opção escolhida a elevada
     }
 
     @ViewBuilder private var generalSection: some View {
         VStack(alignment: .leading, spacing: DS.lg) {
-            group("Geral") {
+            group(nil) {
                 VStack(alignment: .leading, spacing: DS.md) {
                     HStack(spacing: DS.md) {
                         icon("arrow.clockwise")
@@ -209,8 +208,8 @@ struct SettingsView: View {
                             Text(L(transferNote.value ?? "Um ficheiro com as tuas escolhas, sem histórico")).font(DS.meta).foregroundStyle(Color.text3)
                         }
                         Spacer()
-                        Button("Exportar…") { transferNote.value = SettingsFiles.exportSettings() }.controlSize(.small)
-                        Button("Importar…") { transferNote.value = SettingsFiles.importSettings() }.controlSize(.small)
+                        Button("Exportar…") { Task { transferNote.value = await SettingsFiles.exportSettings() } }.controlSize(.small)
+                        Button("Importar…") { Task { transferNote.value = await SettingsFiles.importSettings(into: m) } }.controlSize(.small)
                     }
                     row("arrow.down.circle", "Procurar versões novas", "Uma vez por dia, no GitHub", Binding(
                         get: { updates.enabled }, set: { updates.enabled = $0 }))
@@ -447,7 +446,7 @@ struct SettingsView: View {
 
     @ViewBuilder private var appearanceSection: some View {
         VStack(alignment: .leading, spacing: DS.lg) {
-            group("Aparência") {
+            group(nil) {
                 VStack(alignment: .leading, spacing: DS.md) {
                     HStack(spacing: DS.md) {
                         icon("circle.lefthalf.filled")
@@ -474,7 +473,7 @@ struct SettingsView: View {
 
     @ViewBuilder private var alertsSection: some View {
         VStack(alignment: .leading, spacing: DS.lg) {
-            group("Alertas") {
+            group(nil) {
                 VStack(alignment: .leading, spacing: DS.md) {
                     row("cpu", "CPU alta", "Notifica após 20 s acima do limite", bm.cpuAlertEnabled)
                     if m.cpuAlertEnabled {
@@ -525,195 +524,6 @@ struct SettingsView: View {
             }
         }
     }
-
-
-    private func group<C: View>(_ title: String, @ViewBuilder _ content: () -> C) -> some View {
-        VStack(alignment: .leading, spacing: DS.sm) {
-            Text(L(title)).font(DS.meta.weight(.medium)).foregroundStyle(Color.text2)
-                .padding(.leading, DS.xs)
-            content().cardStyle()
-        }
-    }
-
-    private var metricSettings: [MenuBarMetricSetting] {
-        [
-            .init(id: "agents", icon: "terminal", title: "Agentes", subtitle: "A trabalhar e total", isEnabled: $showAgents),
-            .init(id: "cpu", icon: "cpu", title: "CPU", isEnabled: $showCPU),
-            .init(id: "ram", icon: "memorychip", title: "Memória", isEnabled: $showRAM),
-            .init(id: "temp", icon: "thermometer.medium", title: "Temperatura", subtitle: "Máximo da CPU", isEnabled: $showTemp),
-            .init(id: "gpu", icon: "cube", title: "GPU", isEnabled: $showGPU),
-            .init(id: "net", icon: "network", title: "Rede", subtitle: "Upload e download", isEnabled: $showNet),
-            .init(id: "battery", icon: "battery.75percent", title: "Bateria", isEnabled: $showBattery),
-        ]
-    }
-
-    private var orderedMetrics: [MenuBarMetricSetting] {
-        let byID = Dictionary(uniqueKeysWithValues: metricSettings.map { ($0.id, $0) })
-        let defaults = metricSettings.map(\.id)
-        var seen = Set<String>()
-        var ids = barOrder.split(separator: ",").map(String.init)
-            .filter { byID[$0] != nil && seen.insert($0).inserted }
-        ids += defaults.filter { seen.insert($0).inserted }
-        return ids.compactMap { byID[$0] }
-    }
-
-    private var accentColorBinding: Binding<Color> {
-        Binding(get: { Color(hexRGB: accentHex) }, set: { accentHex = $0.hexRGB })
-    }
-
-    private var currentSnapshot: SettingsSnapshot {
-        SettingsSnapshot(
-            barOrder: barOrder,
-            showAgents: showAgents, showCPU: showCPU, showRAM: showRAM, showTemp: showTemp,
-            showGPU: showGPU, showNet: showNet, showBattery: showBattery,
-            showUsage: showUsage, showActivity: showActivity,
-            showRecentSection: showRecentSection, showHistorySection: showHistorySection,
-            density: densityRawValue, theme: appearanceThemeRaw, accentHex: accentHex
-        )
-    }
-
-    private func selectProfile(_ profile: String) {
-        savedProfile.value = nil
-        activeProfile = profile
-        guard profile != "custom" else { return }
-
-        let saved = profile == "work" ? workProfileData : monitoringProfileData
-        if let data = saved.data(using: .utf8), let snapshot = try? JSONDecoder().decode(SettingsSnapshot.self, from: data) {
-            apply(snapshot)
-        } else {
-            apply(profile == "work" ? .workDefault : .monitoringDefault)
-        }
-    }
-
-    private func saveActiveProfile() {
-        guard activeProfile != "custom",
-              let data = try? JSONEncoder().encode(currentSnapshot),
-              let json = String(data: data, encoding: .utf8) else { return }
-        if activeProfile == "work" { workProfileData = json }
-        else { monitoringProfileData = json }
-        savedProfile.value = activeProfile
-    }
-
-    private func apply(_ snapshot: SettingsSnapshot) {
-        barOrder = snapshot.barOrder
-        showAgents = snapshot.showAgents; showCPU = snapshot.showCPU; showRAM = snapshot.showRAM
-        showTemp = snapshot.showTemp; showGPU = snapshot.showGPU; showNet = snapshot.showNet
-        showBattery = snapshot.showBattery
-        showUsage = snapshot.showUsage; showActivity = snapshot.showActivity
-        showRecentSection = snapshot.showRecentSection; showHistorySection = snapshot.showHistorySection
-        densityRawValue = snapshot.density
-        appearanceThemeRaw = snapshot.theme
-        accentHex = snapshot.accentHex
-    }
-
-    private func moveMetric(_ dragged: String?, to target: String) -> Bool {
-        var ids = orderedMetrics.map(\.id)
-        guard let dragged, dragged != target, let from = ids.firstIndex(of: dragged), let to = ids.firstIndex(of: target) else { return false }
-        ids.remove(at: from)
-        ids.insert(dragged, at: to)
-        barOrder = ids.joined(separator: ",")
-        return true
-    }
-
-    private func moveMetric(from index: Int, by offset: Int) {
-        var ids = orderedMetrics.map(\.id)
-        let destination = index + offset
-        guard ids.indices.contains(index), ids.indices.contains(destination) else { return }
-        ids.swapAt(index, destination)
-        barOrder = ids.joined(separator: ",")
-    }
-
-    /// Limite de um alerta: qualquer valor no intervalo, com o valor escrito ao lado.
-    private func limit(_ title: String, _ value: Binding<Double>, in range: ClosedRange<Double>, step: Double,
-                       format: @escaping (Double) -> String) -> some View {
-        HStack(spacing: DS.md) {
-            // Sem "step" no Slider: o macOS desenhava uma marca por passo. Arredonda-se aqui.
-            Slider(value: Binding(get: { value.wrappedValue },
-                                  set: { value.wrappedValue = min(max(($0 / step).rounded() * step, range.lowerBound), range.upperBound) }),
-                   in: range)
-                .controlSize(.small)
-                .accessibilityLabel(L(title))
-                .accessibilityValue(L(format(value.wrappedValue)))
-            Text(L(format(value.wrappedValue)))
-                .font(DS.body.monospacedDigit())
-                .lineLimit(1).fixedSize()
-                .frame(minWidth: 48, alignment: .trailing)
-        }
-        .padding(.leading, 28)
-    }
-
-    /// Ícones de linha, todos do mesmo tamanho e na cor do texto secundário.
-    private func icon(_ name: String) -> some View {
-        Image(systemName: name).font(DS.body).foregroundStyle(Color.text2).frame(width: 16)
-    }
-
-    private func row(_ iconName: String, _ title: String, _ sub: String?, _ binding: Binding<Bool>) -> some View {
-        HStack(spacing: DS.md) {
-            icon(iconName)
-            VStack(alignment: .leading, spacing: 2) {
-                Text(L(title)).font(DS.body).lineLimit(1)
-                if let sub { Text(L(sub)).font(DS.meta).foregroundStyle(Color.text3).lineLimit(2) }
-            }
-            Spacer()
-            Toggle("", isOn: binding).toggleStyle(.switch).controlSize(.mini).labelsHidden()
-        }
-    }
 }
 
-private struct MenuBarMetricSetting: Identifiable {
-    let id: String
-    let icon: String
-    let title: String
-    var subtitle: String? = nil
-    let isEnabled: Binding<Bool>
-}
 
-private struct SettingsSnapshot: Codable, Equatable {
-    let barOrder: String
-    let showAgents: Bool
-    let showCPU: Bool
-    let showRAM: Bool
-    let showTemp: Bool
-    let showGPU: Bool
-    let showNet: Bool
-    let showBattery: Bool
-    let showUsage: Bool
-    let showActivity: Bool
-    let showRecentSection: Bool
-    let showHistorySection: Bool
-    let density: String
-    let theme: String
-    let accentHex: String
-
-    static let workDefault = SettingsSnapshot(
-        barOrder: "agents,cpu,ram,temp,net,gpu,battery",
-        showAgents: true, showCPU: true, showRAM: true, showTemp: true,
-        showGPU: false, showNet: true, showBattery: false,
-        showUsage: true, showActivity: false, showRecentSection: true, showHistorySection: false,
-        density: PanelDensity.compact.rawValue, theme: PanelTheme.system.rawValue, accentHex: "#0A84FF"
-    )
-
-    static let monitoringDefault = SettingsSnapshot(
-        barOrder: "agents,cpu,ram,gpu,temp,net,battery",
-        showAgents: true, showCPU: true, showRAM: true, showTemp: true,
-        showGPU: true, showNet: true, showBattery: true,
-        showUsage: true, showActivity: true, showRecentSection: true, showHistorySection: true,
-        density: PanelDensity.detailed.rawValue, theme: PanelTheme.dark.rawValue, accentHex: "#0A84FF"
-    )
-}
-
-/// Secções das Definições.
-enum SettingsSection: String, CaseIterable, Identifiable {
-    case general, menuBar, panel, appearance, alerts, rules
-    var id: String { rawValue }
-    var title: String {
-        switch self {
-        case .general: "Geral"
-        case .menuBar: "Barra"
-        case .panel: "Painel"
-        case .appearance: "Aspeto"
-        case .alerts: "Alertas"
-        case .rules: "Regras"
-        }
-    }
-}

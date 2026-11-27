@@ -98,8 +98,8 @@ final class ProcessSampler {
             var cpu = 0.0
             if dWall > 0, let p = prevTimes[pid], total >= p { cpu = Double(total - p) / dWall * 100 }
 
-            var name = Self.fixedCString(bi.pbi_name)
-            if name.isEmpty { name = Self.fixedCString(bi.pbi_comm) }
+            var name = Sys.fixedCString(bi.pbi_name)
+            if name.isEmpty { name = Sys.fixedCString(bi.pbi_comm) }
             var args = name
             if ProcessReader.argsWanted.contains(name) || name.hasPrefix("python") {
                 if let c = argsCache[pid], c.start == bi.pbi_start_tvsec { args = c.args }
@@ -128,12 +128,6 @@ final class ProcessSampler {
         }
         out.append(contentsOf: fresh.values)
         return out
-    }
-
-    /// Texto de um array C de tamanho fixo. O kernel não garante o terminador nulo quando o nome
-    /// ocupa o array todo, por isso lê no máximo o tamanho do array (nunca para além dele).
-    static func fixedCString<T>(_ tuple: T) -> String {
-        withUnsafeBytes(of: tuple) { raw in String(decoding: raw.prefix(while: { $0 != 0 }), as: UTF8.self) }
     }
 
     /// Formato igual ao `etime` do ps: [DD-]HH:MM:SS

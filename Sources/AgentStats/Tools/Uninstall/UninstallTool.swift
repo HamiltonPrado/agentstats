@@ -53,8 +53,9 @@ enum UninstallRules {
     static func candidates(bundleID id: String, home: String) -> [String] {
         guard validBundleID(id) else { return [] }
         let relative = [
-            String(localized: "Application Support/\(id)"),
-            String(localized: "Application Scripts/\(id)"),
+            // Caminhos, nunca traduzidos: uma tradução mudava o que vai para o Lixo.
+            "Application Support/\(id)",
+            "Application Scripts/\(id)",
             "Caches/\(id)",
             "Containers/\(id)",
             "Cookies/\(id).binarycookies",
@@ -63,7 +64,7 @@ enum UninstallRules {
             "LaunchAgents/\(id).plist",
             "Logs/\(id)",
             "Preferences/\(id).plist",
-            String(localized: "Saved Application State/\(id).savedState"),
+            "Saved Application State/\(id).savedState",
             "WebKit/\(id)",
         ]
         return relative.map { "\(home)/Library/\($0)" }
@@ -137,7 +138,7 @@ final class UninstallStore: ObservableObject {
     func refresh() async {
         guard !demo else { return }
         let roots = environment.roots
-        all = await Task.detached(priority: .userInitiated) { UninstallRules.scan(roots) }.value
+        all = await Blocking.run { UninstallRules.scan(roots) }
         apps = all.filter { UninstallRules.removable(bundleID: $0.bundleID) }
         loaded = true
     }

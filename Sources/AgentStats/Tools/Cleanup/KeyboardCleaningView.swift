@@ -72,7 +72,7 @@ final class CleaningOverlay {
                                                               object: nil, queue: .main) { [weak self] _ in
             MainActor.assumeIsolated { self?.rebuild() }
         }
-        NSApp.activate(ignoringOtherApps: true)
+        NSApp.activate()
     }
 
     func hide() {
@@ -120,7 +120,7 @@ struct CleaningScreen: View {
                     .font(.system(size: 22, weight: .medium)).foregroundStyle(Color(white: 0.8))
                 if let end = store.endsAt {
                     TimelineView(.periodic(from: .now, by: 1)) { context in
-                        Text(String(localized: "Sai sozinho em \(Self.clock(end.timeIntervalSince(context.date)))"))
+                        Text(String(localized: "Sai sozinho em \(Fmt.clock(end.timeIntervalSince(context.date)))"))
                             .font(.system(size: 14).monospacedDigit()).foregroundStyle(Color(white: 0.6))
                     }
                 }
@@ -133,10 +133,6 @@ struct CleaningScreen: View {
         .ignoresSafeArea()
     }
 
-    nonisolated static func clock(_ seconds: TimeInterval) -> String {
-        let left = max(0, Int(seconds.rounded(.up)))
-        return String(format: "%d:%02d", left / 60, left % 60)
-    }
 }
 
 /// Tem de se segurar: um pano a passar no trackpad não sai sem querer.

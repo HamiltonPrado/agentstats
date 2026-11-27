@@ -1,5 +1,6 @@
 import AppKit
 import CryptoKit
+import ImageIO
 import SwiftUI
 
 enum ClipboardAccess: Equatable {
@@ -16,8 +17,7 @@ enum ClipboardAccess: Equatable {
 final class ClipboardStore: ObservableObject {
     static let shared = ClipboardStore(
         pasteboard: .general,
-        directory: FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-            .appendingPathComponent("AgentStats"),
+        directory: AppPaths.support,
         defaults: .standard)
 
     private enum Key {
@@ -149,22 +149,41 @@ final class ClipboardStore: ObservableObject {
         saveHistory()
     }
 
+    /// A imagem a ser guardada (os testes esperam por ela).
+    private(set) var pendingImage: Task<Void, Never>?
+
     /// Guarda a imagem como PNG, com o hash do conteúdo como nome (a mesma imagem não se duplica).
+    /// A conversão e a gravação correm fora do main thread: uma captura Retina grande congelava o painel.
     private func keepImage(change: Int, now: Date) {
         let raw = pasteboard.data(forType: .png) ?? pasteboard.data(forType: .tiff)
-        guard pasteboard.changeCount == change, let raw, raw.count <= ClipboardRules.maxImageBytes,
+        guard pasteboard.changeCount == change, let raw, raw.count <= ClipboardRules.maxImageBytes, let dir = imagesDirectory else { return }
+        pendingImage = Task {
+            guard let saved = await Blocking.run(qos: .utility, { ClipboardStore.storeImage(raw, in: dir) }) else { return }
+            items = ClipboardRules.addingImage(saved.name, size: saved.size, to: items, now: now)
+            saveHistory()
+        }
+    }
+
+    nonisolated static func storeImage(_ raw: Data, in dir: URL) -> (name: String, size: String)? {
+        guard let src = CGImageSourceCreateWithData(raw as CFData, nil),
+              let props = CGImageSourceCopyPropertiesAtIndex(src, 0, nil) as? [CFString: Any],
+              ClipboardRules.imageFits(width: props[kCGImagePropertyPixelWidth] as? Int ?? 0,
+                                       height: props[kCGImagePropertyPixelHeight] as? Int ?? 0),
               let rep = NSBitmapImageRep(data: raw), let png = rep.representation(using: .png, properties: [:]),
-              png.count <= ClipboardRules.maxImageBytes, let dir = imagesDirectory else { return }
+              png.count <= ClipboardRules.maxImageBytes else { return nil }
         let name = SHA256.hash(data: png).prefix(12).map { String(format: "%02x", $0) }.joined() + ".png"
         let url = dir.appendingPathComponent(name)
         let fm = FileManager.default
         try? fm.createDirectory(at: dir, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
+        // Capturas de ecrã copiadas podem ter coisas sensíveis: fora do Time Machine, como o histórico.
+        var folder = dir
+        var values = URLResourceValues()
+        values.isExcludedFromBackup = true
+        try? folder.setResourceValues(values)
         if !fm.fileExists(atPath: url.path) {
-            guard fm.createFile(atPath: url.path, contents: png, attributes: [.posixPermissions: 0o600]) else { return }
+            guard fm.createFile(atPath: url.path, contents: png, attributes: [.posixPermissions: 0o600]) else { return nil }
         }
-        items = ClipboardRules.addingImage(name, size: "\(rep.pixelsWide)×\(rep.pixelsHigh)", to: items, now: now)
-        saveHistory()
-        removeOrphanImages()
+        return (name, "\(rep.pixelsWide)×\(rep.pixelsHigh)")
     }
 
     func copyImage(_ item: ClipItem) {
@@ -223,6 +242,13 @@ final class ClipboardStore: ObservableObject {
         pasteboard.clearContents()
         pasteboard.setString(text, forType: .string)
         lastChange = pasteboard.changeCount   // a nossa cópia não é uma entrada nova
+    }
+
+    /// Uma imagem feita pela app (o código QR): também não é uma entrada nova.
+    func copy(image: NSImage) {
+        pasteboard.clearContents()
+        pasteboard.writeObjects([image])
+        lastChange = pasteboard.changeCount
     }
 
     func togglePin(_ id: UUID) {
@@ -299,6 +325,8 @@ final class ClipboardStore: ObservableObject {
     private func saveHistory() {
         guard historyWritable, let url = historyFile else { return }
         if !PrivateFile.save(items, to: url, backup: false) { storageError = "Não consegui guardar o histórico." }
+        // Itens que saíram (expirados ou empurrados por novos) não deixam a imagem para trás.
+        removeOrphanImages()
     }
 
     private func saveSnippets() {

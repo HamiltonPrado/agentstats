@@ -16,7 +16,7 @@ final class OtherAIsReader {
         var timestamp: Date?
     }
 
-    private var fileCache: [String: (mtime: Date, size: UInt64, info: TailInfo)] = [:]
+    private let fileCache = FileCache<TailInfo>()
 
     func sessions(processes: [AgentProcess], existingSessions: [AgentSession]) -> [AgentSession] {
         let linkedPids = Set(existingSessions.compactMap { $0.process?.pid })
@@ -114,20 +114,10 @@ final class OtherAIsReader {
     }
 
     func tailAider(_ url: URL, mtime: Date, size: UInt64) -> TailInfo {
-        if let c = fileCache[url.path], c.mtime == mtime, c.size == size { return c.info }
-
-        guard let h = try? FileHandle(forReadingFrom: url) else { return TailInfo() }
-        defer { try? h.close() }
-        let chunk: UInt64 = 64 * 1024
-        let start = size > chunk ? size - chunk : 0
-        try? h.seek(toOffset: start)
-        let data = (try? h.readToEnd()) ?? Data()
-
-        let content = String(decoding: data, as: UTF8.self)
-        let lines = content.components(separatedBy: .newlines)
-        let info = parseAiderLines(lines)
-        fileCache[url.path] = (mtime, size, info)
-        return info
+        fileCache.value(url.path, mtime: mtime, size: size) {
+            let lines = TextTail.lines(url.path, maxBytes: 64 * 1024).map { String(decoding: $0, as: UTF8.self) }
+            return parseAiderLines(lines)
+        }
     }
 
     func parseAiderLines(_ lines: [String]) -> TailInfo {

@@ -65,7 +65,7 @@ final class CaptureStore: ObservableObject {
     /// O texto da barra de menus enquanto grava.
     var menuBarText: String? {
         switch phase {
-        case .recording(let since): CaptureCommand.clock(Int(Date().timeIntervalSince(since)))
+        case .recording(let since): Fmt.clock(Double(Int(Date().timeIntervalSince(since))))
         case .stopping: "A guardar…"
         case .idle, .capturing: nil
         }
@@ -220,6 +220,7 @@ final class CaptureStore: ObservableObject {
     }
 
     /// Ao sair da app espera até o vídeo estar fechado: nunca deixa uma gravação a correr sozinha.
+    /// Bloqueia de propósito (até ~8 s, dentro do `willTerminate`): depois disto a app já não existe para esperar.
     func shutdown() {
         cancelled = true
         guard let p = process, p.isRunning else { return }

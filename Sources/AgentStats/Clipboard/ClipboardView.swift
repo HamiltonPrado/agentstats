@@ -113,9 +113,7 @@ struct ClipboardView: View {
                  ? "O macOS não deixa o AgentStats ler o clipboard, por isso nada está a ser guardado."
                  : "Falta um passo: escolhe “Permitir sempre” para o AgentStats em Privacidade e Segurança → Colar de outras apps. Até lá não leio nada, para não veres um alerta por cópia.")
             Button("Abrir Definições do Sistema") {
-                if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Pasteboard") {
-                    NSWorkspace.shared.open(url)
-                }
+                SystemSettings.open(.pasteboard)
             }
             .controlSize(.small)
         }
@@ -186,7 +184,7 @@ struct ClipboardView: View {
         .padding(.vertical, DS.xs)
         .contextMenu {
             if let url = store.imageURL(item) {
-                Button("Guardar como PNG…") { saveImage(url) }
+                Button("Guardar como PNG…") { Task { await saveImage(url) } }
                 Button("Abrir") { NSWorkspace.shared.open(url) }
             }
         }
@@ -265,14 +263,15 @@ struct ClipboardView: View {
 
     // MARK: Peças
 
-    private func saveImage(_ url: URL) {
-        let panel = NSSavePanel()
-        panel.nameFieldStringValue = L("Imagem") + ".png"
-        panel.allowedContentTypes = [.png]
-        NSApp.activate(ignoringOtherApps: true)
-        guard panel.runModal() == .OK, let dest = panel.url else { return }
-        try? FileManager.default.removeItem(at: dest)
-        try? FileManager.default.copyItem(at: url, to: dest)
+    private func saveImage(_ url: URL) async {
+        guard let dest = await FilePanels.save(name: L("Imagem") + ".png", types: [.png]) else { return }
+        do {
+            // O painel já perguntou se substitui: o ficheiro antigo sai antes de copiar.
+            if FileManager.default.fileExists(atPath: dest.path) { try FileManager.default.removeItem(at: dest) }
+            try FileManager.default.copyItem(at: url, to: dest)
+        } catch {
+            FilePanels.reportSaveFailure()
+        }
     }
 
     private func copyButton<Label: View>(_ item: ClipItem, @ViewBuilder label: () -> Label) -> some View {

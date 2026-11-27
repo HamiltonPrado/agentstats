@@ -43,22 +43,7 @@ enum NetworkExtras {
     }
 
     static func tunnelAddresses() -> [(name: String, ipv4: String)] {
-        var ifaddr: UnsafeMutablePointer<ifaddrs>?
-        guard getifaddrs(&ifaddr) == 0 else { return [] }
-        defer { freeifaddrs(ifaddr) }
-        var out: [(String, String)] = []
-        var p = ifaddr
-        while let a = p {
-            let ifa = a.pointee
-            if let addr = ifa.ifa_addr, Int32(addr.pointee.sa_family) == AF_INET, (ifa.ifa_flags & UInt32(IFF_UP)) != 0 {
-                var host = [CChar](repeating: 0, count: Int(NI_MAXHOST))
-                if getnameinfo(addr, socklen_t(addr.pointee.sa_len), &host, socklen_t(host.count), nil, 0, NI_NUMERICHOST) == 0 {
-                    out.append((String(cString: ifa.ifa_name), Sys.string(host)))
-                }
-            }
-            p = ifa.ifa_next
-        }
-        return out
+        Interfaces.ipv4().map { ($0.name, $0.ip) }
     }
 }
 

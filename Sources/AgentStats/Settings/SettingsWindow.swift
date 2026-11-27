@@ -3,7 +3,7 @@ import SwiftUI
 /// O conteúdo da janela das Definições: o mesmo SettingsView, com o tema e a cor escolhidos.
 struct SettingsWindowContent: View {
     @AppStorage("appearance.theme") private var themeRawValue = PanelTheme.system.rawValue
-    @AppStorage("appearance.accentHex") private var accentHex = "#0A84FF"
+    @AppStorage(PrefKey.accentHex) private var accentHex = PrefKey.defaultAccentHex
     @AppStorage(TextSize.defaultsKey) private var textSizeRaw = TextSize.normal.rawValue
 
     var body: some View {

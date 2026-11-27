@@ -296,14 +296,14 @@ final class CleanupStore: ObservableObject {
                 continue
             }
             let home = environment.home, trash = environment.trash
-            let problem: String? = await Task.detached(priority: .userInitiated) {
+            let problem: String? = await Blocking.run {
                 guard let place = CleanupRules.location(entry.target, home: home),
                       place.path == entry.path, place.signature == entry.signature else {
                     return "mudou entretanto, não mexi."
                 }
                 do { try trash(URL(fileURLWithPath: place.path)) } catch { return "o macOS não deixou mover." }
                 return nil
-            }.value
+            }
             if let problem {
                 failed.append("\(entry.target.name): \(problem)")
             } else {

@@ -11,7 +11,11 @@ final class ShortcutsOverlay {
     static let combo = GlobalHotKey.Combo(keyCode: UInt32(kVK_ANSI_Slash), modifiers: UInt32(controlKey | optionKey), label: "⌃⌥/")
 
     private var panel: NSPanel?
-    private var monitors: [Any] = []
+    /// O monitor do teclado vive sempre; o dos cliques só enquanto a janela está aberta.
+    private var keyMonitor: Any?
+    private var clickMonitor: Any?
+    /// A leitura dos menus da app (pode demorar): cancelada se se fechar antes de acabar.
+    private var loading: Task<Void, Never>?
     private var holdTask: Task<Void, Never>?
     private let hotKey = GlobalHotKey(id: ShortcutsOverlay.hotkeyID)
     /// Aberta por segurar ⌘: fecha ao largar.
@@ -19,11 +23,11 @@ final class ShortcutsOverlay {
 
     func start() {
         GlobalHotKey.handlers[Self.hotkeyID] = { ShortcutsOverlay.shared.toggle() }
-        hotKey.register(Self.combo)
+        updateHotKey()
         // Segurar ⌘ sozinho. Os monitores globais de teclado precisam da Acessibilidade; sem ela fica só o atalho.
-        if let m = NSEvent.addGlobalMonitorForEvents(matching: [.flagsChanged, .keyDown], handler: { e in
+        keyMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.flagsChanged, .keyDown], handler: { e in
             MainActor.assumeIsolated { ShortcutsOverlay.shared.event(e) }
-        }) { monitors.append(m) }
+        })
     }
 
     private func event(_ e: NSEvent) {
@@ -34,7 +38,7 @@ final class ShortcutsOverlay {
             if openedByHold || e.type == .keyDown { close() }
             return
         }
-        guard Pref.bool(Self.holdKey, true), panel == nil else { return }
+        guard Pref.bool(Self.holdKey, true), panel == nil, loading == nil else { return }
         holdTask?.cancel()
         holdTask = Task { @MainActor in
             try? await Task.sleep(for: .milliseconds(1000))
@@ -46,7 +50,11 @@ final class ShortcutsOverlay {
         }
     }
 
-    func toggle() { panel == nil ? show(byHold: false) : close() }
+    /// Desligar nas Definições desliga as duas formas: segurar ⌘ e o ⌃⌥/.
+    func updateHotKey() { hotKey.register(Pref.bool(Self.holdKey, true) ? Self.combo : nil) }
+
+    /// A carregar conta como aberta: carregar outra vez fecha, em vez de lançar outra leitura.
+    func toggle() { panel == nil && loading == nil ? show(byHold: false) : close() }
 
     /// ⌘ sozinho: nenhuma tecla carregada desde que se começou a segurar.
     nonisolated static func heldAlone(secondsSinceLastKey: Double) -> Bool { secondsSinceLastKey >= 0.95 }
@@ -54,16 +62,16 @@ final class ShortcutsOverlay {
     private func show(byHold: Bool) {
         let me = ProcessInfo.processInfo.processIdentifier
         guard let app = NSWorkspace.shared.frontmostApplication.flatMap({ $0.processIdentifier == me ? QuickPaste.previousApp : $0 }) else { return }
-        guard AXIsProcessTrusted() else {
-            _ = AXIsProcessTrustedWithOptions(["AXTrustedCheckOptionPrompt": true] as CFDictionary)
-            return
-        }
+        guard AX.ensureTrusted() else { return }
         openedByHold = byHold
         let pid = app.processIdentifier
         let name = app.localizedName ?? ""
         let icon = app.icon
-        Task {
-            let sections = await Task.detached(priority: .userInitiated) { AppShortcuts.read(pid: pid) }.value
+        loading?.cancel()
+        loading = Task {
+            let sections = await Blocking.run { AppShortcuts.read(pid: pid) }
+            guard !Task.isCancelled else { return }
+            self.loading = nil
             guard !byHold || NSEvent.modifierFlags.contains(.command) else { return }   // largou entretanto
             self.present(ShortcutsSheet(name: name, icon: icon, sections: sections) { ShortcutsOverlay.shared.close() })
         }
@@ -85,20 +93,19 @@ final class ShortcutsOverlay {
         p.setFrameOrigin(NSPoint(x: screen.midX - size.width / 2, y: screen.midY - size.height / 2))
         p.orderFrontRegardless()
         panel = p
-        let click = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) { _ in
+        clickMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) { _ in
             MainActor.assumeIsolated { ShortcutsOverlay.shared.close() }
         }
-        if let click { monitors.append(click) }
     }
 
     func close() {
         openedByHold = false
+        loading?.cancel()
+        loading = nil
         panel?.orderOut(nil)
         panel = nil
-        if monitors.count > 1 {
-            for m in monitors.dropFirst() { NSEvent.removeMonitor(m) }
-            monitors = Array(monitors.prefix(1))
-        }
+        if let clickMonitor { NSEvent.removeMonitor(clickMonitor) }
+        clickMonitor = nil
     }
 }
 

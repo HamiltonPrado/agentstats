@@ -14,8 +14,7 @@ enum AgentActions {
     }
 
     static func copyPath(_ path: String) {
-        NSPasteboard.general.clearContents()
-        NSPasteboard.general.setString(path, forType: .string)
+        ClipboardStore.shared.copy(path)
     }
 
     /// O ficheiro do transcript da sessão, se houver. O OpenCode guarda tudo numa base de dados, e as sessões
@@ -25,6 +24,6 @@ enum AgentActions {
     }
 
     static func revealTranscript(_ path: String) {
-        NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: path)])
+        Finder.reveal(path: path)
     }
 }

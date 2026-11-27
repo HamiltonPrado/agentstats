@@ -194,9 +194,9 @@ import Testing
     }
 
     @Test func clock() {
-        #expect(CaptureCommand.clock(7) == "0:07")
-        #expect(CaptureCommand.clock(750) == "12:30")
-        #expect(CaptureCommand.clock(3723) == "1:02:03")
+        #expect(Fmt.clock(7) == "0:07")
+        #expect(Fmt.clock(750) == "12:30")
+        #expect(Fmt.clock(3723) == "1:02:03")
     }
 
     @Test func onlyOurOwnOrphanIsStopped() {

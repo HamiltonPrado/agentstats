@@ -69,9 +69,7 @@ final class LocationAccess: NSObject, ObservableObject, CLLocationManagerDelegat
     }
 
     func openSettings() {
-        if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_LocationServices") {
-            NSWorkspace.shared.open(url)
-        }
+        SystemSettings.open(.location)
     }
 
     nonisolated func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {

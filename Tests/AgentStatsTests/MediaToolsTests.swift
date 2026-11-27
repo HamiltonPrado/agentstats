@@ -126,13 +126,19 @@ struct ClipboardImageTests {
         #expect(ClipboardRules.orphanImages(files: ["a.png", "b.png", "x.json"], items: [ClipItem(text: "", date: now, image: "a.png")]) == ["b.png"])
     }
 
+    @Test func hugeImagesAreRefusedBeforeDecoding() {
+        #expect(ClipboardRules.imageFits(width: 6000, height: 4000))
+        #expect(!ClipboardRules.imageFits(width: 50_000, height: 50_000))
+        #expect(!ClipboardRules.imageFits(width: 0, height: 10))
+    }
+
     @Test func oldHistoryStillLoads() throws {
         let json = #"[{"id":"7C9E4C79-6F1C-4E0B-9C2C-1D2B3A4F5E6D","text":"olá","date":0,"pinned":false}]"#
         let items = try JSONDecoder().decode([ClipItem].self, from: Data(json.utf8))
         #expect(items.first?.text == "olá" && items.first?.image == nil)
     }
 
-    @Test func keepsCopiedImagesOnlyWhenAsked() throws {
+    @Test func keepsCopiedImagesOnlyWhenAsked() async throws {
         let board = NSPasteboard.withUniqueName()
         defer { board.releaseGlobally() }
         let dir = tempDir()
@@ -146,6 +152,7 @@ struct ClipboardImageTests {
 
         s.setImagesEnabled(true)
         board.clearContents(); board.setData(png, forType: .png); s.poll()
+        await s.pendingImage?.value
         let item = try #require(s.items.first)
         #expect(item.imageSize == "40×20")
         let file = try #require(s.imageURL(item))
@@ -155,12 +162,14 @@ struct ClipboardImageTests {
 
         // A mesma imagem outra vez não duplica.
         board.clearContents(); board.setData(png, forType: .png); s.poll()
+        await s.pendingImage?.value
         #expect(s.items.count == 1)
 
         // De um gestor de passwords, nunca.
         let other = ClipboardStore(pasteboard: board, directory: nil, defaults: nil, accessOverride: .allowed, frontApp: { "com.1password.1password" })
         other.setEnabled(true); other.setImagesEnabled(true)
         board.clearContents(); board.setData(pngData(width: 10, height: 10), forType: .png); other.poll()
+        await other.pendingImage?.value
         #expect(other.items.isEmpty)
 
         // Copiar de volta põe a imagem no clipboard; apagar o item apaga o ficheiro.

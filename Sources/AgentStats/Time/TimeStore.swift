@@ -10,20 +10,24 @@ final class TimerStore: ObservableObject {
     @Published private(set) var endsAt: Date?
     /// Em pausa: quanto faltava.
     @Published private(set) var pausedLeft: TimeInterval?
-    @Published private(set) var now = Date()
+    /// Não é publicado: mudava a cada segundo e redesenhava o separador Tempo inteiro.
+    /// A contagem no painel tem o seu próprio `TimelineView`; a barra de menus atualiza pelo `onChange`.
+    private(set) var now = Date()
     var onChange: (() -> Void)?
     private var ticker: Timer?
     private var demo = false
 
     var running: Bool { endsAt != nil }
-    var left: TimeInterval {
+    var left: TimeInterval { left(at: now) }
+
+    func left(at date: Date) -> TimeInterval {
         if let pausedLeft { return pausedLeft }
         guard let endsAt else { return 0 }
-        return max(0, endsAt.timeIntervalSince(now))
+        return max(0, endsAt.timeIntervalSince(date))
     }
 
     /// O que aparece na barra de menus enquanto corre.
-    var menuBarText: String? { plan == nil ? nil : TimerPlan.clock(left) + (pausedLeft != nil ? " ❚❚" : "") }
+    var menuBarText: String? { plan == nil ? nil : Fmt.clock(left) + (pausedLeft != nil ? " ❚❚" : "") }
 
     func start(_ plan: TimerPlan) {
         self.plan = plan
@@ -60,7 +64,7 @@ final class TimerStore: ObservableObject {
 
     private func ensureTicker() {
         guard ticker == nil else { return }
-        ticker = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { _ in
+        ticker = Timer.common(withTimeInterval: 1, repeats: true) { _ in
             MainActor.assumeIsolated { TimerStore.shared.tick() }
         }
     }

@@ -136,11 +136,11 @@ final class StartupStore: ObservableObject {
     }
 
     func reveal(_ item: LaunchItem) {
-        NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: item.plist)])
+        Finder.reveal(path: item.plist)
     }
 
     func openLoginItems() {
-        if let url = URL(string: "x-apple.systempreferences:com.apple.LoginItems-Settings.extension") { NSWorkspace.shared.open(url) }
+        SystemSettings.open(.loginItems)
     }
 
     func loadDemo() {

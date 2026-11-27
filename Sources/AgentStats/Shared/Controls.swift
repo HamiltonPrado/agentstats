@@ -84,6 +84,19 @@ struct IconButton: View {
     Text(L(text)).font(DS.meta).foregroundStyle(color).fixedSize(horizontal: false, vertical: true)
 }
 
+/// Uma frase curta à vista e o resto ao passar o rato: os cartões não ficam com parágrafos que se repetem
+/// sempre que se abre o separador.
+@MainActor func note(_ text: String, more: String) -> some View {
+    HStack(alignment: .firstTextBaseline, spacing: DS.xs) {
+        note(text)
+        Image(systemName: "info.circle").font(DS.meta).foregroundStyle(Color.text3).accessibilityHidden(true)
+    }
+    .help(L(more))
+    .accessibilityElement(children: .ignore)
+    .accessibilityLabel(L(text))
+    .accessibilityHint(L(more))
+}
+
 /// Ação discreta, em texto.
 @MainActor func textLink(_ title: String, color: Color = .text2, action: @escaping () -> Void) -> some View {
     Button(L(title), action: action).buttonStyle(.plain).font(DS.meta).foregroundStyle(color).fixedSize()

@@ -41,7 +41,7 @@ enum Meetings {
     }
 }
 
-struct MeetingInfo: Equatable {
+struct MeetingInfo: Equatable, Sendable {
     var title: String
     var start: Date
     var end: Date
@@ -71,7 +71,7 @@ final class MeetingsStore: ObservableObject {
 
     func start() {
         guard !demo else { return }
-        timer = Timer.scheduledTimer(withTimeInterval: 30, repeats: true) { _ in MainActor.assumeIsolated { MeetingsStore.shared.refresh() } }
+        timer = Timer.common(withTimeInterval: 30, repeats: true) { _ in MainActor.assumeIsolated { MeetingsStore.shared.refresh() } }
         NotificationCenter.default.addObserver(forName: .EKEventStoreChanged, object: nil, queue: .main) { _ in
             MainActor.assumeIsolated { MeetingsStore.shared.refresh() }
         }
@@ -91,15 +91,25 @@ final class MeetingsStore: ObservableObject {
         guard !demo else { return }
         access = EKEventStore.authorizationStatus(for: .event)
         guard enabled, allowed else { next = nil; onChange?(); return }
-        let now = Date()
-        let predicate = store.predicateForEvents(withStart: now.addingTimeInterval(-3 * 3600), end: now.addingTimeInterval(24 * 3600), calendars: nil)
-        let event = store.events(matching: predicate)
-            .filter { !$0.isAllDay && $0.endDate > now && $0.status != .canceled }
-            .sorted { $0.startDate < $1.startDate }
-            .first
-        next = event.map { MeetingInfo(title: $0.title ?? L("Reunião"), start: $0.startDate, end: $0.endDate,
+        // Um calendário grande demora: a consulta corre fora do main thread e só o resultado volta.
+        // O EKEventStore pode ser usado de outra thread; os EKEvent nunca saem dela.
+        nonisolated(unsafe) let store = self.store
+        let fallback = L("Reunião")
+        Task {
+            let found = await Blocking.run { () -> MeetingInfo? in
+                let now = Date()
+                let predicate = store.predicateForEvents(withStart: now.addingTimeInterval(-3 * 3600), end: now.addingTimeInterval(24 * 3600), calendars: nil)
+                return store.events(matching: predicate)
+                    .filter { !$0.isAllDay && $0.endDate > now && $0.status != .canceled }
+                    .sorted { $0.startDate < $1.startDate }
+                    .first
+                    .map { MeetingInfo(title: $0.title ?? fallback, start: $0.startDate, end: $0.endDate,
                                        link: Meetings.joinLink(in: [$0.url?.absoluteString, $0.location, $0.notes])) }
-        onChange?()
+            }
+            guard enabled, allowed else { return }
+            if found != next { next = found }
+            onChange?()
+        }
     }
 
     var menuBarText: String? {

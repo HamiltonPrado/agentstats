@@ -28,7 +28,8 @@ struct WindowsView: View {
                     }
                 }
                 if let m = message.value { note(m, color: .attentionText) }
-                note("Aplica à janela da app onde estavas. Carregar outra vez na metade esquerda ou direita alterna entre ½, ⅔ e ⅓.")
+                note("Carregar outra vez numa metade alterna entre ½, ⅔ e ⅓.",
+                     more: "Aplica à janela da app onde estavas. Carregar outra vez na metade esquerda ou direita alterna entre ½, ⅔ e ⅓.")
             }
             .cardStyle()
 
@@ -64,10 +65,7 @@ struct WindowsView: View {
             }
             trusted.value = AXIsProcessTrusted()
         } label: {
-            preview(action)
-                .frame(maxWidth: .infinity).frame(height: 34)
-                .background(RoundedRectangle(cornerRadius: DS.rSmall, style: .continuous).fill(DS.raised))
-                .contentShape(Rectangle())
+            preview(action).raisedTile(height: 34)
         }
         .buttonStyle(.plain)
         .help(L(action.title) + (WindowShortcuts.label(action).map { "  " + $0 } ?? ""))

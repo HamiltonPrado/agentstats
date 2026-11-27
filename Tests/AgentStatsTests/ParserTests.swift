@@ -53,12 +53,12 @@ struct FormattingTests {
 struct FixedCStringTests {
     @Test func fullArrayWithoutTerminatorStopsAtArrayEnd() {
         let full: (CChar, CChar, CChar, CChar) = (65, 66, 67, 68)   // "ABCD", sem nulo
-        #expect(ProcessSampler.fixedCString(full) == "ABCD")
+        #expect(Sys.fixedCString(full) == "ABCD")
     }
 
     @Test func stopsAtTerminator() {
         let short: (CChar, CChar, CChar, CChar) = (122, 115, 104, 0)   // "zsh\0"
-        #expect(ProcessSampler.fixedCString(short) == "zsh")
+        #expect(Sys.fixedCString(short) == "zsh")
     }
 
     @Test func bufferHelper() {

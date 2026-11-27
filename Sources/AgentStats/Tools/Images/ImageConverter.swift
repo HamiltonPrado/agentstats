@@ -59,9 +59,11 @@ enum ImageConverter {
         let w = props[kCGImagePropertyPixelWidth] as? Int ?? 0, h = props[kCGImagePropertyPixelHeight] as? Int ?? 0
         let side = targetSide(width: w, height: h, maxSide: options.maxSide)
         // A miniatura com a transformação aplica a orientação da foto e reduz numa só passagem.
-        let thumbOptions: [CFString: Any] = [kCGImageSourceCreateThumbnailFromImageAlways: true,
-                                             kCGImageSourceCreateThumbnailWithTransform: true,
-                                             kCGImageSourceThumbnailMaxPixelSize: max(side, 1)]
+        var thumbOptions: [CFString: Any] = [kCGImageSourceCreateThumbnailFromImageAlways: true,
+                                             kCGImageSourceCreateThumbnailWithTransform: true]
+        // Sem dimensões conhecidas, o limite fica o escolhido (ou nenhum): com 0 saía uma imagem de 1 píxel.
+        if side > 0 { thumbOptions[kCGImageSourceThumbnailMaxPixelSize] = side }
+        else if options.maxSide > 0 { thumbOptions[kCGImageSourceThumbnailMaxPixelSize] = options.maxSide }
         guard let image = CGImageSourceCreateThumbnailAtIndex(src, 0, thumbOptions as CFDictionary) else {
             return Result(source: source, output: nil, before: before, after: 0)
         }
